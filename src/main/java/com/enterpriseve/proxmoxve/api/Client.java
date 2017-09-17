@@ -47,11 +47,6 @@ public class Client {
     private final String _hostName;
     private final int _port;
 
-    /**
-     *
-     * @param hostName
-     * @param port
-     */
     public Client(String hostName, int port) {
         _client = this;
         _hostName = hostName;
@@ -66,6 +61,34 @@ public class Client {
         return _port;
     }
 
+    /**
+     * Creation ticket from login.
+     *
+     * @param userName user name or <username>@<relam>
+     * @param password
+     * @return
+     * @throws JSONException
+     */
+    public boolean login(String userName, String password) throws JSONException {
+        String realm = "pam";
+        String[] uData = userName.split("@");
+        if (uData.length > 1) {
+            userName = uData[0];
+            realm = uData[1];
+        }
+
+        return login(userName, password, realm);
+    }
+
+    /**
+     * Creation ticket from login.
+     *
+     * @param userName user name
+     * @param password
+     * @param realm pam/pve or custom
+     * @return
+     * @throws JSONException
+     */
     public boolean login(String userName, String password, String realm) throws JSONException {
         JSONObject ticket = getAccess().getTicket().createTicket(password, userName, null, null, null, realm);
         if (ticket != null && !ticket.isNull("data")) {
@@ -79,6 +102,22 @@ public class Client {
 
     protected enum HttpMethod {
         GET, POST, PUT, DELETE
+    }
+
+    public JSONObject get(String resource, Map<String, Object> parameters) {
+        return executeAction(resource, HttpMethod.GET, parameters);
+    }
+
+    public JSONObject put(String resource, Map<String, Object> parameters) {
+        return executeAction(resource, HttpMethod.PUT, parameters);
+    }
+
+    public JSONObject post(String resource, Map<String, Object> parameters) {
+        return executeAction(resource, HttpMethod.POST, parameters);
+    }
+
+    public JSONObject ddelete(String resource, Map<String, Object> parameters) {
+        return executeAction(resource, HttpMethod.DELETE, parameters);
     }
 
     protected JSONObject executeAction(String resource, HttpMethod method, Map<String, Object> parameters) {
@@ -399,8 +438,6 @@ public class Client {
 
                 /**
                  * Read replication job configuration.
-                 *
-                 * @return
                  */
                 public JSONObject read() {
                     return _client.executeAction("/cluster/replication/" + _id + "", HttpMethod.GET, null);
@@ -447,7 +484,6 @@ public class Client {
 
             /**
              * List replication jobs.
-             * @return 
              */
             public JSONObject index() {
                 return _client.executeAction("/cluster/replication", HttpMethod.GET, null);
@@ -458,7 +494,7 @@ public class Client {
              *
              * @param id Replication Job ID. The ID is composed of a Guest ID
              * and a job number, separated by a hyphen, i.e.
-             * '&amp;lt;GUEST>-&amp;lt;JOBNUM>'.
+             * '&amp;lt;GUEST&amp;gt;-&amp;lt;JOBNUM&amp;gt;'.
              * @param target Target node.
              * @param type Section type. Enum: local
              * @param comment Description.
@@ -490,7 +526,7 @@ public class Client {
              *
              * @param id Replication Job ID. The ID is composed of a Guest ID
              * and a job number, separated by a hyphen, i.e.
-             * '&amp;lt;GUEST>-&amp;lt;JOBNUM>'.
+             * '&amp;lt;GUEST&amp;gt;-&amp;lt;JOBNUM&amp;gt;'.
              * @param target Target node.
              * @param type Section type. Enum: local
              */
@@ -714,7 +750,7 @@ public class Client {
                          * arbitrary strings.
                          * @param macro Use predefined standard macro.
                          * @param moveto Move rule to new position
-                         * &amp;lt;moveto>. Other arguments are ignored.
+                         * &amp;lt;moveto&amp;gt;. Other arguments are ignored.
                          * @param proto IP protocol. You can use protocol names
                          * ('tcp'/'udp') or simple numbers, as defined in
                          * '/etc/protocols'.
@@ -801,7 +837,7 @@ public class Client {
                      * network configuration key names for VMs and containers
                      * ('net\d+'). Host related rules can use arbitrary strings.
                      * @param macro Use predefined standard macro.
-                     * @param pos Update rule at position &amp;lt;pos>.
+                     * @param pos Update rule at position &amp;lt;pos&amp;gt;.
                      * @param proto IP protocol. You can use protocol names
                      * ('tcp'/'udp') or simple numbers, as defined in
                      * '/etc/protocols'.
@@ -964,8 +1000,8 @@ public class Client {
                      * network configuration key names for VMs and containers
                      * ('net\d+'). Host related rules can use arbitrary strings.
                      * @param macro Use predefined standard macro.
-                     * @param moveto Move rule to new position &amp;lt;moveto>.
-                     * Other arguments are ignored.
+                     * @param moveto Move rule to new position
+                     * &amp;lt;moveto&amp;gt;. Other arguments are ignored.
                      * @param proto IP protocol. You can use protocol names
                      * ('tcp'/'udp') or simple numbers, as defined in
                      * '/etc/protocols'.
@@ -1043,7 +1079,7 @@ public class Client {
                  * configuration key names for VMs and containers ('net\d+').
                  * Host related rules can use arbitrary strings.
                  * @param macro Use predefined standard macro.
-                 * @param pos Update rule at position &amp;lt;pos>.
+                 * @param pos Update rule at position &amp;lt;pos&amp;gt;.
                  * @param proto IP protocol. You can use protocol names
                  * ('tcp'/'udp') or simple numbers, as defined in
                  * '/etc/protocols'.
@@ -1523,8 +1559,8 @@ public class Client {
                  * system.
                  * @param mode Backup mode. Enum: snapshot,suspend,stop
                  * @param node Only run if executed on this node.
-                 * @param pigz Use pigz instead of gzip when N>0. N=1 uses half
-                 * of cores, N>1 uses N as thread count.
+                 * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1
+                 * uses half of cores, N&amp;gt;1 uses N as thread count.
                  * @param quiet Be quiet.
                  * @param remove Remove old backup files if there are more than
                  * 'maxfiles' backup files.
@@ -1613,8 +1649,8 @@ public class Client {
              * @param maxfiles Maximal number of backup files per guest system.
              * @param mode Backup mode. Enum: snapshot,suspend,stop
              * @param node Only run if executed on this node.
-             * @param pigz Use pigz instead of gzip when N>0. N=1 uses half of
-             * cores, N>1 uses N as thread count.
+             * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1 uses
+             * half of cores, N&amp;gt;1 uses N as thread count.
              * @param quiet Be quiet.
              * @param remove Remove old backup files if there are more than
              * 'maxfiles' backup files.
@@ -2858,7 +2894,8 @@ public class Client {
                                  * rules can use arbitrary strings.
                                  * @param macro Use predefined standard macro.
                                  * @param moveto Move rule to new position
-                                 * &amp;lt;moveto>. Other arguments are ignored.
+                                 * &amp;lt;moveto&amp;gt;. Other arguments are
+                                 * ignored.
                                  * @param proto IP protocol. You can use
                                  * protocol names ('tcp'/'udp') or simple
                                  * numbers, as defined in '/etc/protocols'.
@@ -2944,7 +2981,8 @@ public class Client {
                              * containers ('net\d+'). Host related rules can use
                              * arbitrary strings.
                              * @param macro Use predefined standard macro.
-                             * @param pos Update rule at position &amp;lt;pos>.
+                             * @param pos Update rule at position
+                             * &amp;lt;pos&amp;gt;.
                              * @param proto IP protocol. You can use protocol
                              * names ('tcp'/'udp') or simple numbers, as defined
                              * in '/etc/protocols'.
@@ -3340,7 +3378,7 @@ public class Client {
                              * @param enable Enable/disable firewall rules.
                              * @param ipfilter Enable default IP filters. This
                              * is equivalent to adding an empty
-                             * ipfilter-net&amp;lt;id> ipset for every
+                             * ipfilter-net&amp;lt;id&amp;gt; ipset for every
                              * interface. Such ipsets implicitly contain sane
                              * default restrictions such as restricting IPv6
                              * link local addresses to the one derived from the
@@ -5421,7 +5459,7 @@ public class Client {
                          * @param ostype OS type. This is used to setup
                          * configuration inside the container, and corresponds
                          * to lxc setup scripts in
-                         * /usr/share/lxc/config/&amp;lt;ostype>.common.conf.
+                         * /usr/share/lxc/config/&amp;lt;ostype&amp;gt;.common.conf.
                          * Value 'unmanaged' can be used to skip and OS specific
                          * setup. Enum:
                          * debian,ubuntu,centos,fedora,opensuse,archlinux,alpine,gentoo,unmanaged
@@ -6025,7 +6063,8 @@ public class Client {
                                  * rules can use arbitrary strings.
                                  * @param macro Use predefined standard macro.
                                  * @param moveto Move rule to new position
-                                 * &amp;lt;moveto>. Other arguments are ignored.
+                                 * &amp;lt;moveto&amp;gt;. Other arguments are
+                                 * ignored.
                                  * @param proto IP protocol. You can use
                                  * protocol names ('tcp'/'udp') or simple
                                  * numbers, as defined in '/etc/protocols'.
@@ -6111,7 +6150,8 @@ public class Client {
                              * containers ('net\d+'). Host related rules can use
                              * arbitrary strings.
                              * @param macro Use predefined standard macro.
-                             * @param pos Update rule at position &amp;lt;pos>.
+                             * @param pos Update rule at position
+                             * &amp;lt;pos&amp;gt;.
                              * @param proto IP protocol. You can use protocol
                              * names ('tcp'/'udp') or simple numbers, as defined
                              * in '/etc/protocols'.
@@ -6507,7 +6547,7 @@ public class Client {
                              * @param enable Enable/disable firewall rules.
                              * @param ipfilter Enable default IP filters. This
                              * is equivalent to adding an empty
-                             * ipfilter-net&amp;lt;id> ipset for every
+                             * ipfilter-net&amp;lt;id&amp;gt; ipset for every
                              * interface. Such ipsets implicitly contain sane
                              * default restrictions such as restricting IPv6
                              * link local addresses to the one derived from the
@@ -7089,8 +7129,9 @@ public class Client {
                  * system bootup.
                  * @param ostype OS type. This is used to setup configuration
                  * inside the container, and corresponds to lxc setup scripts in
-                 * /usr/share/lxc/config/&amp;lt;ostype>.common.conf. Value
-                 * 'unmanaged' can be used to skip and OS specific setup. Enum:
+                 * /usr/share/lxc/config/&amp;lt;ostype&amp;gt;.common.conf.
+                 * Value 'unmanaged' can be used to skip and OS specific setup.
+                 * Enum:
                  * debian,ubuntu,centos,fedora,opensuse,archlinux,alpine,gentoo,unmanaged
                  * @param password Sets root password inside container.
                  * @param pool Add the VM to the specified pool.
@@ -7865,8 +7906,8 @@ public class Client {
                  * @param maxfiles Maximal number of backup files per guest
                  * system.
                  * @param mode Backup mode. Enum: snapshot,suspend,stop
-                 * @param pigz Use pigz instead of gzip when N>0. N=1 uses half
-                 * of cores, N>1 uses N as thread count.
+                 * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1
+                 * uses half of cores, N&amp;gt;1 uses N as thread count.
                  * @param quiet Be quiet.
                  * @param remove Remove old backup files if there are more than
                  * 'maxfiles' backup files.
@@ -9442,7 +9483,7 @@ public class Client {
                          * arbitrary strings.
                          * @param macro Use predefined standard macro.
                          * @param moveto Move rule to new position
-                         * &amp;lt;moveto>. Other arguments are ignored.
+                         * &amp;lt;moveto&amp;gt;. Other arguments are ignored.
                          * @param proto IP protocol. You can use protocol names
                          * ('tcp'/'udp') or simple numbers, as defined in
                          * '/etc/protocols'.
@@ -9522,7 +9563,7 @@ public class Client {
                      * network configuration key names for VMs and containers
                      * ('net\d+'). Host related rules can use arbitrary strings.
                      * @param macro Use predefined standard macro.
-                     * @param pos Update rule at position &amp;lt;pos>.
+                     * @param pos Update rule at position &amp;lt;pos&amp;gt;.
                      * @param proto IP protocol. You can use protocol names
                      * ('tcp'/'udp') or simple numbers, as defined in
                      * '/etc/protocols'.
@@ -10887,7 +10928,6 @@ public class Client {
 
                 /**
                  * Get role configuration.
-                 * @return 
                  */
                 public JSONObject readRole() {
                     return _client.executeAction("/access/roles/" + _roleid + "", HttpMethod.GET, null);
@@ -11158,7 +11198,7 @@ public class Client {
              * on 'path'
              * @param realm You can optionally pass the realm using this
              * parameter. Normally the realm is simply added to the username
-             * &amp;lt;username>@&amp;lt;relam>.
+             * &amp;lt;username&amp;gt;@&amp;lt;relam&amp;gt;.
              */
             public JSONObject createTicket(String password, String username, String otp, String path, String privs, String realm) {
                 Map<String, Object> parameters = new HashMap<String, Object>();
