@@ -46,6 +46,8 @@ public class Client {
     private Client _client;
     private final String _hostName;
     private final int _port;
+    private int _statusCode;
+    private String _reasonPhrase;
 
     public Client(String hostName, int port) {
         _client = this;
@@ -100,27 +102,35 @@ public class Client {
         }
     }
 
-    protected enum HttpMethod {
+    public String getReasonPhrase() {
+        return _reasonPhrase;
+    }
+
+    public int getStatusCode() {
+        return _statusCode;
+    }
+
+    private enum HttpMethod {
         GET, POST, PUT, DELETE
     }
 
-    public JSONObject get(String resource, Map<String, Object> parameters) {
+    public JSONObject get(String resource, Map<String, Object> parameters) throws JSONException {
         return executeAction(resource, HttpMethod.GET, parameters);
     }
 
-    public JSONObject put(String resource, Map<String, Object> parameters) {
+    public JSONObject put(String resource, Map<String, Object> parameters) throws JSONException {
         return executeAction(resource, HttpMethod.PUT, parameters);
     }
 
-    public JSONObject post(String resource, Map<String, Object> parameters) {
+    public JSONObject post(String resource, Map<String, Object> parameters) throws JSONException {
         return executeAction(resource, HttpMethod.POST, parameters);
     }
 
-    public JSONObject ddelete(String resource, Map<String, Object> parameters) {
+    public JSONObject delete(String resource, Map<String, Object> parameters) throws JSONException {
         return executeAction(resource, HttpMethod.DELETE, parameters);
     }
 
-    protected JSONObject executeAction(String resource, HttpMethod method, Map<String, Object> parameters) {
+    private JSONObject executeAction(String resource, HttpMethod method, Map<String, Object> parameters) throws JSONException {
         String url = "https://" + _hostName + ":" + _port + "/api2/json" + resource;
         //fix parms
         ArrayList<NameValuePair> parms = new ArrayList<NameValuePair>();
@@ -175,6 +185,7 @@ public class Client {
             }
             case DELETE: {
                 request = new HttpDelete(url);
+                break;
             }
         }
         if (_ticketCSRFPreventionToken != null) {
@@ -195,8 +206,8 @@ public class Client {
         JSONObject response = null;
         try {
             httpResponse = client.execute(request);
-            //responseCode = httpResponse.getStatusLine().getStatusCode();
-            //message = httpResponse.getStatusLine().getReasonPhrase();
+            _statusCode = httpResponse.getStatusLine().getStatusCode();
+            _reasonPhrase = httpResponse.getStatusLine().getReasonPhrase();
             HttpEntity entity = httpResponse.getEntity();
             if (entity != null) {
                 InputStream instream = entity.getContent();
@@ -422,25 +433,25 @@ public class Client {
                  * cleanup.
                  * @param keep Keep replicated data at target (do not remove).
                  */
-                public void delete(Boolean force, Boolean keep) {
+                public void delete(Boolean force, Boolean keep) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("force", force);
                     parameters.put("keep", keep);
-                    _client.executeAction("/cluster/replication/" + _id + "", HttpMethod.DELETE, parameters);
+                    _client.delete("/cluster/replication/" + _id + "", parameters);
                 }
 
                 /**
                  * Mark replication job for removal.
                  */
-                public void delete() {
-                    _client.executeAction("/cluster/replication/" + _id + "", HttpMethod.DELETE, null);
+                public void delete() throws JSONException {
+                    _client.delete("/cluster/replication/" + _id + "", null);
                 }
 
                 /**
                  * Read replication job configuration.
                  */
-                public JSONObject read() {
-                    return _client.executeAction("/cluster/replication/" + _id + "", HttpMethod.GET, null);
+                public JSONObject read() throws JSONException {
+                    return _client.get("/cluster/replication/" + _id + "", null);
                 }
 
                 /**
@@ -462,7 +473,7 @@ public class Client {
                  * @param schedule Storage replication schedule. The format is a
                  * subset of `systemd` calender events.
                  */
-                public void update(String comment, String delete, String digest, Boolean disable, Integer rate, String remove_job, String schedule) {
+                public void update(String comment, String delete, String digest, Boolean disable, Integer rate, String remove_job, String schedule) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("comment", comment);
                     parameters.put("delete", delete);
@@ -471,22 +482,22 @@ public class Client {
                     parameters.put("rate", rate);
                     parameters.put("remove_job", remove_job);
                     parameters.put("schedule", schedule);
-                    _client.executeAction("/cluster/replication/" + _id + "", HttpMethod.PUT, parameters);
+                    _client.put("/cluster/replication/" + _id + "", parameters);
                 }
 
                 /**
                  * Update replication job configuration.
                  */
-                public void update() {
-                    _client.executeAction("/cluster/replication/" + _id + "", HttpMethod.PUT, null);
+                public void update() throws JSONException {
+                    _client.put("/cluster/replication/" + _id + "", null);
                 }
             }
 
             /**
              * List replication jobs.
              */
-            public JSONObject index() {
-                return _client.executeAction("/cluster/replication", HttpMethod.GET, null);
+            public JSONObject index() throws JSONException {
+                return _client.get("/cluster/replication", null);
             }
 
             /**
@@ -508,7 +519,7 @@ public class Client {
              * @param schedule Storage replication schedule. The format is a
              * subset of `systemd` calender events.
              */
-            public void create(String id, String target, String type, String comment, Boolean disable, Integer rate, String remove_job, String schedule) {
+            public void create(String id, String target, String type, String comment, Boolean disable, Integer rate, String remove_job, String schedule) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("id", id);
                 parameters.put("target", target);
@@ -518,7 +529,7 @@ public class Client {
                 parameters.put("rate", rate);
                 parameters.put("remove_job", remove_job);
                 parameters.put("schedule", schedule);
-                _client.executeAction("/cluster/replication", HttpMethod.POST, parameters);
+                _client.post("/cluster/replication", parameters);
             }
 
             /**
@@ -530,12 +541,12 @@ public class Client {
              * @param target Target node.
              * @param type Section type. Enum: local
              */
-            public void create(String id, String target, String type) {
+            public void create(String id, String target, String type) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("id", id);
                 parameters.put("target", target);
                 parameters.put("type", type);
-                _client.executeAction("/cluster/replication", HttpMethod.POST, parameters);
+                _client.post("/cluster/replication", parameters);
             }
         }
 
@@ -570,8 +581,8 @@ public class Client {
                 /**
                  * Corosync node list.
                  */
-                public JSONObject nodes() {
-                    return _client.executeAction("/cluster/config/nodes", HttpMethod.GET, null);
+                public JSONObject nodes() throws JSONException {
+                    return _client.get("/cluster/config/nodes", null);
                 }
             }
 
@@ -584,16 +595,16 @@ public class Client {
                 /**
                  * Get corosync totem protocol settings.
                  */
-                public JSONObject totem() {
-                    return _client.executeAction("/cluster/config/totem", HttpMethod.GET, null);
+                public JSONObject totem() throws JSONException {
+                    return _client.get("/cluster/config/totem", null);
                 }
             }
 
             /**
              * Directory index.
              */
-            public JSONObject index() {
-                return _client.executeAction("/cluster/config", HttpMethod.GET, null);
+            public JSONObject index() throws JSONException {
+                return _client.get("/cluster/config", null);
             }
         }
 
@@ -700,24 +711,24 @@ public class Client {
                          * configuration file has different SHA1 digest. This
                          * can be used to prevent concurrent modifications.
                          */
-                        public void deleteRule(String digest) {
+                        public void deleteRule(String digest) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("digest", digest);
-                            _client.executeAction("/cluster/firewall/groups/" + _group + "/" + _pos + "", HttpMethod.DELETE, parameters);
+                            _client.delete("/cluster/firewall/groups/" + _group + "/" + _pos + "", parameters);
                         }
 
                         /**
                          * Delete rule.
                          */
-                        public void deleteRule() {
-                            _client.executeAction("/cluster/firewall/groups/" + _group + "/" + _pos + "", HttpMethod.DELETE, null);
+                        public void deleteRule() throws JSONException {
+                            _client.delete("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
                         }
 
                         /**
                          * Get single rule data.
                          */
-                        public JSONObject getRule() {
-                            return _client.executeAction("/cluster/firewall/groups/" + _group + "/" + _pos + "", HttpMethod.GET, null);
+                        public JSONObject getRule() throws JSONException {
+                            return _client.get("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
                         }
 
                         /**
@@ -769,7 +780,7 @@ public class Client {
                          * ports or ranges.
                          * @param type Rule type. Enum: in,out,group
                          */
-                        public void updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) {
+                        public void updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("action", action);
                             parameters.put("comment", comment);
@@ -785,29 +796,29 @@ public class Client {
                             parameters.put("source", source);
                             parameters.put("sport", sport);
                             parameters.put("type", type);
-                            _client.executeAction("/cluster/firewall/groups/" + _group + "/" + _pos + "", HttpMethod.PUT, parameters);
+                            _client.put("/cluster/firewall/groups/" + _group + "/" + _pos + "", parameters);
                         }
 
                         /**
                          * Modify rule data.
                          */
-                        public void updateRule() {
-                            _client.executeAction("/cluster/firewall/groups/" + _group + "/" + _pos + "", HttpMethod.PUT, null);
+                        public void updateRule() throws JSONException {
+                            _client.put("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
                         }
                     }
 
                     /**
                      * Delete security group.
                      */
-                    public void deleteSecurityGroup() {
-                        _client.executeAction("/cluster/firewall/groups/" + _group + "", HttpMethod.DELETE, null);
+                    public void deleteSecurityGroup() throws JSONException {
+                        _client.delete("/cluster/firewall/groups/" + _group + "", null);
                     }
 
                     /**
                      * List rules.
                      */
-                    public JSONObject getRules() {
-                        return _client.executeAction("/cluster/firewall/groups/" + _group + "", HttpMethod.GET, null);
+                    public JSONObject getRules() throws JSONException {
+                        return _client.get("/cluster/firewall/groups/" + _group + "", null);
                     }
 
                     /**
@@ -854,7 +865,7 @@ public class Client {
                      * '\d+:\d+', for example '80:85', and you can use comma
                      * separated list to match several ports or ranges.
                      */
-                    public void createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) {
+                    public void createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("action", action);
                         parameters.put("type", type);
@@ -869,7 +880,7 @@ public class Client {
                         parameters.put("proto", proto);
                         parameters.put("source", source);
                         parameters.put("sport", sport);
-                        _client.executeAction("/cluster/firewall/groups/" + _group + "", HttpMethod.POST, parameters);
+                        _client.post("/cluster/firewall/groups/" + _group + "", parameters);
                     }
 
                     /**
@@ -879,19 +890,19 @@ public class Client {
                      * security group name.
                      * @param type Rule type. Enum: in,out,group
                      */
-                    public void createRule(String action, String type) {
+                    public void createRule(String action, String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("action", action);
                         parameters.put("type", type);
-                        _client.executeAction("/cluster/firewall/groups/" + _group + "", HttpMethod.POST, parameters);
+                        _client.post("/cluster/firewall/groups/" + _group + "", parameters);
                     }
                 }
 
                 /**
                  * List security groups.
                  */
-                public JSONObject listSecurityGroups() {
-                    return _client.executeAction("/cluster/firewall/groups", HttpMethod.GET, null);
+                public JSONObject listSecurityGroups() throws JSONException {
+                    return _client.get("/cluster/firewall/groups", null);
                 }
 
                 /**
@@ -906,13 +917,13 @@ public class Client {
                  * can set 'rename' to the same value as 'name' to update the
                  * 'comment' of an existing group.
                  */
-                public void createSecurityGroup(String group, String comment, String digest, String rename) {
+                public void createSecurityGroup(String group, String comment, String digest, String rename) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("group", group);
                     parameters.put("comment", comment);
                     parameters.put("digest", digest);
                     parameters.put("rename", rename);
-                    _client.executeAction("/cluster/firewall/groups", HttpMethod.POST, parameters);
+                    _client.post("/cluster/firewall/groups", parameters);
                 }
 
                 /**
@@ -920,10 +931,10 @@ public class Client {
                  *
                  * @param group Security Group name.
                  */
-                public void createSecurityGroup(String group) {
+                public void createSecurityGroup(String group) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("group", group);
-                    _client.executeAction("/cluster/firewall/groups", HttpMethod.POST, parameters);
+                    _client.post("/cluster/firewall/groups", parameters);
                 }
             }
 
@@ -953,24 +964,24 @@ public class Client {
                      * file has different SHA1 digest. This can be used to
                      * prevent concurrent modifications.
                      */
-                    public void deleteRule(String digest) {
+                    public void deleteRule(String digest) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("digest", digest);
-                        _client.executeAction("/cluster/firewall/rules/" + _pos + "", HttpMethod.DELETE, parameters);
+                        _client.delete("/cluster/firewall/rules/" + _pos + "", parameters);
                     }
 
                     /**
                      * Delete rule.
                      */
-                    public void deleteRule() {
-                        _client.executeAction("/cluster/firewall/rules/" + _pos + "", HttpMethod.DELETE, null);
+                    public void deleteRule() throws JSONException {
+                        _client.delete("/cluster/firewall/rules/" + _pos + "", null);
                     }
 
                     /**
                      * Get single rule data.
                      */
-                    public JSONObject getRule() {
-                        return _client.executeAction("/cluster/firewall/rules/" + _pos + "", HttpMethod.GET, null);
+                    public JSONObject getRule() throws JSONException {
+                        return _client.get("/cluster/firewall/rules/" + _pos + "", null);
                     }
 
                     /**
@@ -1019,7 +1030,7 @@ public class Client {
                      * separated list to match several ports or ranges.
                      * @param type Rule type. Enum: in,out,group
                      */
-                    public void updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) {
+                    public void updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("action", action);
                         parameters.put("comment", comment);
@@ -1035,22 +1046,22 @@ public class Client {
                         parameters.put("source", source);
                         parameters.put("sport", sport);
                         parameters.put("type", type);
-                        _client.executeAction("/cluster/firewall/rules/" + _pos + "", HttpMethod.PUT, parameters);
+                        _client.put("/cluster/firewall/rules/" + _pos + "", parameters);
                     }
 
                     /**
                      * Modify rule data.
                      */
-                    public void updateRule() {
-                        _client.executeAction("/cluster/firewall/rules/" + _pos + "", HttpMethod.PUT, null);
+                    public void updateRule() throws JSONException {
+                        _client.put("/cluster/firewall/rules/" + _pos + "", null);
                     }
                 }
 
                 /**
                  * List rules.
                  */
-                public JSONObject getRules() {
-                    return _client.executeAction("/cluster/firewall/rules", HttpMethod.GET, null);
+                public JSONObject getRules() throws JSONException {
+                    return _client.get("/cluster/firewall/rules", null);
                 }
 
                 /**
@@ -1095,7 +1106,7 @@ public class Client {
                  * for example '80:85', and you can use comma separated list to
                  * match several ports or ranges.
                  */
-                public void createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) {
+                public void createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("action", action);
                     parameters.put("type", type);
@@ -1110,7 +1121,7 @@ public class Client {
                     parameters.put("proto", proto);
                     parameters.put("source", source);
                     parameters.put("sport", sport);
-                    _client.executeAction("/cluster/firewall/rules", HttpMethod.POST, parameters);
+                    _client.post("/cluster/firewall/rules", parameters);
                 }
 
                 /**
@@ -1120,11 +1131,11 @@ public class Client {
                  * security group name.
                  * @param type Rule type. Enum: in,out,group
                  */
-                public void createRule(String action, String type) {
+                public void createRule(String action, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("action", action);
                     parameters.put("type", type);
-                    _client.executeAction("/cluster/firewall/rules", HttpMethod.POST, parameters);
+                    _client.post("/cluster/firewall/rules", parameters);
                 }
             }
 
@@ -1169,24 +1180,24 @@ public class Client {
                          * configuration file has different SHA1 digest. This
                          * can be used to prevent concurrent modifications.
                          */
-                        public void removeIp(String digest) {
+                        public void removeIp(String digest) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("digest", digest);
-                            _client.executeAction("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.DELETE, parameters);
+                            _client.delete("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
                         }
 
                         /**
                          * Remove IP or Network from IPSet.
                          */
-                        public void removeIp() {
-                            _client.executeAction("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.DELETE, null);
+                        public void removeIp() throws JSONException {
+                            _client.delete("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
                         }
 
                         /**
                          * Read IP or Network settings from IPSet.
                          */
-                        public JSONObject readIp() {
-                            return _client.executeAction("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.GET, null);
+                        public JSONObject readIp() throws JSONException {
+                            return _client.get("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
                         }
 
                         /**
@@ -1198,34 +1209,34 @@ public class Client {
                          * can be used to prevent concurrent modifications.
                          * @param nomatch
                          */
-                        public void updateIp(String comment, String digest, Boolean nomatch) {
+                        public void updateIp(String comment, String digest, Boolean nomatch) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("comment", comment);
                             parameters.put("digest", digest);
                             parameters.put("nomatch", nomatch);
-                            _client.executeAction("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.PUT, parameters);
+                            _client.put("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
                         }
 
                         /**
                          * Update IP or Network settings
                          */
-                        public void updateIp() {
-                            _client.executeAction("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.PUT, null);
+                        public void updateIp() throws JSONException {
+                            _client.put("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
                         }
                     }
 
                     /**
                      * Delete IPSet
                      */
-                    public void deleteIpset() {
-                        _client.executeAction("/cluster/firewall/ipset/" + _name + "", HttpMethod.DELETE, null);
+                    public void deleteIpset() throws JSONException {
+                        _client.delete("/cluster/firewall/ipset/" + _name + "", null);
                     }
 
                     /**
                      * List IPSet content
                      */
-                    public JSONObject getIpset() {
-                        return _client.executeAction("/cluster/firewall/ipset/" + _name + "", HttpMethod.GET, null);
+                    public JSONObject getIpset() throws JSONException {
+                        return _client.get("/cluster/firewall/ipset/" + _name + "", null);
                     }
 
                     /**
@@ -1235,12 +1246,12 @@ public class Client {
                      * @param comment
                      * @param nomatch
                      */
-                    public void createIp(String cidr, String comment, Boolean nomatch) {
+                    public void createIp(String cidr, String comment, Boolean nomatch) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("cidr", cidr);
                         parameters.put("comment", comment);
                         parameters.put("nomatch", nomatch);
-                        _client.executeAction("/cluster/firewall/ipset/" + _name + "", HttpMethod.POST, parameters);
+                        _client.post("/cluster/firewall/ipset/" + _name + "", parameters);
                     }
 
                     /**
@@ -1248,18 +1259,18 @@ public class Client {
                      *
                      * @param cidr Network/IP specification in CIDR format.
                      */
-                    public void createIp(String cidr) {
+                    public void createIp(String cidr) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("cidr", cidr);
-                        _client.executeAction("/cluster/firewall/ipset/" + _name + "", HttpMethod.POST, parameters);
+                        _client.post("/cluster/firewall/ipset/" + _name + "", parameters);
                     }
                 }
 
                 /**
                  * List IPSets
                  */
-                public JSONObject ipsetIndex() {
-                    return _client.executeAction("/cluster/firewall/ipset", HttpMethod.GET, null);
+                public JSONObject ipsetIndex() throws JSONException {
+                    return _client.get("/cluster/firewall/ipset", null);
                 }
 
                 /**
@@ -1274,13 +1285,13 @@ public class Client {
                  * to the same value as 'name' to update the 'comment' of an
                  * existing IPSet.
                  */
-                public void createIpset(String name, String comment, String digest, String rename) {
+                public void createIpset(String name, String comment, String digest, String rename) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("name", name);
                     parameters.put("comment", comment);
                     parameters.put("digest", digest);
                     parameters.put("rename", rename);
-                    _client.executeAction("/cluster/firewall/ipset", HttpMethod.POST, parameters);
+                    _client.post("/cluster/firewall/ipset", parameters);
                 }
 
                 /**
@@ -1288,10 +1299,10 @@ public class Client {
                  *
                  * @param name IP set name.
                  */
-                public void createIpset(String name) {
+                public void createIpset(String name) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("name", name);
-                    _client.executeAction("/cluster/firewall/ipset", HttpMethod.POST, parameters);
+                    _client.post("/cluster/firewall/ipset", parameters);
                 }
             }
 
@@ -1321,24 +1332,24 @@ public class Client {
                      * file has different SHA1 digest. This can be used to
                      * prevent concurrent modifications.
                      */
-                    public void removeAlias(String digest) {
+                    public void removeAlias(String digest) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("digest", digest);
-                        _client.executeAction("/cluster/firewall/aliases/" + _name + "", HttpMethod.DELETE, parameters);
+                        _client.delete("/cluster/firewall/aliases/" + _name + "", parameters);
                     }
 
                     /**
                      * Remove IP or Network alias.
                      */
-                    public void removeAlias() {
-                        _client.executeAction("/cluster/firewall/aliases/" + _name + "", HttpMethod.DELETE, null);
+                    public void removeAlias() throws JSONException {
+                        _client.delete("/cluster/firewall/aliases/" + _name + "", null);
                     }
 
                     /**
                      * Read alias.
                      */
-                    public JSONObject readAlias() {
-                        return _client.executeAction("/cluster/firewall/aliases/" + _name + "", HttpMethod.GET, null);
+                    public JSONObject readAlias() throws JSONException {
+                        return _client.get("/cluster/firewall/aliases/" + _name + "", null);
                     }
 
                     /**
@@ -1351,13 +1362,13 @@ public class Client {
                      * prevent concurrent modifications.
                      * @param rename Rename an existing alias.
                      */
-                    public void updateAlias(String cidr, String comment, String digest, String rename) {
+                    public void updateAlias(String cidr, String comment, String digest, String rename) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("cidr", cidr);
                         parameters.put("comment", comment);
                         parameters.put("digest", digest);
                         parameters.put("rename", rename);
-                        _client.executeAction("/cluster/firewall/aliases/" + _name + "", HttpMethod.PUT, parameters);
+                        _client.put("/cluster/firewall/aliases/" + _name + "", parameters);
                     }
 
                     /**
@@ -1365,18 +1376,18 @@ public class Client {
                      *
                      * @param cidr Network/IP specification in CIDR format.
                      */
-                    public void updateAlias(String cidr) {
+                    public void updateAlias(String cidr) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("cidr", cidr);
-                        _client.executeAction("/cluster/firewall/aliases/" + _name + "", HttpMethod.PUT, parameters);
+                        _client.put("/cluster/firewall/aliases/" + _name + "", parameters);
                     }
                 }
 
                 /**
                  * List aliases
                  */
-                public JSONObject getAliases() {
-                    return _client.executeAction("/cluster/firewall/aliases", HttpMethod.GET, null);
+                public JSONObject getAliases() throws JSONException {
+                    return _client.get("/cluster/firewall/aliases", null);
                 }
 
                 /**
@@ -1386,12 +1397,12 @@ public class Client {
                  * @param name Alias name.
                  * @param comment
                  */
-                public void createAlias(String cidr, String name, String comment) {
+                public void createAlias(String cidr, String name, String comment) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("cidr", cidr);
                     parameters.put("name", name);
                     parameters.put("comment", comment);
-                    _client.executeAction("/cluster/firewall/aliases", HttpMethod.POST, parameters);
+                    _client.post("/cluster/firewall/aliases", parameters);
                 }
 
                 /**
@@ -1400,11 +1411,11 @@ public class Client {
                  * @param cidr Network/IP specification in CIDR format.
                  * @param name Alias name.
                  */
-                public void createAlias(String cidr, String name) {
+                public void createAlias(String cidr, String name) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("cidr", cidr);
                     parameters.put("name", name);
-                    _client.executeAction("/cluster/firewall/aliases", HttpMethod.POST, parameters);
+                    _client.post("/cluster/firewall/aliases", parameters);
                 }
             }
 
@@ -1417,8 +1428,8 @@ public class Client {
                 /**
                  * Get Firewall options.
                  */
-                public JSONObject getOptions() {
-                    return _client.executeAction("/cluster/firewall/options", HttpMethod.GET, null);
+                public JSONObject getOptions() throws JSONException {
+                    return _client.get("/cluster/firewall/options", null);
                 }
 
                 /**
@@ -1432,21 +1443,21 @@ public class Client {
                  * @param policy_in Input policy. Enum: ACCEPT,REJECT,DROP
                  * @param policy_out Output policy. Enum: ACCEPT,REJECT,DROP
                  */
-                public void setOptions(String delete, String digest, Integer enable, String policy_in, String policy_out) {
+                public void setOptions(String delete, String digest, Integer enable, String policy_in, String policy_out) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("delete", delete);
                     parameters.put("digest", digest);
                     parameters.put("enable", enable);
                     parameters.put("policy_in", policy_in);
                     parameters.put("policy_out", policy_out);
-                    _client.executeAction("/cluster/firewall/options", HttpMethod.PUT, parameters);
+                    _client.put("/cluster/firewall/options", parameters);
                 }
 
                 /**
                  * Set Firewall options.
                  */
-                public void setOptions() {
-                    _client.executeAction("/cluster/firewall/options", HttpMethod.PUT, null);
+                public void setOptions() throws JSONException {
+                    _client.put("/cluster/firewall/options", null);
                 }
             }
 
@@ -1459,8 +1470,8 @@ public class Client {
                 /**
                  * List available macros
                  */
-                public JSONObject getMacros() {
-                    return _client.executeAction("/cluster/firewall/macros", HttpMethod.GET, null);
+                public JSONObject getMacros() throws JSONException {
+                    return _client.get("/cluster/firewall/macros", null);
                 }
             }
 
@@ -1477,26 +1488,26 @@ public class Client {
                  * @param type Only list references of specified type. Enum:
                  * alias,ipset
                  */
-                public JSONObject refs(String type) {
+                public JSONObject refs(String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("type", type);
-                    return _client.executeAction("/cluster/firewall/refs", HttpMethod.GET, parameters);
+                    return _client.get("/cluster/firewall/refs", parameters);
                 }
 
                 /**
                  * Lists possible IPSet/Alias reference which are allowed in
                  * source/dest properties.
                  */
-                public JSONObject refs() {
-                    return _client.executeAction("/cluster/firewall/refs", HttpMethod.GET, null);
+                public JSONObject refs() throws JSONException {
+                    return _client.get("/cluster/firewall/refs", null);
                 }
             }
 
             /**
              * Directory index.
              */
-            public JSONObject index() {
-                return _client.executeAction("/cluster/firewall", HttpMethod.GET, null);
+            public JSONObject index() throws JSONException {
+                return _client.get("/cluster/firewall", null);
             }
         }
 
@@ -1522,15 +1533,15 @@ public class Client {
                 /**
                  * Delete vzdump backup job definition.
                  */
-                public void deleteJob() {
-                    _client.executeAction("/cluster/backup/" + _id + "", HttpMethod.DELETE, null);
+                public void deleteJob() throws JSONException {
+                    _client.delete("/cluster/backup/" + _id + "", null);
                 }
 
                 /**
                  * Read vzdump backup job definition.
                  */
-                public JSONObject readJob() {
-                    return _client.executeAction("/cluster/backup/" + _id + "", HttpMethod.GET, null);
+                public JSONObject readJob() throws JSONException {
+                    return _client.get("/cluster/backup/" + _id + "", null);
                 }
 
                 /**
@@ -1574,7 +1585,7 @@ public class Client {
                  * @param tmpdir Store temporary files to specified directory.
                  * @param vmid The ID of the guest system you want to backup.
                  */
-                public void updateJob(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) {
+                public void updateJob(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("starttime", starttime);
                     parameters.put("all", all);
@@ -1604,7 +1615,7 @@ public class Client {
                     parameters.put("storage", storage);
                     parameters.put("tmpdir", tmpdir);
                     parameters.put("vmid", vmid);
-                    _client.executeAction("/cluster/backup/" + _id + "", HttpMethod.PUT, parameters);
+                    _client.put("/cluster/backup/" + _id + "", parameters);
                 }
 
                 /**
@@ -1612,18 +1623,18 @@ public class Client {
                  *
                  * @param starttime Job Start time.
                  */
-                public void updateJob(String starttime) {
+                public void updateJob(String starttime) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("starttime", starttime);
-                    _client.executeAction("/cluster/backup/" + _id + "", HttpMethod.PUT, parameters);
+                    _client.put("/cluster/backup/" + _id + "", parameters);
                 }
             }
 
             /**
              * List vzdump backup schedule.
              */
-            public JSONObject index() {
-                return _client.executeAction("/cluster/backup", HttpMethod.GET, null);
+            public JSONObject index() throws JSONException {
+                return _client.get("/cluster/backup", null);
             }
 
             /**
@@ -1664,7 +1675,7 @@ public class Client {
              * @param tmpdir Store temporary files to specified directory.
              * @param vmid The ID of the guest system you want to backup.
              */
-            public void createJob(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) {
+            public void createJob(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("starttime", starttime);
                 parameters.put("all", all);
@@ -1693,7 +1704,7 @@ public class Client {
                 parameters.put("storage", storage);
                 parameters.put("tmpdir", tmpdir);
                 parameters.put("vmid", vmid);
-                _client.executeAction("/cluster/backup", HttpMethod.POST, parameters);
+                _client.post("/cluster/backup", parameters);
             }
 
             /**
@@ -1701,10 +1712,10 @@ public class Client {
              *
              * @param starttime Job Start time.
              */
-            public void createJob(String starttime) {
+            public void createJob(String starttime) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("starttime", starttime);
-                _client.executeAction("/cluster/backup", HttpMethod.POST, parameters);
+                _client.post("/cluster/backup", parameters);
             }
         }
 
@@ -1787,10 +1798,10 @@ public class Client {
                          *
                          * @param node The cluster node name.
                          */
-                        public void migrate(String node) {
+                        public void migrate(String node) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("node", node);
-                            _client.executeAction("/cluster/ha/resources/" + _sid + "/migrate", HttpMethod.POST, parameters);
+                            _client.post("/cluster/ha/resources/" + _sid + "/migrate", parameters);
                         }
                     }
 
@@ -1810,25 +1821,25 @@ public class Client {
                          *
                          * @param node The cluster node name.
                          */
-                        public void relocate(String node) {
+                        public void relocate(String node) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("node", node);
-                            _client.executeAction("/cluster/ha/resources/" + _sid + "/relocate", HttpMethod.POST, parameters);
+                            _client.post("/cluster/ha/resources/" + _sid + "/relocate", parameters);
                         }
                     }
 
                     /**
                      * Delete resource configuration.
                      */
-                    public void delete() {
-                        _client.executeAction("/cluster/ha/resources/" + _sid + "", HttpMethod.DELETE, null);
+                    public void delete() throws JSONException {
+                        _client.delete("/cluster/ha/resources/" + _sid + "", null);
                     }
 
                     /**
                      * Read resource configuration.
                      */
-                    public JSONObject read() {
-                        return _client.executeAction("/cluster/ha/resources/" + _sid + "", HttpMethod.GET, null);
+                    public JSONObject read() throws JSONException {
+                        return _client.get("/cluster/ha/resources/" + _sid + "", null);
                     }
 
                     /**
@@ -1847,7 +1858,7 @@ public class Client {
                      * @param state Requested resource state. Enum:
                      * started,stopped,enabled,disabled
                      */
-                    public void update(String comment, String delete, String digest, String group, Integer max_relocate, Integer max_restart, String state) {
+                    public void update(String comment, String delete, String digest, String group, Integer max_relocate, Integer max_restart, String state) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("comment", comment);
                         parameters.put("delete", delete);
@@ -1856,14 +1867,14 @@ public class Client {
                         parameters.put("max_relocate", max_relocate);
                         parameters.put("max_restart", max_restart);
                         parameters.put("state", state);
-                        _client.executeAction("/cluster/ha/resources/" + _sid + "", HttpMethod.PUT, parameters);
+                        _client.put("/cluster/ha/resources/" + _sid + "", parameters);
                     }
 
                     /**
                      * Update resource configuration.
                      */
-                    public void update() {
-                        _client.executeAction("/cluster/ha/resources/" + _sid + "", HttpMethod.PUT, null);
+                    public void update() throws JSONException {
+                        _client.put("/cluster/ha/resources/" + _sid + "", null);
                     }
                 }
 
@@ -1872,17 +1883,17 @@ public class Client {
                  *
                  * @param type Only list resources of specific type Enum: ct,vm
                  */
-                public JSONObject index(String type) {
+                public JSONObject index(String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("type", type);
-                    return _client.executeAction("/cluster/ha/resources", HttpMethod.GET, parameters);
+                    return _client.get("/cluster/ha/resources", parameters);
                 }
 
                 /**
                  * List HA resources.
                  */
-                public JSONObject index() {
-                    return _client.executeAction("/cluster/ha/resources", HttpMethod.GET, null);
+                public JSONObject index() throws JSONException {
+                    return _client.get("/cluster/ha/resources", null);
                 }
 
                 /**
@@ -1903,7 +1914,7 @@ public class Client {
                  * started,stopped,enabled,disabled
                  * @param type Resource type. Enum: ct,vm
                  */
-                public void create(String sid, String comment, String group, Integer max_relocate, Integer max_restart, String state, String type) {
+                public void create(String sid, String comment, String group, Integer max_relocate, Integer max_restart, String state, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("sid", sid);
                     parameters.put("comment", comment);
@@ -1912,7 +1923,7 @@ public class Client {
                     parameters.put("max_restart", max_restart);
                     parameters.put("state", state);
                     parameters.put("type", type);
-                    _client.executeAction("/cluster/ha/resources", HttpMethod.POST, parameters);
+                    _client.post("/cluster/ha/resources", parameters);
                 }
 
                 /**
@@ -1924,10 +1935,10 @@ public class Client {
                  * containers, you can simply use the VM or CT id as a shortcut
                  * (example: 100).
                  */
-                public void create(String sid) {
+                public void create(String sid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("sid", sid);
-                    _client.executeAction("/cluster/ha/resources", HttpMethod.POST, parameters);
+                    _client.post("/cluster/ha/resources", parameters);
                 }
             }
 
@@ -1953,15 +1964,15 @@ public class Client {
                     /**
                      * Delete ha group configuration.
                      */
-                    public void delete() {
-                        _client.executeAction("/cluster/ha/groups/" + _group + "", HttpMethod.DELETE, null);
+                    public void delete() throws JSONException {
+                        _client.delete("/cluster/ha/groups/" + _group + "", null);
                     }
 
                     /**
                      * Read ha group configuration.
                      */
-                    public JSONObject read() {
-                        return _client.executeAction("/cluster/ha/groups/" + _group + "", HttpMethod.GET, null);
+                    public JSONObject read() throws JSONException {
+                        return _client.get("/cluster/ha/groups/" + _group + "", null);
                     }
 
                     /**
@@ -1981,7 +1992,7 @@ public class Client {
                      * @param restricted Resources bound to restricted groups
                      * may only run on nodes defined by the group.
                      */
-                    public void update(String comment, String delete, String digest, String nodes, Boolean nofailback, Boolean restricted) {
+                    public void update(String comment, String delete, String digest, String nodes, Boolean nofailback, Boolean restricted) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("comment", comment);
                         parameters.put("delete", delete);
@@ -1989,22 +2000,22 @@ public class Client {
                         parameters.put("nodes", nodes);
                         parameters.put("nofailback", nofailback);
                         parameters.put("restricted", restricted);
-                        _client.executeAction("/cluster/ha/groups/" + _group + "", HttpMethod.PUT, parameters);
+                        _client.put("/cluster/ha/groups/" + _group + "", parameters);
                     }
 
                     /**
                      * Update ha group configuration.
                      */
-                    public void update() {
-                        _client.executeAction("/cluster/ha/groups/" + _group + "", HttpMethod.PUT, null);
+                    public void update() throws JSONException {
+                        _client.put("/cluster/ha/groups/" + _group + "", null);
                     }
                 }
 
                 /**
                  * Get HA groups.
                  */
-                public JSONObject index() {
-                    return _client.executeAction("/cluster/ha/groups", HttpMethod.GET, null);
+                public JSONObject index() throws JSONException {
+                    return _client.get("/cluster/ha/groups", null);
                 }
 
                 /**
@@ -2022,7 +2033,7 @@ public class Client {
                  * only run on nodes defined by the group.
                  * @param type Group type. Enum: group
                  */
-                public void create(String group, String nodes, String comment, Boolean nofailback, Boolean restricted, String type) {
+                public void create(String group, String nodes, String comment, Boolean nofailback, Boolean restricted, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("group", group);
                     parameters.put("nodes", nodes);
@@ -2030,7 +2041,7 @@ public class Client {
                     parameters.put("nofailback", nofailback);
                     parameters.put("restricted", restricted);
                     parameters.put("type", type);
-                    _client.executeAction("/cluster/ha/groups", HttpMethod.POST, parameters);
+                    _client.post("/cluster/ha/groups", parameters);
                 }
 
                 /**
@@ -2040,11 +2051,11 @@ public class Client {
                  * @param nodes List of cluster node names with optional
                  * priority.
                  */
-                public void create(String group, String nodes) {
+                public void create(String group, String nodes) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("group", group);
                     parameters.put("nodes", nodes);
-                    _client.executeAction("/cluster/ha/groups", HttpMethod.POST, parameters);
+                    _client.post("/cluster/ha/groups", parameters);
                 }
             }
 
@@ -2079,8 +2090,8 @@ public class Client {
                     /**
                      * Get HA manger status.
                      */
-                    public JSONObject status() {
-                        return _client.executeAction("/cluster/ha/status/current", HttpMethod.GET, null);
+                    public JSONObject status() throws JSONException {
+                        return _client.get("/cluster/ha/status/current", null);
                     }
                 }
 
@@ -2093,24 +2104,24 @@ public class Client {
                     /**
                      * Get full HA manger status, including LRM status.
                      */
-                    public JSONObject managerStatus() {
-                        return _client.executeAction("/cluster/ha/status/manager_status", HttpMethod.GET, null);
+                    public JSONObject managerStatus() throws JSONException {
+                        return _client.get("/cluster/ha/status/manager_status", null);
                     }
                 }
 
                 /**
                  * Directory index.
                  */
-                public JSONObject index() {
-                    return _client.executeAction("/cluster/ha/status", HttpMethod.GET, null);
+                public JSONObject index() throws JSONException {
+                    return _client.get("/cluster/ha/status", null);
                 }
             }
 
             /**
              * Directory index.
              */
-            public JSONObject index() {
-                return _client.executeAction("/cluster/ha", HttpMethod.GET, null);
+            public JSONObject index() throws JSONException {
+                return _client.get("/cluster/ha", null);
             }
         }
 
@@ -2125,17 +2136,17 @@ public class Client {
              *
              * @param max Maximum number of entries.
              */
-            public JSONObject log(Integer max) {
+            public JSONObject log(Integer max) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("max", max);
-                return _client.executeAction("/cluster/log", HttpMethod.GET, parameters);
+                return _client.get("/cluster/log", parameters);
             }
 
             /**
              * Read cluster log
              */
-            public JSONObject log() {
-                return _client.executeAction("/cluster/log", HttpMethod.GET, null);
+            public JSONObject log() throws JSONException {
+                return _client.get("/cluster/log", null);
             }
         }
 
@@ -2150,17 +2161,17 @@ public class Client {
              *
              * @param type Enum: vm,storage,node
              */
-            public JSONObject resources(String type) {
+            public JSONObject resources(String type) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("type", type);
-                return _client.executeAction("/cluster/resources", HttpMethod.GET, parameters);
+                return _client.get("/cluster/resources", parameters);
             }
 
             /**
              * Resources index (cluster wide).
              */
-            public JSONObject resources() {
-                return _client.executeAction("/cluster/resources", HttpMethod.GET, null);
+            public JSONObject resources() throws JSONException {
+                return _client.get("/cluster/resources", null);
             }
         }
 
@@ -2173,8 +2184,8 @@ public class Client {
             /**
              * List recent tasks (cluster wide).
              */
-            public JSONObject tasks() {
-                return _client.executeAction("/cluster/tasks", HttpMethod.GET, null);
+            public JSONObject tasks() throws JSONException {
+                return _client.get("/cluster/tasks", null);
             }
         }
 
@@ -2187,8 +2198,8 @@ public class Client {
             /**
              * Get datacenter options.
              */
-            public JSONObject getOptions() {
-                return _client.executeAction("/cluster/options", HttpMethod.GET, null);
+            public JSONObject getOptions() throws JSONException {
+                return _client.get("/cluster/options", null);
             }
 
             /**
@@ -2220,7 +2231,7 @@ public class Client {
              * default. For secure private networks you can disable it to speed
              * up migration. Deprecated, use the 'migration' property instead!
              */
-            public void setOptions(String console, String delete, String email_from, String fencing, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure) {
+            public void setOptions(String console, String delete, String email_from, String fencing, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("console", console);
                 parameters.put("delete", delete);
@@ -2233,14 +2244,14 @@ public class Client {
                 parameters.put("max_workers", max_workers);
                 parameters.put("migration", migration);
                 parameters.put("migration_unsecure", migration_unsecure);
-                _client.executeAction("/cluster/options", HttpMethod.PUT, parameters);
+                _client.put("/cluster/options", parameters);
             }
 
             /**
              * Set datacenter options.
              */
-            public void setOptions() {
-                _client.executeAction("/cluster/options", HttpMethod.PUT, null);
+            public void setOptions() throws JSONException {
+                _client.put("/cluster/options", null);
             }
         }
 
@@ -2253,8 +2264,8 @@ public class Client {
             /**
              * Get cluster status informations.
              */
-            public JSONObject getStatus() {
-                return _client.executeAction("/cluster/status", HttpMethod.GET, null);
+            public JSONObject getStatus() throws JSONException {
+                return _client.get("/cluster/status", null);
             }
         }
 
@@ -2270,26 +2281,26 @@ public class Client {
              *
              * @param vmid The (unique) ID of the VM.
              */
-            public JSONObject nextid(Integer vmid) {
+            public JSONObject nextid(Integer vmid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("vmid", vmid);
-                return _client.executeAction("/cluster/nextid", HttpMethod.GET, parameters);
+                return _client.get("/cluster/nextid", parameters);
             }
 
             /**
              * Get next free VMID. If you pass an VMID it will raise an error if
              * the ID is already used.
              */
-            public JSONObject nextid() {
-                return _client.executeAction("/cluster/nextid", HttpMethod.GET, null);
+            public JSONObject nextid() throws JSONException {
+                return _client.get("/cluster/nextid", null);
             }
         }
 
         /**
          * Cluster index.
          */
-        public JSONObject index() {
-            return _client.executeAction("/cluster", HttpMethod.GET, null);
+        public JSONObject index() throws JSONException {
+            return _client.get("/cluster", null);
         }
     }
 
@@ -2839,24 +2850,24 @@ public class Client {
                                  * This can be used to prevent concurrent
                                  * modifications.
                                  */
-                                public void deleteRule(String digest) {
+                                public void deleteRule(String digest) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("digest", digest);
-                                    _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", HttpMethod.DELETE, parameters);
+                                    _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", parameters);
                                 }
 
                                 /**
                                  * Delete rule.
                                  */
-                                public void deleteRule() {
-                                    _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", HttpMethod.DELETE, null);
+                                public void deleteRule() throws JSONException {
+                                    _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
 
                                 /**
                                  * Get single rule data.
                                  */
-                                public JSONObject getRule() {
-                                    return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", HttpMethod.GET, null);
+                                public JSONObject getRule() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
 
                                 /**
@@ -2916,7 +2927,7 @@ public class Client {
                                  * ranges.
                                  * @param type Rule type. Enum: in,out,group
                                  */
-                                public void updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) {
+                                public void updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("action", action);
                                     parameters.put("comment", comment);
@@ -2932,22 +2943,22 @@ public class Client {
                                     parameters.put("source", source);
                                     parameters.put("sport", sport);
                                     parameters.put("type", type);
-                                    _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", HttpMethod.PUT, parameters);
+                                    _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", parameters);
                                 }
 
                                 /**
                                  * Modify rule data.
                                  */
-                                public void updateRule() {
-                                    _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", HttpMethod.PUT, null);
+                                public void updateRule() throws JSONException {
+                                    _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
                             }
 
                             /**
                              * List rules.
                              */
-                            public JSONObject getRules() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules", HttpMethod.GET, null);
+                            public JSONObject getRules() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules", null);
                             }
 
                             /**
@@ -3001,7 +3012,7 @@ public class Client {
                              * example '80:85', and you can use comma separated
                              * list to match several ports or ranges.
                              */
-                            public void createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) {
+                            public void createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
@@ -3016,7 +3027,7 @@ public class Client {
                                 parameters.put("proto", proto);
                                 parameters.put("source", source);
                                 parameters.put("sport", sport);
-                                _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules", HttpMethod.POST, parameters);
+                                _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules", parameters);
                             }
 
                             /**
@@ -3026,11 +3037,11 @@ public class Client {
                              * 'REJECT') or security group name.
                              * @param type Rule type. Enum: in,out,group
                              */
-                            public void createRule(String action, String type) {
+                            public void createRule(String action, String type) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
-                                _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules", HttpMethod.POST, parameters);
+                                _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules", parameters);
                             }
                         }
 
@@ -3070,24 +3081,24 @@ public class Client {
                                  * This can be used to prevent concurrent
                                  * modifications.
                                  */
-                                public void removeAlias(String digest) {
+                                public void removeAlias(String digest) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("digest", digest);
-                                    _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", HttpMethod.DELETE, parameters);
+                                    _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
                                 }
 
                                 /**
                                  * Remove IP or Network alias.
                                  */
-                                public void removeAlias() {
-                                    _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", HttpMethod.DELETE, null);
+                                public void removeAlias() throws JSONException {
+                                    _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", null);
                                 }
 
                                 /**
                                  * Read alias.
                                  */
-                                public JSONObject readAlias() {
-                                    return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", HttpMethod.GET, null);
+                                public JSONObject readAlias() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", null);
                                 }
 
                                 /**
@@ -3102,13 +3113,13 @@ public class Client {
                                  * modifications.
                                  * @param rename Rename an existing alias.
                                  */
-                                public void updateAlias(String cidr, String comment, String digest, String rename) {
+                                public void updateAlias(String cidr, String comment, String digest, String rename) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("cidr", cidr);
                                     parameters.put("comment", comment);
                                     parameters.put("digest", digest);
                                     parameters.put("rename", rename);
-                                    _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", HttpMethod.PUT, parameters);
+                                    _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
                                 }
 
                                 /**
@@ -3117,18 +3128,18 @@ public class Client {
                                  * @param cidr Network/IP specification in CIDR
                                  * format.
                                  */
-                                public void updateAlias(String cidr) {
+                                public void updateAlias(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("cidr", cidr);
-                                    _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", HttpMethod.PUT, parameters);
+                                    _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
                                 }
                             }
 
                             /**
                              * List aliases
                              */
-                            public JSONObject getAliases() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases", HttpMethod.GET, null);
+                            public JSONObject getAliases() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases", null);
                             }
 
                             /**
@@ -3139,12 +3150,12 @@ public class Client {
                              * @param name Alias name.
                              * @param comment
                              */
-                            public void createAlias(String cidr, String name, String comment) {
+                            public void createAlias(String cidr, String name, String comment) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("cidr", cidr);
                                 parameters.put("name", name);
                                 parameters.put("comment", comment);
-                                _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases", HttpMethod.POST, parameters);
+                                _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases", parameters);
                             }
 
                             /**
@@ -3154,11 +3165,11 @@ public class Client {
                              * format.
                              * @param name Alias name.
                              */
-                            public void createAlias(String cidr, String name) {
+                            public void createAlias(String cidr, String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("cidr", cidr);
                                 parameters.put("name", name);
-                                _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases", HttpMethod.POST, parameters);
+                                _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases", parameters);
                             }
                         }
 
@@ -3217,24 +3228,24 @@ public class Client {
                                      * digest. This can be used to prevent
                                      * concurrent modifications.
                                      */
-                                    public void removeIp(String digest) {
+                                    public void removeIp(String digest) throws JSONException {
                                         Map<String, Object> parameters = new HashMap<String, Object>();
                                         parameters.put("digest", digest);
-                                        _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.DELETE, parameters);
+                                        _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
                                     }
 
                                     /**
                                      * Remove IP or Network from IPSet.
                                      */
-                                    public void removeIp() {
-                                        _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.DELETE, null);
+                                    public void removeIp() throws JSONException {
+                                        _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
 
                                     /**
                                      * Read IP or Network settings from IPSet.
                                      */
-                                    public JSONObject readIp() {
-                                        return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.GET, null);
+                                    public JSONObject readIp() throws JSONException {
+                                        return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
 
                                     /**
@@ -3247,34 +3258,34 @@ public class Client {
                                      * concurrent modifications.
                                      * @param nomatch
                                      */
-                                    public void updateIp(String comment, String digest, Boolean nomatch) {
+                                    public void updateIp(String comment, String digest, Boolean nomatch) throws JSONException {
                                         Map<String, Object> parameters = new HashMap<String, Object>();
                                         parameters.put("comment", comment);
                                         parameters.put("digest", digest);
                                         parameters.put("nomatch", nomatch);
-                                        _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.PUT, parameters);
+                                        _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
                                     }
 
                                     /**
                                      * Update IP or Network settings
                                      */
-                                    public void updateIp() {
-                                        _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.PUT, null);
+                                    public void updateIp() throws JSONException {
+                                        _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
                                 }
 
                                 /**
                                  * Delete IPSet
                                  */
-                                public void deleteIpset() {
-                                    _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", HttpMethod.DELETE, null);
+                                public void deleteIpset() throws JSONException {
+                                    _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", null);
                                 }
 
                                 /**
                                  * List IPSet content
                                  */
-                                public JSONObject getIpset() {
-                                    return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", HttpMethod.GET, null);
+                                public JSONObject getIpset() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", null);
                                 }
 
                                 /**
@@ -3285,12 +3296,12 @@ public class Client {
                                  * @param comment
                                  * @param nomatch
                                  */
-                                public void createIp(String cidr, String comment, Boolean nomatch) {
+                                public void createIp(String cidr, String comment, Boolean nomatch) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("cidr", cidr);
                                     parameters.put("comment", comment);
                                     parameters.put("nomatch", nomatch);
-                                    _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", HttpMethod.POST, parameters);
+                                    _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", parameters);
                                 }
 
                                 /**
@@ -3299,18 +3310,18 @@ public class Client {
                                  * @param cidr Network/IP specification in CIDR
                                  * format.
                                  */
-                                public void createIp(String cidr) {
+                                public void createIp(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("cidr", cidr);
-                                    _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", HttpMethod.POST, parameters);
+                                    _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", parameters);
                                 }
                             }
 
                             /**
                              * List IPSets
                              */
-                            public JSONObject ipsetIndex() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset", HttpMethod.GET, null);
+                            public JSONObject ipsetIndex() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset", null);
                             }
 
                             /**
@@ -3326,13 +3337,13 @@ public class Client {
                              * set 'rename' to the same value as 'name' to
                              * update the 'comment' of an existing IPSet.
                              */
-                            public void createIpset(String name, String comment, String digest, String rename) {
+                            public void createIpset(String name, String comment, String digest, String rename) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("name", name);
                                 parameters.put("comment", comment);
                                 parameters.put("digest", digest);
                                 parameters.put("rename", rename);
-                                _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset", HttpMethod.POST, parameters);
+                                _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset", parameters);
                             }
 
                             /**
@@ -3340,10 +3351,10 @@ public class Client {
                              *
                              * @param name IP set name.
                              */
-                            public void createIpset(String name) {
+                            public void createIpset(String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("name", name);
-                                _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset", HttpMethod.POST, parameters);
+                                _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset", parameters);
                             }
                         }
 
@@ -3361,8 +3372,8 @@ public class Client {
                             /**
                              * Get VM firewall options.
                              */
-                            public JSONObject getOptions() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/options", HttpMethod.GET, null);
+                            public JSONObject getOptions() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/options", null);
                             }
 
                             /**
@@ -3399,7 +3410,7 @@ public class Client {
                              * ACCEPT,REJECT,DROP
                              * @param radv Allow sending Router Advertisement.
                              */
-                            public void setOptions(String delete, Boolean dhcp, String digest, Boolean enable, Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter, Boolean ndp, String policy_in, String policy_out, Boolean radv) {
+                            public void setOptions(String delete, Boolean dhcp, String digest, Boolean enable, Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter, Boolean ndp, String policy_in, String policy_out, Boolean radv) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("delete", delete);
                                 parameters.put("dhcp", dhcp);
@@ -3413,14 +3424,14 @@ public class Client {
                                 parameters.put("policy_in", policy_in);
                                 parameters.put("policy_out", policy_out);
                                 parameters.put("radv", radv);
-                                _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/options", HttpMethod.PUT, parameters);
+                                _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/options", parameters);
                             }
 
                             /**
                              * Set Firewall options.
                              */
-                            public void setOptions() {
-                                _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/options", HttpMethod.PUT, null);
+                            public void setOptions() throws JSONException {
+                                _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/options", null);
                             }
                         }
 
@@ -3441,18 +3452,18 @@ public class Client {
                              * @param limit
                              * @param start
                              */
-                            public JSONObject log(Integer limit, Integer start) {
+                            public JSONObject log(Integer limit, Integer start) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("limit", limit);
                                 parameters.put("start", start);
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/log", HttpMethod.GET, parameters);
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/log", parameters);
                             }
 
                             /**
                              * Read firewall log
                              */
-                            public JSONObject log() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/log", HttpMethod.GET, null);
+                            public JSONObject log() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/log", null);
                             }
                         }
 
@@ -3474,26 +3485,26 @@ public class Client {
                              * @param type Only list references of specified
                              * type. Enum: alias,ipset
                              */
-                            public JSONObject refs(String type) {
+                            public JSONObject refs(String type) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("type", type);
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/refs", HttpMethod.GET, parameters);
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/refs", parameters);
                             }
 
                             /**
                              * Lists possible IPSet/Alias reference which are
                              * allowed in source/dest properties.
                              */
-                            public JSONObject refs() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/refs", HttpMethod.GET, null);
+                            public JSONObject refs() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/refs", null);
                             }
                         }
 
                         /**
                          * Directory index.
                          */
-                        public JSONObject index() {
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/firewall", HttpMethod.GET, null);
+                        public JSONObject index() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall", null);
                         }
                     }
 
@@ -3518,12 +3529,12 @@ public class Client {
                          * @param cf The RRD consolidation function Enum:
                          * AVERAGE,MAX
                          */
-                        public JSONObject rrd(String ds, String timeframe, String cf) {
+                        public JSONObject rrd(String ds, String timeframe, String cf) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
                             parameters.put("cf", cf);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/rrd", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/rrd", parameters);
                         }
 
                         /**
@@ -3534,11 +3545,11 @@ public class Client {
                          * @param timeframe Specify the time frame you are
                          * interested in. Enum: hour,day,week,month,year
                          */
-                        public JSONObject rrd(String ds, String timeframe) {
+                        public JSONObject rrd(String ds, String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/rrd", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/rrd", parameters);
                         }
                     }
 
@@ -3561,11 +3572,11 @@ public class Client {
                          * @param cf The RRD consolidation function Enum:
                          * AVERAGE,MAX
                          */
-                        public JSONObject rrddata(String timeframe, String cf) {
+                        public JSONObject rrddata(String timeframe, String cf) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("timeframe", timeframe);
                             parameters.put("cf", cf);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/rrddata", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/rrddata", parameters);
                         }
 
                         /**
@@ -3574,10 +3585,10 @@ public class Client {
                          * @param timeframe Specify the time frame you are
                          * interested in. Enum: hour,day,week,month,year
                          */
-                        public JSONObject rrddata(String timeframe) {
+                        public JSONObject rrddata(String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("timeframe", timeframe);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/rrddata", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/rrddata", parameters);
                         }
                     }
 
@@ -3600,10 +3611,10 @@ public class Client {
                          * @param current Get current values (instead of pending
                          * values).
                          */
-                        public JSONObject vmConfig(Boolean current) {
+                        public JSONObject vmConfig(Boolean current) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("current", current);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/config", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/config", parameters);
                         }
 
                         /**
@@ -3611,8 +3622,8 @@ public class Client {
                          * not include pending configuration changes (see
                          * 'pending' API).
                          */
-                        public JSONObject vmConfig() {
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/config", HttpMethod.GET, null);
+                        public JSONObject vmConfig() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
                         }
 
                         /**
@@ -3740,7 +3751,7 @@ public class Client {
                          * @param watchdog Create a virtual hardware watchdog
                          * device.
                          */
-                        public JSONObject updateVmAsync(Boolean acpi, Boolean agent, String args, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String watchdog) {
+                        public JSONObject updateVmAsync(Boolean acpi, Boolean agent, String args, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("acpi", acpi);
                             parameters.put("agent", agent);
@@ -3803,14 +3814,14 @@ public class Client {
                             addIndexedParmeter(parameters, "unused", unusedN);
                             addIndexedParmeter(parameters, "usb", usbN);
                             addIndexedParmeter(parameters, "virtio", virtioN);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/config", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/config", parameters);
                         }
 
                         /**
                          * Set virtual machine options (asynchrounous API).
                          */
-                        public JSONObject updateVmAsync() {
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/config", HttpMethod.POST, null);
+                        public JSONObject updateVmAsync() throws JSONException {
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
                         }
 
                         /**
@@ -3937,7 +3948,7 @@ public class Client {
                          * @param watchdog Create a virtual hardware watchdog
                          * device.
                          */
-                        public void updateVm(Boolean acpi, Boolean agent, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String watchdog) {
+                        public void updateVm(Boolean acpi, Boolean agent, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("acpi", acpi);
                             parameters.put("agent", agent);
@@ -3999,7 +4010,7 @@ public class Client {
                             addIndexedParmeter(parameters, "unused", unusedN);
                             addIndexedParmeter(parameters, "usb", usbN);
                             addIndexedParmeter(parameters, "virtio", virtioN);
-                            _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/config", HttpMethod.PUT, parameters);
+                            _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/config", parameters);
                         }
 
                         /**
@@ -4007,8 +4018,8 @@ public class Client {
                          * should consider using the POST method instead for any
                          * actions involving hotplug or storage allocation.
                          */
-                        public void updateVm() {
-                            _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/config", HttpMethod.PUT, null);
+                        public void updateVm() throws JSONException {
+                            _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
                         }
                     }
 
@@ -4027,8 +4038,8 @@ public class Client {
                          * Get virtual machine configuration, including pending
                          * changes.
                          */
-                        public JSONObject vmPending() {
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/pending", HttpMethod.GET, null);
+                        public JSONObject vmPending() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/pending", null);
                         }
                     }
 
@@ -4053,11 +4064,11 @@ public class Client {
                          * 'unused[n]', which contains the volume ID. Unlink of
                          * unused[n] always cause physical removal.
                          */
-                        public void unlink(String idlist, Boolean force) {
+                        public void unlink(String idlist, Boolean force) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("idlist", idlist);
                             parameters.put("force", force);
-                            _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/unlink", HttpMethod.PUT, parameters);
+                            _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/unlink", parameters);
                         }
 
                         /**
@@ -4065,10 +4076,10 @@ public class Client {
                          *
                          * @param idlist A list of disk IDs you want to delete.
                          */
-                        public void unlink(String idlist) {
+                        public void unlink(String idlist) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("idlist", idlist);
-                            _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/unlink", HttpMethod.PUT, parameters);
+                            _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/unlink", parameters);
                         }
                     }
 
@@ -4089,17 +4100,17 @@ public class Client {
                          * @param websocket starts websockify instead of
                          * vncproxy
                          */
-                        public JSONObject vncproxy(Boolean websocket) {
+                        public JSONObject vncproxy(Boolean websocket) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("websocket", websocket);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/vncproxy", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/vncproxy", parameters);
                         }
 
                         /**
                          * Creates a TCP VNC proxy connections.
                          */
-                        public JSONObject vncproxy() {
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/vncproxy", HttpMethod.POST, null);
+                        public JSONObject vncproxy() throws JSONException {
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/vncproxy", null);
                         }
                     }
 
@@ -4122,11 +4133,11 @@ public class Client {
                          * @param vncticket Ticket from previous call to
                          * vncproxy.
                          */
-                        public JSONObject vncwebsocket(int port, String vncticket) {
+                        public JSONObject vncwebsocket(int port, String vncticket) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("port", port);
                             parameters.put("vncticket", vncticket);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/vncwebsocket", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/vncwebsocket", parameters);
                         }
                     }
 
@@ -4153,17 +4164,17 @@ public class Client {
                          * API (This is window.location.hostname for the JS
                          * GUI).
                          */
-                        public JSONObject spiceproxy(String proxy) {
+                        public JSONObject spiceproxy(String proxy) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("proxy", proxy);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/spiceproxy", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/spiceproxy", parameters);
                         }
 
                         /**
                          * Returns a SPICE configuration to connect to the VM.
                          */
-                        public JSONObject spiceproxy() {
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/spiceproxy", HttpMethod.POST, null);
+                        public JSONObject spiceproxy() throws JSONException {
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/spiceproxy", null);
                         }
                     }
 
@@ -4248,8 +4259,8 @@ public class Client {
                             /**
                              * Get virtual machine status.
                              */
-                            public JSONObject vmStatus() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/status/current", HttpMethod.GET, null);
+                            public JSONObject vmStatus() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/status/current", null);
                             }
                         }
 
@@ -4284,7 +4295,7 @@ public class Client {
                              * migration. (Can be '1' to use the same storage id
                              * as on the source node.)
                              */
-                            public JSONObject vmStart(String machine, String migratedfrom, String migration_network, String migration_type, Boolean skiplock, String stateuri, String targetstorage) {
+                            public JSONObject vmStart(String machine, String migratedfrom, String migration_network, String migration_type, Boolean skiplock, String stateuri, String targetstorage) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("machine", machine);
                                 parameters.put("migratedfrom", migratedfrom);
@@ -4293,14 +4304,14 @@ public class Client {
                                 parameters.put("skiplock", skiplock);
                                 parameters.put("stateuri", stateuri);
                                 parameters.put("targetstorage", targetstorage);
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/status/start", HttpMethod.POST, parameters);
+                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/start", parameters);
                             }
 
                             /**
                              * Start virtual machine.
                              */
-                            public JSONObject vmStart() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/status/start", HttpMethod.POST, null);
+                            public JSONObject vmStart() throws JSONException {
+                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/start", null);
                             }
                         }
 
@@ -4328,13 +4339,13 @@ public class Client {
                              * allowed to use this option.
                              * @param timeout Wait maximal timeout seconds.
                              */
-                            public JSONObject vmStop(Boolean keepActive, String migratedfrom, Boolean skiplock, Integer timeout) {
+                            public JSONObject vmStop(Boolean keepActive, String migratedfrom, Boolean skiplock, Integer timeout) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("keepActive", keepActive);
                                 parameters.put("migratedfrom", migratedfrom);
                                 parameters.put("skiplock", skiplock);
                                 parameters.put("timeout", timeout);
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/status/stop", HttpMethod.POST, parameters);
+                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/stop", parameters);
                             }
 
                             /**
@@ -4343,8 +4354,8 @@ public class Client {
                              * plug of a running computer and may damage the VM
                              * data
                              */
-                            public JSONObject vmStop() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/status/stop", HttpMethod.POST, null);
+                            public JSONObject vmStop() throws JSONException {
+                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/stop", null);
                             }
                         }
 
@@ -4365,17 +4376,17 @@ public class Client {
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
                              */
-                            public JSONObject vmReset(Boolean skiplock) {
+                            public JSONObject vmReset(Boolean skiplock) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("skiplock", skiplock);
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/status/reset", HttpMethod.POST, parameters);
+                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/reset", parameters);
                             }
 
                             /**
                              * Reset virtual machine.
                              */
-                            public JSONObject vmReset() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/status/reset", HttpMethod.POST, null);
+                            public JSONObject vmReset() throws JSONException {
+                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/reset", null);
                             }
                         }
 
@@ -4404,13 +4415,13 @@ public class Client {
                              * allowed to use this option.
                              * @param timeout Wait maximal timeout seconds.
                              */
-                            public JSONObject vmShutdown(Boolean forceStop, Boolean keepActive, Boolean skiplock, Integer timeout) {
+                            public JSONObject vmShutdown(Boolean forceStop, Boolean keepActive, Boolean skiplock, Integer timeout) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("forceStop", forceStop);
                                 parameters.put("keepActive", keepActive);
                                 parameters.put("skiplock", skiplock);
                                 parameters.put("timeout", timeout);
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/status/shutdown", HttpMethod.POST, parameters);
+                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/shutdown", parameters);
                             }
 
                             /**
@@ -4420,8 +4431,8 @@ public class Client {
                              * guest OS, which should then proceed to a clean
                              * shutdown.
                              */
-                            public JSONObject vmShutdown() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/status/shutdown", HttpMethod.POST, null);
+                            public JSONObject vmShutdown() throws JSONException {
+                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/shutdown", null);
                             }
                         }
 
@@ -4442,17 +4453,17 @@ public class Client {
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
                              */
-                            public JSONObject vmSuspend(Boolean skiplock) {
+                            public JSONObject vmSuspend(Boolean skiplock) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("skiplock", skiplock);
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/status/suspend", HttpMethod.POST, parameters);
+                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/suspend", parameters);
                             }
 
                             /**
                              * Suspend virtual machine.
                              */
-                            public JSONObject vmSuspend() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/status/suspend", HttpMethod.POST, null);
+                            public JSONObject vmSuspend() throws JSONException {
+                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/suspend", null);
                             }
                         }
 
@@ -4474,26 +4485,26 @@ public class Client {
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
                              */
-                            public JSONObject vmResume(Boolean nocheck, Boolean skiplock) {
+                            public JSONObject vmResume(Boolean nocheck, Boolean skiplock) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("nocheck", nocheck);
                                 parameters.put("skiplock", skiplock);
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/status/resume", HttpMethod.POST, parameters);
+                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/resume", parameters);
                             }
 
                             /**
                              * Resume virtual machine.
                              */
-                            public JSONObject vmResume() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/status/resume", HttpMethod.POST, null);
+                            public JSONObject vmResume() throws JSONException {
+                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/resume", null);
                             }
                         }
 
                         /**
                          * Directory index
                          */
-                        public JSONObject vmcmdidx() {
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/status", HttpMethod.GET, null);
+                        public JSONObject vmcmdidx() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/status", null);
                         }
                     }
 
@@ -4515,11 +4526,11 @@ public class Client {
                          * @param skiplock Ignore locks - only root is allowed
                          * to use this option.
                          */
-                        public void vmSendkey(String key, Boolean skiplock) {
+                        public void vmSendkey(String key, Boolean skiplock) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("key", key);
                             parameters.put("skiplock", skiplock);
-                            _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/sendkey", HttpMethod.PUT, parameters);
+                            _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/sendkey", parameters);
                         }
 
                         /**
@@ -4527,10 +4538,10 @@ public class Client {
                          *
                          * @param key The key (qemu monitor encoding).
                          */
-                        public void vmSendkey(String key) {
+                        public void vmSendkey(String key) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("key", key);
-                            _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/sendkey", HttpMethod.PUT, parameters);
+                            _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/sendkey", parameters);
                         }
                     }
 
@@ -4552,11 +4563,11 @@ public class Client {
                          * snapshot,clone,copy
                          * @param snapname The name of the snapshot.
                          */
-                        public JSONObject vmFeature(String feature, String snapname) {
+                        public JSONObject vmFeature(String feature, String snapname) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("feature", feature);
                             parameters.put("snapname", snapname);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/feature", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/feature", parameters);
                         }
 
                         /**
@@ -4565,10 +4576,10 @@ public class Client {
                          * @param feature Feature to check. Enum:
                          * snapshot,clone,copy
                          */
-                        public JSONObject vmFeature(String feature) {
+                        public JSONObject vmFeature(String feature) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("feature", feature);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/feature", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/feature", parameters);
                         }
                     }
 
@@ -4601,7 +4612,7 @@ public class Client {
                          * @param target Target node. Only allowed if the
                          * original VM is on shared storage.
                          */
-                        public JSONObject cloneVm(int newid, String description, String format, Boolean full, String name, String pool, String snapname, String storage, String target) {
+                        public JSONObject cloneVm(int newid, String description, String format, Boolean full, String name, String pool, String snapname, String storage, String target) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("newid", newid);
                             parameters.put("description", description);
@@ -4612,7 +4623,7 @@ public class Client {
                             parameters.put("snapname", snapname);
                             parameters.put("storage", storage);
                             parameters.put("target", target);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/clone", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/clone", parameters);
                         }
 
                         /**
@@ -4620,10 +4631,10 @@ public class Client {
                          *
                          * @param newid VMID for the clone.
                          */
-                        public JSONObject cloneVm(int newid) {
+                        public JSONObject cloneVm(int newid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("newid", newid);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/clone", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/clone", parameters);
                         }
                     }
 
@@ -4652,14 +4663,14 @@ public class Client {
                          * can be used to prevent concurrent modifications.
                          * @param format Target Format. Enum: raw,qcow2,vmdk
                          */
-                        public JSONObject moveVmDisk(String disk, String storage, Boolean delete, String digest, String format) {
+                        public JSONObject moveVmDisk(String disk, String storage, Boolean delete, String digest, String format) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("disk", disk);
                             parameters.put("storage", storage);
                             parameters.put("delete", delete);
                             parameters.put("digest", digest);
                             parameters.put("format", format);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/move_disk", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/move_disk", parameters);
                         }
 
                         /**
@@ -4669,11 +4680,11 @@ public class Client {
                          * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          * @param storage Target storage.
                          */
-                        public JSONObject moveVmDisk(String disk, String storage) {
+                        public JSONObject moveVmDisk(String disk, String storage) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("disk", disk);
                             parameters.put("storage", storage);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/move_disk", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/move_disk", parameters);
                         }
                     }
 
@@ -4706,7 +4717,7 @@ public class Client {
                          * @param with_local_disks Enable live storage migration
                          * for local disk
                          */
-                        public JSONObject migrateVm(String target, Boolean force, String migration_network, String migration_type, Boolean online, String targetstorage, Boolean with_local_disks) {
+                        public JSONObject migrateVm(String target, Boolean force, String migration_network, String migration_type, Boolean online, String targetstorage, Boolean with_local_disks) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("target", target);
                             parameters.put("force", force);
@@ -4715,7 +4726,7 @@ public class Client {
                             parameters.put("online", online);
                             parameters.put("targetstorage", targetstorage);
                             parameters.put("with-local-disks", with_local_disks);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/migrate", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/migrate", parameters);
                         }
 
                         /**
@@ -4724,10 +4735,10 @@ public class Client {
                          *
                          * @param target Target node.
                          */
-                        public JSONObject migrateVm(String target) {
+                        public JSONObject migrateVm(String target) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("target", target);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/migrate", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/migrate", parameters);
                         }
                     }
 
@@ -4747,10 +4758,10 @@ public class Client {
                          *
                          * @param command The monitor command.
                          */
-                        public JSONObject monitor(String command) {
+                        public JSONObject monitor(String command) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("command", command);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/monitor", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/monitor", parameters);
                         }
                     }
 
@@ -4771,10 +4782,10 @@ public class Client {
                          * @param command The QGA command. Enum:
                          * ping,get-time,info,fsfreeze-status,fsfreeze-freeze,fsfreeze-thaw,fstrim,network-get-interfaces,get-vcpus,get-fsinfo,get-memory-blocks,get-memory-block-info,suspend-hybrid,suspend-ram,suspend-disk,shutdown
                          */
-                        public JSONObject agent(String command) {
+                        public JSONObject agent(String command) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("command", command);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/agent", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/agent", parameters);
                         }
                     }
 
@@ -4804,13 +4815,13 @@ public class Client {
                          * @param skiplock Ignore locks - only root is allowed
                          * to use this option.
                          */
-                        public void resizeVm(String disk, String size, String digest, Boolean skiplock) {
+                        public void resizeVm(String disk, String size, String digest, Boolean skiplock) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("disk", disk);
                             parameters.put("size", size);
                             parameters.put("digest", digest);
                             parameters.put("skiplock", skiplock);
-                            _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/resize", HttpMethod.PUT, parameters);
+                            _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/resize", parameters);
                         }
 
                         /**
@@ -4823,11 +4834,11 @@ public class Client {
                          * it, the value is taken as an absolute one. Shrinking
                          * disk size is not supported.
                          */
-                        public void resizeVm(String disk, String size) {
+                        public void resizeVm(String disk, String size) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("disk", disk);
                             parameters.put("size", size);
-                            _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/resize", HttpMethod.PUT, parameters);
+                            _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/resize", parameters);
                         }
                     }
 
@@ -4891,8 +4902,8 @@ public class Client {
                                 /**
                                  * Get snapshot configuration
                                  */
-                                public JSONObject getSnapshotConfig() {
-                                    return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/config", HttpMethod.GET, null);
+                                public JSONObject getSnapshotConfig() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/config", null);
                                 }
 
                                 /**
@@ -4901,17 +4912,17 @@ public class Client {
                                  * @param description A textual description or
                                  * comment.
                                  */
-                                public void updateSnapshotConfig(String description) {
+                                public void updateSnapshotConfig(String description) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("description", description);
-                                    _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/config", HttpMethod.PUT, parameters);
+                                    _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/config", parameters);
                                 }
 
                                 /**
                                  * Update snapshot metadata.
                                  */
-                                public void updateSnapshotConfig() {
-                                    _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/config", HttpMethod.PUT, null);
+                                public void updateSnapshotConfig() throws JSONException {
+                                    _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/config", null);
                                 }
                             }
 
@@ -4931,8 +4942,8 @@ public class Client {
                                 /**
                                  * Rollback VM state to specified snapshot.
                                  */
-                                public JSONObject rollback() {
-                                    return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/rollback", HttpMethod.POST, null);
+                                public JSONObject rollback() throws JSONException {
+                                    return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/rollback", null);
                                 }
                             }
 
@@ -4942,32 +4953,32 @@ public class Client {
                              * @param force For removal from config file, even
                              * if removing disk snapshots fails.
                              */
-                            public JSONObject delsnapshot(Boolean force) {
+                            public JSONObject delsnapshot(Boolean force) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("force", force);
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "", HttpMethod.DELETE, parameters);
+                                return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "", parameters);
                             }
 
                             /**
                              * Delete a VM snapshot.
                              */
-                            public JSONObject delsnapshot() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "", HttpMethod.DELETE, null);
+                            public JSONObject delsnapshot() throws JSONException {
+                                return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "", null);
                             }
 
                             /**
                              *
                              */
-                            public JSONObject snapshotCmdIdx() {
-                                return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "", HttpMethod.GET, null);
+                            public JSONObject snapshotCmdIdx() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "", null);
                             }
                         }
 
                         /**
                          * List all snapshots.
                          */
-                        public JSONObject snapshotList() {
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot", HttpMethod.GET, null);
+                        public JSONObject snapshotList() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot", null);
                         }
 
                         /**
@@ -4977,12 +4988,12 @@ public class Client {
                          * @param description A textual description or comment.
                          * @param vmstate Save the vmstate
                          */
-                        public JSONObject snapshot(String snapname, String description, Boolean vmstate) {
+                        public JSONObject snapshot(String snapname, String description, Boolean vmstate) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("snapname", snapname);
                             parameters.put("description", description);
                             parameters.put("vmstate", vmstate);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot", parameters);
                         }
 
                         /**
@@ -4990,10 +5001,10 @@ public class Client {
                          *
                          * @param snapname The name of the snapshot.
                          */
-                        public JSONObject snapshot(String snapname) {
+                        public JSONObject snapshot(String snapname) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("snapname", snapname);
-                            return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot", parameters);
                         }
                     }
 
@@ -5015,17 +5026,17 @@ public class Client {
                          * base image. Enum:
                          * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          */
-                        public void template(String disk) {
+                        public void template(String disk) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("disk", disk);
-                            _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/template", HttpMethod.POST, parameters);
+                            _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/template", parameters);
                         }
 
                         /**
                          * Create a Template.
                          */
-                        public void template() {
-                            _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "/template", HttpMethod.POST, null);
+                        public void template() throws JSONException {
+                            _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/template", null);
                         }
                     }
 
@@ -5035,24 +5046,24 @@ public class Client {
                      * @param skiplock Ignore locks - only root is allowed to
                      * use this option.
                      */
-                    public JSONObject destroyVm(Boolean skiplock) {
+                    public JSONObject destroyVm(Boolean skiplock) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("skiplock", skiplock);
-                        return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "", HttpMethod.DELETE, parameters);
+                        return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "", parameters);
                     }
 
                     /**
                      * Destroy the vm (also delete all used/owned volumes).
                      */
-                    public JSONObject destroyVm() {
-                        return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "", HttpMethod.DELETE, null);
+                    public JSONObject destroyVm() throws JSONException {
+                        return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "", null);
                     }
 
                     /**
                      * Directory index
                      */
-                    public JSONObject vmdiridx() {
-                        return _client.executeAction("/nodes/" + _node + "/qemu/" + _vmid + "", HttpMethod.GET, null);
+                    public JSONObject vmdiridx() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "", null);
                     }
                 }
 
@@ -5061,17 +5072,17 @@ public class Client {
                  *
                  * @param full Determine the full status of active VMs.
                  */
-                public JSONObject vmlist(Boolean full) {
+                public JSONObject vmlist(Boolean full) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("full", full);
-                    return _client.executeAction("/nodes/" + _node + "/qemu", HttpMethod.GET, parameters);
+                    return _client.get("/nodes/" + _node + "/qemu", parameters);
                 }
 
                 /**
                  * Virtual machine index (per node).
                  */
-                public JSONObject vmlist() {
-                    return _client.executeAction("/nodes/" + _node + "/qemu", HttpMethod.GET, null);
+                public JSONObject vmlist() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/qemu", null);
                 }
 
                 /**
@@ -5180,7 +5191,7 @@ public class Client {
                  * @param virtioN Use volume as VIRTIO hard disk (n is 0 to 15).
                  * @param watchdog Create a virtual hardware watchdog device.
                  */
-                public JSONObject createVm(int vmid, Boolean acpi, Boolean agent, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String watchdog) {
+                public JSONObject createVm(int vmid, Boolean acpi, Boolean agent, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String watchdog) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("vmid", vmid);
                     parameters.put("acpi", acpi);
@@ -5243,7 +5254,7 @@ public class Client {
                     addIndexedParmeter(parameters, "unused", unusedN);
                     addIndexedParmeter(parameters, "usb", usbN);
                     addIndexedParmeter(parameters, "virtio", virtioN);
-                    return _client.executeAction("/nodes/" + _node + "/qemu", HttpMethod.POST, parameters);
+                    return _client.post("/nodes/" + _node + "/qemu", parameters);
                 }
 
                 /**
@@ -5251,10 +5262,10 @@ public class Client {
                  *
                  * @param vmid The (unique) ID of the VM.
                  */
-                public JSONObject createVm(int vmid) {
+                public JSONObject createVm(int vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("vmid", vmid);
-                    return _client.executeAction("/nodes/" + _node + "/qemu", HttpMethod.POST, parameters);
+                    return _client.post("/nodes/" + _node + "/qemu", parameters);
                 }
             }
 
@@ -5408,8 +5419,8 @@ public class Client {
                         /**
                          * Get container configuration.
                          */
-                        public JSONObject vmConfig() {
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/config", HttpMethod.GET, null);
+                        public JSONObject vmConfig() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/config", null);
                         }
 
                         /**
@@ -5486,7 +5497,7 @@ public class Client {
                          * @param unusedN Reference to unused volumes. This is
                          * used internally, and should not be modified manually.
                          */
-                        public void updateVm(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String rootfs, String searchdomain, String startup, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) {
+                        public void updateVm(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String rootfs, String searchdomain, String startup, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("arch", arch);
                             parameters.put("cmode", cmode);
@@ -5514,14 +5525,14 @@ public class Client {
                             addIndexedParmeter(parameters, "mp", mpN);
                             addIndexedParmeter(parameters, "net", netN);
                             addIndexedParmeter(parameters, "unused", unusedN);
-                            _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/config", HttpMethod.PUT, parameters);
+                            _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/config", parameters);
                         }
 
                         /**
                          * Set container options.
                          */
-                        public void updateVm() {
-                            _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/config", HttpMethod.PUT, null);
+                        public void updateVm() throws JSONException {
+                            _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/config", null);
                         }
                     }
 
@@ -5598,8 +5609,8 @@ public class Client {
                             /**
                              * Get virtual machine status.
                              */
-                            public JSONObject vmStatus() {
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/status/current", HttpMethod.GET, null);
+                            public JSONObject vmStatus() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/status/current", null);
                             }
                         }
 
@@ -5620,17 +5631,17 @@ public class Client {
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
                              */
-                            public JSONObject vmStart(Boolean skiplock) {
+                            public JSONObject vmStart(Boolean skiplock) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("skiplock", skiplock);
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/status/start", HttpMethod.POST, parameters);
+                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/start", parameters);
                             }
 
                             /**
                              * Start the container.
                              */
-                            public JSONObject vmStart() {
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/status/start", HttpMethod.POST, null);
+                            public JSONObject vmStart() throws JSONException {
+                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/start", null);
                             }
                         }
 
@@ -5652,18 +5663,18 @@ public class Client {
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
                              */
-                            public JSONObject vmStop(Boolean skiplock) {
+                            public JSONObject vmStop(Boolean skiplock) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("skiplock", skiplock);
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/status/stop", HttpMethod.POST, parameters);
+                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/stop", parameters);
                             }
 
                             /**
                              * Stop the container. This will abruptly stop all
                              * processes running in the container.
                              */
-                            public JSONObject vmStop() {
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/status/stop", HttpMethod.POST, null);
+                            public JSONObject vmStop() throws JSONException {
+                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/stop", null);
                             }
                         }
 
@@ -5686,11 +5697,11 @@ public class Client {
                              * @param forceStop Make sure the Container stops.
                              * @param timeout Wait maximal timeout seconds.
                              */
-                            public JSONObject vmShutdown(Boolean forceStop, Integer timeout) {
+                            public JSONObject vmShutdown(Boolean forceStop, Integer timeout) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("forceStop", forceStop);
                                 parameters.put("timeout", timeout);
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/status/shutdown", HttpMethod.POST, parameters);
+                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/shutdown", parameters);
                             }
 
                             /**
@@ -5698,8 +5709,8 @@ public class Client {
                              * shutdown of the container, see lxc-stop(1) for
                              * details.
                              */
-                            public JSONObject vmShutdown() {
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/status/shutdown", HttpMethod.POST, null);
+                            public JSONObject vmShutdown() throws JSONException {
+                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/shutdown", null);
                             }
                         }
 
@@ -5717,8 +5728,8 @@ public class Client {
                             /**
                              * Suspend the container.
                              */
-                            public JSONObject vmSuspend() {
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/status/suspend", HttpMethod.POST, null);
+                            public JSONObject vmSuspend() throws JSONException {
+                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/suspend", null);
                             }
                         }
 
@@ -5736,16 +5747,16 @@ public class Client {
                             /**
                              * Resume the container.
                              */
-                            public JSONObject vmResume() {
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/status/resume", HttpMethod.POST, null);
+                            public JSONObject vmResume() throws JSONException {
+                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/resume", null);
                             }
                         }
 
                         /**
                          * Directory index
                          */
-                        public JSONObject vmcmdidx() {
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/status", HttpMethod.GET, null);
+                        public JSONObject vmcmdidx() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/status", null);
                         }
                     }
 
@@ -5809,8 +5820,8 @@ public class Client {
                                 /**
                                  * Rollback LXC state to specified snapshot.
                                  */
-                                public JSONObject rollback() {
-                                    return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/rollback", HttpMethod.POST, null);
+                                public JSONObject rollback() throws JSONException {
+                                    return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/rollback", null);
                                 }
                             }
 
@@ -5830,8 +5841,8 @@ public class Client {
                                 /**
                                  * Get snapshot configuration
                                  */
-                                public JSONObject getSnapshotConfig() {
-                                    return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/config", HttpMethod.GET, null);
+                                public JSONObject getSnapshotConfig() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/config", null);
                                 }
 
                                 /**
@@ -5840,17 +5851,17 @@ public class Client {
                                  * @param description A textual description or
                                  * comment.
                                  */
-                                public void updateSnapshotConfig(String description) {
+                                public void updateSnapshotConfig(String description) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("description", description);
-                                    _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/config", HttpMethod.PUT, parameters);
+                                    _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/config", parameters);
                                 }
 
                                 /**
                                  * Update snapshot metadata.
                                  */
-                                public void updateSnapshotConfig() {
-                                    _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/config", HttpMethod.PUT, null);
+                                public void updateSnapshotConfig() throws JSONException {
+                                    _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/config", null);
                                 }
                             }
 
@@ -5860,32 +5871,32 @@ public class Client {
                              * @param force For removal from config file, even
                              * if removing disk snapshots fails.
                              */
-                            public JSONObject delsnapshot(Boolean force) {
+                            public JSONObject delsnapshot(Boolean force) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("force", force);
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "", HttpMethod.DELETE, parameters);
+                                return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "", parameters);
                             }
 
                             /**
                              * Delete a LXC snapshot.
                              */
-                            public JSONObject delsnapshot() {
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "", HttpMethod.DELETE, null);
+                            public JSONObject delsnapshot() throws JSONException {
+                                return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "", null);
                             }
 
                             /**
                              *
                              */
-                            public JSONObject snapshotCmdIdx() {
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "", HttpMethod.GET, null);
+                            public JSONObject snapshotCmdIdx() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "", null);
                             }
                         }
 
                         /**
                          * List all snapshots.
                          */
-                        public JSONObject list() {
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot", HttpMethod.GET, null);
+                        public JSONObject list() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot", null);
                         }
 
                         /**
@@ -5894,11 +5905,11 @@ public class Client {
                          * @param snapname The name of the snapshot.
                          * @param description A textual description or comment.
                          */
-                        public JSONObject snapshot(String snapname, String description) {
+                        public JSONObject snapshot(String snapname, String description) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("snapname", snapname);
                             parameters.put("description", description);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot", parameters);
                         }
 
                         /**
@@ -5906,10 +5917,10 @@ public class Client {
                          *
                          * @param snapname The name of the snapshot.
                          */
-                        public JSONObject snapshot(String snapname) {
+                        public JSONObject snapshot(String snapname) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("snapname", snapname);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot", parameters);
                         }
                     }
 
@@ -6008,24 +6019,24 @@ public class Client {
                                  * This can be used to prevent concurrent
                                  * modifications.
                                  */
-                                public void deleteRule(String digest) {
+                                public void deleteRule(String digest) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("digest", digest);
-                                    _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", HttpMethod.DELETE, parameters);
+                                    _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", parameters);
                                 }
 
                                 /**
                                  * Delete rule.
                                  */
-                                public void deleteRule() {
-                                    _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", HttpMethod.DELETE, null);
+                                public void deleteRule() throws JSONException {
+                                    _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
 
                                 /**
                                  * Get single rule data.
                                  */
-                                public JSONObject getRule() {
-                                    return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", HttpMethod.GET, null);
+                                public JSONObject getRule() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
 
                                 /**
@@ -6085,7 +6096,7 @@ public class Client {
                                  * ranges.
                                  * @param type Rule type. Enum: in,out,group
                                  */
-                                public void updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) {
+                                public void updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("action", action);
                                     parameters.put("comment", comment);
@@ -6101,22 +6112,22 @@ public class Client {
                                     parameters.put("source", source);
                                     parameters.put("sport", sport);
                                     parameters.put("type", type);
-                                    _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", HttpMethod.PUT, parameters);
+                                    _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", parameters);
                                 }
 
                                 /**
                                  * Modify rule data.
                                  */
-                                public void updateRule() {
-                                    _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", HttpMethod.PUT, null);
+                                public void updateRule() throws JSONException {
+                                    _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
                             }
 
                             /**
                              * List rules.
                              */
-                            public JSONObject getRules() {
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules", HttpMethod.GET, null);
+                            public JSONObject getRules() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules", null);
                             }
 
                             /**
@@ -6170,7 +6181,7 @@ public class Client {
                              * example '80:85', and you can use comma separated
                              * list to match several ports or ranges.
                              */
-                            public void createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) {
+                            public void createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
@@ -6185,7 +6196,7 @@ public class Client {
                                 parameters.put("proto", proto);
                                 parameters.put("source", source);
                                 parameters.put("sport", sport);
-                                _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules", HttpMethod.POST, parameters);
+                                _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules", parameters);
                             }
 
                             /**
@@ -6195,11 +6206,11 @@ public class Client {
                              * 'REJECT') or security group name.
                              * @param type Rule type. Enum: in,out,group
                              */
-                            public void createRule(String action, String type) {
+                            public void createRule(String action, String type) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
-                                _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules", HttpMethod.POST, parameters);
+                                _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules", parameters);
                             }
                         }
 
@@ -6239,24 +6250,24 @@ public class Client {
                                  * This can be used to prevent concurrent
                                  * modifications.
                                  */
-                                public void removeAlias(String digest) {
+                                public void removeAlias(String digest) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("digest", digest);
-                                    _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", HttpMethod.DELETE, parameters);
+                                    _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
                                 }
 
                                 /**
                                  * Remove IP or Network alias.
                                  */
-                                public void removeAlias() {
-                                    _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", HttpMethod.DELETE, null);
+                                public void removeAlias() throws JSONException {
+                                    _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", null);
                                 }
 
                                 /**
                                  * Read alias.
                                  */
-                                public JSONObject readAlias() {
-                                    return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", HttpMethod.GET, null);
+                                public JSONObject readAlias() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", null);
                                 }
 
                                 /**
@@ -6271,13 +6282,13 @@ public class Client {
                                  * modifications.
                                  * @param rename Rename an existing alias.
                                  */
-                                public void updateAlias(String cidr, String comment, String digest, String rename) {
+                                public void updateAlias(String cidr, String comment, String digest, String rename) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("cidr", cidr);
                                     parameters.put("comment", comment);
                                     parameters.put("digest", digest);
                                     parameters.put("rename", rename);
-                                    _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", HttpMethod.PUT, parameters);
+                                    _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
                                 }
 
                                 /**
@@ -6286,18 +6297,18 @@ public class Client {
                                  * @param cidr Network/IP specification in CIDR
                                  * format.
                                  */
-                                public void updateAlias(String cidr) {
+                                public void updateAlias(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("cidr", cidr);
-                                    _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", HttpMethod.PUT, parameters);
+                                    _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
                                 }
                             }
 
                             /**
                              * List aliases
                              */
-                            public JSONObject getAliases() {
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases", HttpMethod.GET, null);
+                            public JSONObject getAliases() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases", null);
                             }
 
                             /**
@@ -6308,12 +6319,12 @@ public class Client {
                              * @param name Alias name.
                              * @param comment
                              */
-                            public void createAlias(String cidr, String name, String comment) {
+                            public void createAlias(String cidr, String name, String comment) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("cidr", cidr);
                                 parameters.put("name", name);
                                 parameters.put("comment", comment);
-                                _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases", HttpMethod.POST, parameters);
+                                _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases", parameters);
                             }
 
                             /**
@@ -6323,11 +6334,11 @@ public class Client {
                              * format.
                              * @param name Alias name.
                              */
-                            public void createAlias(String cidr, String name) {
+                            public void createAlias(String cidr, String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("cidr", cidr);
                                 parameters.put("name", name);
-                                _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases", HttpMethod.POST, parameters);
+                                _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases", parameters);
                             }
                         }
 
@@ -6386,24 +6397,24 @@ public class Client {
                                      * digest. This can be used to prevent
                                      * concurrent modifications.
                                      */
-                                    public void removeIp(String digest) {
+                                    public void removeIp(String digest) throws JSONException {
                                         Map<String, Object> parameters = new HashMap<String, Object>();
                                         parameters.put("digest", digest);
-                                        _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.DELETE, parameters);
+                                        _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
                                     }
 
                                     /**
                                      * Remove IP or Network from IPSet.
                                      */
-                                    public void removeIp() {
-                                        _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.DELETE, null);
+                                    public void removeIp() throws JSONException {
+                                        _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
 
                                     /**
                                      * Read IP or Network settings from IPSet.
                                      */
-                                    public JSONObject readIp() {
-                                        return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.GET, null);
+                                    public JSONObject readIp() throws JSONException {
+                                        return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
 
                                     /**
@@ -6416,34 +6427,34 @@ public class Client {
                                      * concurrent modifications.
                                      * @param nomatch
                                      */
-                                    public void updateIp(String comment, String digest, Boolean nomatch) {
+                                    public void updateIp(String comment, String digest, Boolean nomatch) throws JSONException {
                                         Map<String, Object> parameters = new HashMap<String, Object>();
                                         parameters.put("comment", comment);
                                         parameters.put("digest", digest);
                                         parameters.put("nomatch", nomatch);
-                                        _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.PUT, parameters);
+                                        _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
                                     }
 
                                     /**
                                      * Update IP or Network settings
                                      */
-                                    public void updateIp() {
-                                        _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", HttpMethod.PUT, null);
+                                    public void updateIp() throws JSONException {
+                                        _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
                                 }
 
                                 /**
                                  * Delete IPSet
                                  */
-                                public void deleteIpset() {
-                                    _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", HttpMethod.DELETE, null);
+                                public void deleteIpset() throws JSONException {
+                                    _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", null);
                                 }
 
                                 /**
                                  * List IPSet content
                                  */
-                                public JSONObject getIpset() {
-                                    return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", HttpMethod.GET, null);
+                                public JSONObject getIpset() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", null);
                                 }
 
                                 /**
@@ -6454,12 +6465,12 @@ public class Client {
                                  * @param comment
                                  * @param nomatch
                                  */
-                                public void createIp(String cidr, String comment, Boolean nomatch) {
+                                public void createIp(String cidr, String comment, Boolean nomatch) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("cidr", cidr);
                                     parameters.put("comment", comment);
                                     parameters.put("nomatch", nomatch);
-                                    _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", HttpMethod.POST, parameters);
+                                    _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", parameters);
                                 }
 
                                 /**
@@ -6468,18 +6479,18 @@ public class Client {
                                  * @param cidr Network/IP specification in CIDR
                                  * format.
                                  */
-                                public void createIp(String cidr) {
+                                public void createIp(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<String, Object>();
                                     parameters.put("cidr", cidr);
-                                    _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", HttpMethod.POST, parameters);
+                                    _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", parameters);
                                 }
                             }
 
                             /**
                              * List IPSets
                              */
-                            public JSONObject ipsetIndex() {
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset", HttpMethod.GET, null);
+                            public JSONObject ipsetIndex() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset", null);
                             }
 
                             /**
@@ -6495,13 +6506,13 @@ public class Client {
                              * set 'rename' to the same value as 'name' to
                              * update the 'comment' of an existing IPSet.
                              */
-                            public void createIpset(String name, String comment, String digest, String rename) {
+                            public void createIpset(String name, String comment, String digest, String rename) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("name", name);
                                 parameters.put("comment", comment);
                                 parameters.put("digest", digest);
                                 parameters.put("rename", rename);
-                                _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset", HttpMethod.POST, parameters);
+                                _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset", parameters);
                             }
 
                             /**
@@ -6509,10 +6520,10 @@ public class Client {
                              *
                              * @param name IP set name.
                              */
-                            public void createIpset(String name) {
+                            public void createIpset(String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("name", name);
-                                _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset", HttpMethod.POST, parameters);
+                                _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset", parameters);
                             }
                         }
 
@@ -6530,8 +6541,8 @@ public class Client {
                             /**
                              * Get VM firewall options.
                              */
-                            public JSONObject getOptions() {
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/options", HttpMethod.GET, null);
+                            public JSONObject getOptions() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/options", null);
                             }
 
                             /**
@@ -6568,7 +6579,7 @@ public class Client {
                              * ACCEPT,REJECT,DROP
                              * @param radv Allow sending Router Advertisement.
                              */
-                            public void setOptions(String delete, Boolean dhcp, String digest, Boolean enable, Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter, Boolean ndp, String policy_in, String policy_out, Boolean radv) {
+                            public void setOptions(String delete, Boolean dhcp, String digest, Boolean enable, Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter, Boolean ndp, String policy_in, String policy_out, Boolean radv) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("delete", delete);
                                 parameters.put("dhcp", dhcp);
@@ -6582,14 +6593,14 @@ public class Client {
                                 parameters.put("policy_in", policy_in);
                                 parameters.put("policy_out", policy_out);
                                 parameters.put("radv", radv);
-                                _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/options", HttpMethod.PUT, parameters);
+                                _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/options", parameters);
                             }
 
                             /**
                              * Set Firewall options.
                              */
-                            public void setOptions() {
-                                _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/options", HttpMethod.PUT, null);
+                            public void setOptions() throws JSONException {
+                                _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/options", null);
                             }
                         }
 
@@ -6610,18 +6621,18 @@ public class Client {
                              * @param limit
                              * @param start
                              */
-                            public JSONObject log(Integer limit, Integer start) {
+                            public JSONObject log(Integer limit, Integer start) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("limit", limit);
                                 parameters.put("start", start);
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/log", HttpMethod.GET, parameters);
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/log", parameters);
                             }
 
                             /**
                              * Read firewall log
                              */
-                            public JSONObject log() {
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/log", HttpMethod.GET, null);
+                            public JSONObject log() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/log", null);
                             }
                         }
 
@@ -6643,26 +6654,26 @@ public class Client {
                              * @param type Only list references of specified
                              * type. Enum: alias,ipset
                              */
-                            public JSONObject refs(String type) {
+                            public JSONObject refs(String type) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("type", type);
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/refs", HttpMethod.GET, parameters);
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/refs", parameters);
                             }
 
                             /**
                              * Lists possible IPSet/Alias reference which are
                              * allowed in source/dest properties.
                              */
-                            public JSONObject refs() {
-                                return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/refs", HttpMethod.GET, null);
+                            public JSONObject refs() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/refs", null);
                             }
                         }
 
                         /**
                          * Directory index.
                          */
-                        public JSONObject index() {
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/firewall", HttpMethod.GET, null);
+                        public JSONObject index() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall", null);
                         }
                     }
 
@@ -6687,12 +6698,12 @@ public class Client {
                          * @param cf The RRD consolidation function Enum:
                          * AVERAGE,MAX
                          */
-                        public JSONObject rrd(String ds, String timeframe, String cf) {
+                        public JSONObject rrd(String ds, String timeframe, String cf) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
                             parameters.put("cf", cf);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/rrd", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/rrd", parameters);
                         }
 
                         /**
@@ -6703,11 +6714,11 @@ public class Client {
                          * @param timeframe Specify the time frame you are
                          * interested in. Enum: hour,day,week,month,year
                          */
-                        public JSONObject rrd(String ds, String timeframe) {
+                        public JSONObject rrd(String ds, String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/rrd", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/rrd", parameters);
                         }
                     }
 
@@ -6730,11 +6741,11 @@ public class Client {
                          * @param cf The RRD consolidation function Enum:
                          * AVERAGE,MAX
                          */
-                        public JSONObject rrddata(String timeframe, String cf) {
+                        public JSONObject rrddata(String timeframe, String cf) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("timeframe", timeframe);
                             parameters.put("cf", cf);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/rrddata", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/rrddata", parameters);
                         }
 
                         /**
@@ -6743,10 +6754,10 @@ public class Client {
                          * @param timeframe Specify the time frame you are
                          * interested in. Enum: hour,day,week,month,year
                          */
-                        public JSONObject rrddata(String timeframe) {
+                        public JSONObject rrddata(String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("timeframe", timeframe);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/rrddata", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/rrddata", parameters);
                         }
                     }
 
@@ -6770,19 +6781,19 @@ public class Client {
                          * VNC.
                          * @param width sets the width of the console in pixels.
                          */
-                        public JSONObject vncproxy(Integer height, Boolean websocket, Integer width) {
+                        public JSONObject vncproxy(Integer height, Boolean websocket, Integer width) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("height", height);
                             parameters.put("websocket", websocket);
                             parameters.put("width", width);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/vncproxy", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/vncproxy", parameters);
                         }
 
                         /**
                          * Creates a TCP VNC proxy connections.
                          */
-                        public JSONObject vncproxy() {
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/vncproxy", HttpMethod.POST, null);
+                        public JSONObject vncproxy() throws JSONException {
+                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/vncproxy", null);
                         }
                     }
 
@@ -6805,11 +6816,11 @@ public class Client {
                          * @param vncticket Ticket from previous call to
                          * vncproxy.
                          */
-                        public JSONObject vncwebsocket(int port, String vncticket) {
+                        public JSONObject vncwebsocket(int port, String vncticket) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("port", port);
                             parameters.put("vncticket", vncticket);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/vncwebsocket", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/vncwebsocket", parameters);
                         }
                     }
 
@@ -6836,17 +6847,17 @@ public class Client {
                          * API (This is window.location.hostname for the JS
                          * GUI).
                          */
-                        public JSONObject spiceproxy(String proxy) {
+                        public JSONObject spiceproxy(String proxy) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("proxy", proxy);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/spiceproxy", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/spiceproxy", parameters);
                         }
 
                         /**
                          * Returns a SPICE configuration to connect to the CT.
                          */
-                        public JSONObject spiceproxy() {
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/spiceproxy", HttpMethod.POST, null);
+                        public JSONObject spiceproxy() throws JSONException {
+                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/spiceproxy", null);
                         }
                     }
 
@@ -6874,14 +6885,14 @@ public class Client {
                          * @param timeout Timeout in seconds for shutdown for
                          * restart migration
                          */
-                        public JSONObject migrateVm(String target, Boolean force, Boolean online, Boolean restart, Integer timeout) {
+                        public JSONObject migrateVm(String target, Boolean force, Boolean online, Boolean restart, Integer timeout) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("target", target);
                             parameters.put("force", force);
                             parameters.put("online", online);
                             parameters.put("restart", restart);
                             parameters.put("timeout", timeout);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/migrate", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/migrate", parameters);
                         }
 
                         /**
@@ -6890,10 +6901,10 @@ public class Client {
                          *
                          * @param target Target node.
                          */
-                        public JSONObject migrateVm(String target) {
+                        public JSONObject migrateVm(String target) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("target", target);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/migrate", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/migrate", parameters);
                         }
                     }
 
@@ -6914,11 +6925,11 @@ public class Client {
                          * @param feature Feature to check. Enum: snapshot
                          * @param snapname The name of the snapshot.
                          */
-                        public JSONObject vmFeature(String feature, String snapname) {
+                        public JSONObject vmFeature(String feature, String snapname) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("feature", feature);
                             parameters.put("snapname", snapname);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/feature", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/feature", parameters);
                         }
 
                         /**
@@ -6926,10 +6937,10 @@ public class Client {
                          *
                          * @param feature Feature to check. Enum: snapshot
                          */
-                        public JSONObject vmFeature(String feature) {
+                        public JSONObject vmFeature(String feature) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("feature", feature);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/feature", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/feature", parameters);
                         }
                     }
 
@@ -6951,10 +6962,10 @@ public class Client {
                          * experimental, set this flag if you know what you are
                          * doing.
                          */
-                        public void template(boolean experimental) {
+                        public void template(boolean experimental) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("experimental", experimental);
-                            _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/template", HttpMethod.POST, parameters);
+                            _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/template", parameters);
                         }
                     }
 
@@ -6986,7 +6997,7 @@ public class Client {
                          * @param snapname The name of the snapshot.
                          * @param storage Target storage for full clone.
                          */
-                        public JSONObject cloneVm(boolean experimental, int newid, String description, Boolean full, String hostname, String pool, String snapname, String storage) {
+                        public JSONObject cloneVm(boolean experimental, int newid, String description, Boolean full, String hostname, String pool, String snapname, String storage) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("experimental", experimental);
                             parameters.put("newid", newid);
@@ -6996,7 +7007,7 @@ public class Client {
                             parameters.put("pool", pool);
                             parameters.put("snapname", snapname);
                             parameters.put("storage", storage);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/clone", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/clone", parameters);
                         }
 
                         /**
@@ -7007,11 +7018,11 @@ public class Client {
                          * doing.
                          * @param newid VMID for the clone.
                          */
-                        public JSONObject cloneVm(boolean experimental, int newid) {
+                        public JSONObject cloneVm(boolean experimental, int newid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("experimental", experimental);
                             parameters.put("newid", newid);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/clone", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/clone", parameters);
                         }
                     }
 
@@ -7039,12 +7050,12 @@ public class Client {
                          * configuration file has different SHA1 digest. This
                          * can be used to prevent concurrent modifications.
                          */
-                        public JSONObject resizeVm(String disk, String size, String digest) {
+                        public JSONObject resizeVm(String disk, String size, String digest) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("disk", disk);
                             parameters.put("size", size);
                             parameters.put("digest", digest);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/resize", HttpMethod.PUT, parameters);
+                            return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/resize", parameters);
                         }
 
                         /**
@@ -7057,34 +7068,34 @@ public class Client {
                          * it, the value is taken as an absolute one. Shrinking
                          * disk size is not supported.
                          */
-                        public JSONObject resizeVm(String disk, String size) {
+                        public JSONObject resizeVm(String disk, String size) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("disk", disk);
                             parameters.put("size", size);
-                            return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "/resize", HttpMethod.PUT, parameters);
+                            return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/resize", parameters);
                         }
                     }
 
                     /**
                      * Destroy the container (also delete all uses files).
                      */
-                    public JSONObject destroyVm() {
-                        return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "", HttpMethod.DELETE, null);
+                    public JSONObject destroyVm() throws JSONException {
+                        return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "", null);
                     }
 
                     /**
                      * Directory index
                      */
-                    public JSONObject vmdiridx() {
-                        return _client.executeAction("/nodes/" + _node + "/lxc/" + _vmid + "", HttpMethod.GET, null);
+                    public JSONObject vmdiridx() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "", null);
                     }
                 }
 
                 /**
                  * LXC container index (per node).
                  */
-                public JSONObject vmlist() {
-                    return _client.executeAction("/nodes/" + _node + "/lxc", HttpMethod.GET, null);
+                public JSONObject vmlist() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/lxc", null);
                 }
 
                 /**
@@ -7160,7 +7171,7 @@ public class Client {
                  * @param unusedN Reference to unused volumes. This is used
                  * internally, and should not be modified manually.
                  */
-                public JSONObject createVm(String ostemplate, int vmid, String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, Boolean force, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) {
+                public JSONObject createVm(String ostemplate, int vmid, String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, Boolean force, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("ostemplate", ostemplate);
                     parameters.put("vmid", vmid);
@@ -7195,7 +7206,7 @@ public class Client {
                     addIndexedParmeter(parameters, "mp", mpN);
                     addIndexedParmeter(parameters, "net", netN);
                     addIndexedParmeter(parameters, "unused", unusedN);
-                    return _client.executeAction("/nodes/" + _node + "/lxc", HttpMethod.POST, parameters);
+                    return _client.post("/nodes/" + _node + "/lxc", parameters);
                 }
 
                 /**
@@ -7204,11 +7215,11 @@ public class Client {
                  * @param ostemplate The OS template or backup file.
                  * @param vmid The (unique) ID of the VM.
                  */
-                public JSONObject createVm(String ostemplate, int vmid) {
+                public JSONObject createVm(String ostemplate, int vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("ostemplate", ostemplate);
                     parameters.put("vmid", vmid);
-                    return _client.executeAction("/nodes/" + _node + "/lxc", HttpMethod.POST, parameters);
+                    return _client.post("/nodes/" + _node + "/lxc", parameters);
                 }
             }
 
@@ -7371,8 +7382,8 @@ public class Client {
                             /**
                              * ceph osd in
                              */
-                            public void in() {
-                                _client.executeAction("/nodes/" + _node + "/ceph/osd/" + _osdid + "/in", HttpMethod.POST, null);
+                            public void in() throws JSONException {
+                                _client.post("/nodes/" + _node + "/ceph/osd/" + _osdid + "/in", null);
                             }
                         }
 
@@ -7390,8 +7401,8 @@ public class Client {
                             /**
                              * ceph osd out
                              */
-                            public void out() {
-                                _client.executeAction("/nodes/" + _node + "/ceph/osd/" + _osdid + "/out", HttpMethod.POST, null);
+                            public void out() throws JSONException {
+                                _client.post("/nodes/" + _node + "/ceph/osd/" + _osdid + "/out", null);
                             }
                         }
 
@@ -7401,25 +7412,25 @@ public class Client {
                          * @param cleanup If set, we remove partition table
                          * entries.
                          */
-                        public JSONObject destroyosd(Boolean cleanup) {
+                        public JSONObject destroyosd(Boolean cleanup) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("cleanup", cleanup);
-                            return _client.executeAction("/nodes/" + _node + "/ceph/osd/" + _osdid + "", HttpMethod.DELETE, parameters);
+                            return _client.delete("/nodes/" + _node + "/ceph/osd/" + _osdid + "", parameters);
                         }
 
                         /**
                          * Destroy OSD
                          */
-                        public JSONObject destroyosd() {
-                            return _client.executeAction("/nodes/" + _node + "/ceph/osd/" + _osdid + "", HttpMethod.DELETE, null);
+                        public JSONObject destroyosd() throws JSONException {
+                            return _client.delete("/nodes/" + _node + "/ceph/osd/" + _osdid + "", null);
                         }
                     }
 
                     /**
                      * Get Ceph osd list/tree.
                      */
-                    public JSONObject index() {
-                        return _client.executeAction("/nodes/" + _node + "/ceph/osd", HttpMethod.GET, null);
+                    public JSONObject index() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/osd", null);
                     }
 
                     /**
@@ -7431,13 +7442,13 @@ public class Client {
                      * xfs,ext4,btrfs
                      * @param journal_dev Block device name for journal.
                      */
-                    public JSONObject createosd(String dev, Boolean bluestore, String fstype, String journal_dev) {
+                    public JSONObject createosd(String dev, Boolean bluestore, String fstype, String journal_dev) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("dev", dev);
                         parameters.put("bluestore", bluestore);
                         parameters.put("fstype", fstype);
                         parameters.put("journal_dev", journal_dev);
-                        return _client.executeAction("/nodes/" + _node + "/ceph/osd", HttpMethod.POST, parameters);
+                        return _client.post("/nodes/" + _node + "/ceph/osd", parameters);
                     }
 
                     /**
@@ -7445,10 +7456,10 @@ public class Client {
                      *
                      * @param dev Block device name.
                      */
-                    public JSONObject createosd(String dev) {
+                    public JSONObject createosd(String dev) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("dev", dev);
-                        return _client.executeAction("/nodes/" + _node + "/ceph/osd", HttpMethod.POST, parameters);
+                        return _client.post("/nodes/" + _node + "/ceph/osd", parameters);
                     }
                 }
 
@@ -7467,17 +7478,17 @@ public class Client {
                      * @param type Only list specific types of disks. Enum:
                      * unused,journal_disks
                      */
-                    public JSONObject disks(String type) {
+                    public JSONObject disks(String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("type", type);
-                        return _client.executeAction("/nodes/" + _node + "/ceph/disks", HttpMethod.GET, parameters);
+                        return _client.get("/nodes/" + _node + "/ceph/disks", parameters);
                     }
 
                     /**
                      * List local disks.
                      */
-                    public JSONObject disks() {
-                        return _client.executeAction("/nodes/" + _node + "/ceph/disks", HttpMethod.GET, null);
+                    public JSONObject disks() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/disks", null);
                     }
                 }
 
@@ -7493,8 +7504,8 @@ public class Client {
                     /**
                      * Get Ceph configuration.
                      */
-                    public JSONObject config() {
-                        return _client.executeAction("/nodes/" + _node + "/ceph/config", HttpMethod.GET, null);
+                    public JSONObject config() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/config", null);
                     }
                 }
 
@@ -7525,23 +7536,23 @@ public class Client {
                         /**
                          * Destroy Ceph monitor.
                          */
-                        public JSONObject destroymon() {
-                            return _client.executeAction("/nodes/" + _node + "/ceph/mon/" + _monid + "", HttpMethod.DELETE, null);
+                        public JSONObject destroymon() throws JSONException {
+                            return _client.delete("/nodes/" + _node + "/ceph/mon/" + _monid + "", null);
                         }
                     }
 
                     /**
                      * Get Ceph monitor list.
                      */
-                    public JSONObject listmon() {
-                        return _client.executeAction("/nodes/" + _node + "/ceph/mon", HttpMethod.GET, null);
+                    public JSONObject listmon() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/mon", null);
                     }
 
                     /**
                      * Create Ceph Monitor
                      */
-                    public JSONObject createmon() {
-                        return _client.executeAction("/nodes/" + _node + "/ceph/mon", HttpMethod.POST, null);
+                    public JSONObject createmon() throws JSONException {
+                        return _client.post("/nodes/" + _node + "/ceph/mon", null);
                     }
                 }
 
@@ -7571,22 +7582,22 @@ public class Client {
                      * default pg num' does not work for default pools.
                      * @param size Targeted number of replicas per object
                      */
-                    public void init(Boolean disable_cephx, Integer min_size, String network, Integer pg_bits, Integer size) {
+                    public void init(Boolean disable_cephx, Integer min_size, String network, Integer pg_bits, Integer size) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("disable_cephx", disable_cephx);
                         parameters.put("min_size", min_size);
                         parameters.put("network", network);
                         parameters.put("pg_bits", pg_bits);
                         parameters.put("size", size);
-                        _client.executeAction("/nodes/" + _node + "/ceph/init", HttpMethod.POST, parameters);
+                        _client.post("/nodes/" + _node + "/ceph/init", parameters);
                     }
 
                     /**
                      * Create initial ceph default configuration and setup
                      * symlinks.
                      */
-                    public void init() {
-                        _client.executeAction("/nodes/" + _node + "/ceph/init", HttpMethod.POST, null);
+                    public void init() throws JSONException {
+                        _client.post("/nodes/" + _node + "/ceph/init", null);
                     }
                 }
 
@@ -7604,17 +7615,17 @@ public class Client {
                      *
                      * @param service Ceph service name.
                      */
-                    public JSONObject stop(String service) {
+                    public JSONObject stop(String service) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("service", service);
-                        return _client.executeAction("/nodes/" + _node + "/ceph/stop", HttpMethod.POST, parameters);
+                        return _client.post("/nodes/" + _node + "/ceph/stop", parameters);
                     }
 
                     /**
                      * Stop ceph services.
                      */
-                    public JSONObject stop() {
-                        return _client.executeAction("/nodes/" + _node + "/ceph/stop", HttpMethod.POST, null);
+                    public JSONObject stop() throws JSONException {
+                        return _client.post("/nodes/" + _node + "/ceph/stop", null);
                     }
                 }
 
@@ -7632,17 +7643,17 @@ public class Client {
                      *
                      * @param service Ceph service name.
                      */
-                    public JSONObject start(String service) {
+                    public JSONObject start(String service) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("service", service);
-                        return _client.executeAction("/nodes/" + _node + "/ceph/start", HttpMethod.POST, parameters);
+                        return _client.post("/nodes/" + _node + "/ceph/start", parameters);
                     }
 
                     /**
                      * Start ceph services.
                      */
-                    public JSONObject start() {
-                        return _client.executeAction("/nodes/" + _node + "/ceph/start", HttpMethod.POST, null);
+                    public JSONObject start() throws JSONException {
+                        return _client.post("/nodes/" + _node + "/ceph/start", null);
                     }
                 }
 
@@ -7658,8 +7669,8 @@ public class Client {
                     /**
                      * Get ceph status.
                      */
-                    public JSONObject status() {
-                        return _client.executeAction("/nodes/" + _node + "/ceph/status", HttpMethod.GET, null);
+                    public JSONObject status() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/status", null);
                     }
                 }
 
@@ -7692,25 +7703,25 @@ public class Client {
                          *
                          * @param force If true, destroys pool even if in use
                          */
-                        public void destroypool(Boolean force) {
+                        public void destroypool(Boolean force) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("force", force);
-                            _client.executeAction("/nodes/" + _node + "/ceph/pools/" + _name + "", HttpMethod.DELETE, parameters);
+                            _client.delete("/nodes/" + _node + "/ceph/pools/" + _name + "", parameters);
                         }
 
                         /**
                          * Destroy pool
                          */
-                        public void destroypool() {
-                            _client.executeAction("/nodes/" + _node + "/ceph/pools/" + _name + "", HttpMethod.DELETE, null);
+                        public void destroypool() throws JSONException {
+                            _client.delete("/nodes/" + _node + "/ceph/pools/" + _name + "", null);
                         }
                     }
 
                     /**
                      * List all pools.
                      */
-                    public JSONObject lspools() {
-                        return _client.executeAction("/nodes/" + _node + "/ceph/pools", HttpMethod.GET, null);
+                    public JSONObject lspools() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/pools", null);
                     }
 
                     /**
@@ -7723,14 +7734,14 @@ public class Client {
                      * @param pg_num Number of placement groups.
                      * @param size Number of replicas per object
                      */
-                    public void createpool(String name, Integer crush_ruleset, Integer min_size, Integer pg_num, Integer size) {
+                    public void createpool(String name, Integer crush_ruleset, Integer min_size, Integer pg_num, Integer size) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("name", name);
                         parameters.put("crush_ruleset", crush_ruleset);
                         parameters.put("min_size", min_size);
                         parameters.put("pg_num", pg_num);
                         parameters.put("size", size);
-                        _client.executeAction("/nodes/" + _node + "/ceph/pools", HttpMethod.POST, parameters);
+                        _client.post("/nodes/" + _node + "/ceph/pools", parameters);
                     }
 
                     /**
@@ -7738,10 +7749,10 @@ public class Client {
                      *
                      * @param name The name of the pool. It must be unique.
                      */
-                    public void createpool(String name) {
+                    public void createpool(String name) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("name", name);
-                        _client.executeAction("/nodes/" + _node + "/ceph/pools", HttpMethod.POST, parameters);
+                        _client.post("/nodes/" + _node + "/ceph/pools", parameters);
                     }
                 }
 
@@ -7772,23 +7783,23 @@ public class Client {
                         /**
                          * Unset a ceph flag
                          */
-                        public void unsetFlag() {
-                            _client.executeAction("/nodes/" + _node + "/ceph/flags/" + _flag + "", HttpMethod.DELETE, null);
+                        public void unsetFlag() throws JSONException {
+                            _client.delete("/nodes/" + _node + "/ceph/flags/" + _flag + "", null);
                         }
 
                         /**
                          * Set a ceph flag
                          */
-                        public void setFlag() {
-                            _client.executeAction("/nodes/" + _node + "/ceph/flags/" + _flag + "", HttpMethod.POST, null);
+                        public void setFlag() throws JSONException {
+                            _client.post("/nodes/" + _node + "/ceph/flags/" + _flag + "", null);
                         }
                     }
 
                     /**
                      * get all set ceph flags
                      */
-                    public JSONObject getFlags() {
-                        return _client.executeAction("/nodes/" + _node + "/ceph/flags", HttpMethod.GET, null);
+                    public JSONObject getFlags() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/flags", null);
                     }
                 }
 
@@ -7804,8 +7815,8 @@ public class Client {
                     /**
                      * Get OSD crush map
                      */
-                    public JSONObject crush() {
-                        return _client.executeAction("/nodes/" + _node + "/ceph/crush", HttpMethod.GET, null);
+                    public JSONObject crush() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/crush", null);
                     }
                 }
 
@@ -7824,26 +7835,26 @@ public class Client {
                      * @param limit
                      * @param start
                      */
-                    public JSONObject log(Integer limit, Integer start) {
+                    public JSONObject log(Integer limit, Integer start) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("limit", limit);
                         parameters.put("start", start);
-                        return _client.executeAction("/nodes/" + _node + "/ceph/log", HttpMethod.GET, parameters);
+                        return _client.get("/nodes/" + _node + "/ceph/log", parameters);
                     }
 
                     /**
                      * Read ceph log
                      */
-                    public JSONObject log() {
-                        return _client.executeAction("/nodes/" + _node + "/ceph/log", HttpMethod.GET, null);
+                    public JSONObject log() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/log", null);
                     }
                 }
 
                 /**
                  * Directory index.
                  */
-                public JSONObject index() {
-                    return _client.executeAction("/nodes/" + _node + "/ceph", HttpMethod.GET, null);
+                public JSONObject index() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/ceph", null);
                 }
             }
 
@@ -7878,10 +7889,10 @@ public class Client {
                      *
                      * @param volume Volume identifier
                      */
-                    public JSONObject extractconfig(String volume) {
+                    public JSONObject extractconfig(String volume) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("volume", volume);
-                        return _client.executeAction("/nodes/" + _node + "/vzdump/extractconfig", HttpMethod.GET, parameters);
+                        return _client.get("/nodes/" + _node + "/vzdump/extractconfig", parameters);
                     }
                 }
 
@@ -7922,7 +7933,7 @@ public class Client {
                  * @param tmpdir Store temporary files to specified directory.
                  * @param vmid The ID of the guest system you want to backup.
                  */
-                public JSONObject vzdump(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) {
+                public JSONObject vzdump(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("all", all);
                     parameters.put("bwlimit", bwlimit);
@@ -7948,14 +7959,14 @@ public class Client {
                     parameters.put("storage", storage);
                     parameters.put("tmpdir", tmpdir);
                     parameters.put("vmid", vmid);
-                    return _client.executeAction("/nodes/" + _node + "/vzdump", HttpMethod.POST, parameters);
+                    return _client.post("/nodes/" + _node + "/vzdump", parameters);
                 }
 
                 /**
                  * Create backup.
                  */
-                public JSONObject vzdump() {
-                    return _client.executeAction("/nodes/" + _node + "/vzdump", HttpMethod.POST, null);
+                public JSONObject vzdump() throws JSONException {
+                    return _client.post("/nodes/" + _node + "/vzdump", null);
                 }
             }
 
@@ -8037,8 +8048,8 @@ public class Client {
                         /**
                          * Read service properties
                          */
-                        public JSONObject serviceState() {
-                            return _client.executeAction("/nodes/" + _node + "/services/" + _service + "/state", HttpMethod.GET, null);
+                        public JSONObject serviceState() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/services/" + _service + "/state", null);
                         }
                     }
 
@@ -8056,8 +8067,8 @@ public class Client {
                         /**
                          * Start service.
                          */
-                        public JSONObject serviceStart() {
-                            return _client.executeAction("/nodes/" + _node + "/services/" + _service + "/start", HttpMethod.POST, null);
+                        public JSONObject serviceStart() throws JSONException {
+                            return _client.post("/nodes/" + _node + "/services/" + _service + "/start", null);
                         }
                     }
 
@@ -8075,8 +8086,8 @@ public class Client {
                         /**
                          * Stop service.
                          */
-                        public JSONObject serviceStop() {
-                            return _client.executeAction("/nodes/" + _node + "/services/" + _service + "/stop", HttpMethod.POST, null);
+                        public JSONObject serviceStop() throws JSONException {
+                            return _client.post("/nodes/" + _node + "/services/" + _service + "/stop", null);
                         }
                     }
 
@@ -8094,8 +8105,8 @@ public class Client {
                         /**
                          * Restart service.
                          */
-                        public JSONObject serviceRestart() {
-                            return _client.executeAction("/nodes/" + _node + "/services/" + _service + "/restart", HttpMethod.POST, null);
+                        public JSONObject serviceRestart() throws JSONException {
+                            return _client.post("/nodes/" + _node + "/services/" + _service + "/restart", null);
                         }
                     }
 
@@ -8113,24 +8124,24 @@ public class Client {
                         /**
                          * Reload service.
                          */
-                        public JSONObject serviceReload() {
-                            return _client.executeAction("/nodes/" + _node + "/services/" + _service + "/reload", HttpMethod.POST, null);
+                        public JSONObject serviceReload() throws JSONException {
+                            return _client.post("/nodes/" + _node + "/services/" + _service + "/reload", null);
                         }
                     }
 
                     /**
                      * Directory index
                      */
-                    public JSONObject srvcmdidx() {
-                        return _client.executeAction("/nodes/" + _node + "/services/" + _service + "", HttpMethod.GET, null);
+                    public JSONObject srvcmdidx() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/services/" + _service + "", null);
                     }
                 }
 
                 /**
                  * Service list.
                  */
-                public JSONObject index() {
-                    return _client.executeAction("/nodes/" + _node + "/services", HttpMethod.GET, null);
+                public JSONObject index() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/services", null);
                 }
             }
 
@@ -8146,8 +8157,8 @@ public class Client {
                 /**
                  * Read subscription info.
                  */
-                public JSONObject get() {
-                    return _client.executeAction("/nodes/" + _node + "/subscription", HttpMethod.GET, null);
+                public JSONObject get() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/subscription", null);
                 }
 
                 /**
@@ -8156,17 +8167,17 @@ public class Client {
                  * @param force Always connect to server, even if we have up to
                  * date info inside local cache.
                  */
-                public void update(Boolean force) {
+                public void update(Boolean force) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("force", force);
-                    _client.executeAction("/nodes/" + _node + "/subscription", HttpMethod.POST, parameters);
+                    _client.post("/nodes/" + _node + "/subscription", parameters);
                 }
 
                 /**
                  * Update subscription info.
                  */
-                public void update() {
-                    _client.executeAction("/nodes/" + _node + "/subscription", HttpMethod.POST, null);
+                public void update() throws JSONException {
+                    _client.post("/nodes/" + _node + "/subscription", null);
                 }
 
                 /**
@@ -8174,10 +8185,10 @@ public class Client {
                  *
                  * @param key Proxmox VE subscription key
                  */
-                public void set(String key) {
+                public void set(String key) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("key", key);
-                    _client.executeAction("/nodes/" + _node + "/subscription", HttpMethod.PUT, parameters);
+                    _client.put("/nodes/" + _node + "/subscription", parameters);
                 }
             }
 
@@ -8208,15 +8219,15 @@ public class Client {
                     /**
                      * Delete network device configuration
                      */
-                    public void deleteNetwork() {
-                        _client.executeAction("/nodes/" + _node + "/network/" + _iface + "", HttpMethod.DELETE, null);
+                    public void deleteNetwork() throws JSONException {
+                        _client.delete("/nodes/" + _node + "/network/" + _iface + "", null);
                     }
 
                     /**
                      * Read network device configuration
                      */
-                    public JSONObject networkConfig() {
-                        return _client.executeAction("/nodes/" + _node + "/network/" + _iface + "", HttpMethod.GET, null);
+                    public JSONObject networkConfig() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/network/" + _iface + "", null);
                     }
 
                     /**
@@ -8254,7 +8265,7 @@ public class Client {
                      * @param slaves Specify the interfaces used by the bonding
                      * device.
                      */
-                    public void updateNetwork(String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String comments, String comments6, String delete, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) {
+                    public void updateNetwork(String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String comments, String comments6, String delete, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("type", type);
                         parameters.put("address", address);
@@ -8277,7 +8288,7 @@ public class Client {
                         parameters.put("ovs_ports", ovs_ports);
                         parameters.put("ovs_tag", ovs_tag);
                         parameters.put("slaves", slaves);
-                        _client.executeAction("/nodes/" + _node + "/network/" + _iface + "", HttpMethod.PUT, parameters);
+                        _client.put("/nodes/" + _node + "/network/" + _iface + "", parameters);
                     }
 
                     /**
@@ -8286,18 +8297,18 @@ public class Client {
                      * @param type Network interface type Enum:
                      * bridge,bond,eth,alias,vlan,OVSBridge,OVSBond,OVSPort,OVSIntPort,unknown
                      */
-                    public void updateNetwork(String type) {
+                    public void updateNetwork(String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("type", type);
-                        _client.executeAction("/nodes/" + _node + "/network/" + _iface + "", HttpMethod.PUT, parameters);
+                        _client.put("/nodes/" + _node + "/network/" + _iface + "", parameters);
                     }
                 }
 
                 /**
                  * Revert network configuration changes.
                  */
-                public void revertNetworkChanges() {
-                    _client.executeAction("/nodes/" + _node + "/network", HttpMethod.DELETE, null);
+                public void revertNetworkChanges() throws JSONException {
+                    _client.delete("/nodes/" + _node + "/network", null);
                 }
 
                 /**
@@ -8306,17 +8317,17 @@ public class Client {
                  * @param type Only list specific interface types. Enum:
                  * bridge,bond,eth,alias,vlan,OVSBridge,OVSBond,OVSPort,OVSIntPort,any_bridge
                  */
-                public JSONObject index(String type) {
+                public JSONObject index(String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("type", type);
-                    return _client.executeAction("/nodes/" + _node + "/network", HttpMethod.GET, parameters);
+                    return _client.get("/nodes/" + _node + "/network", parameters);
                 }
 
                 /**
                  * List available networks
                  */
-                public JSONObject index() {
-                    return _client.executeAction("/nodes/" + _node + "/network", HttpMethod.GET, null);
+                public JSONObject index() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/network", null);
                 }
 
                 /**
@@ -8354,7 +8365,7 @@ public class Client {
                  * @param slaves Specify the interfaces used by the bonding
                  * device.
                  */
-                public void createNetwork(String iface, String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String comments, String comments6, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) {
+                public void createNetwork(String iface, String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String comments, String comments6, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("iface", iface);
                     parameters.put("type", type);
@@ -8377,7 +8388,7 @@ public class Client {
                     parameters.put("ovs_ports", ovs_ports);
                     parameters.put("ovs_tag", ovs_tag);
                     parameters.put("slaves", slaves);
-                    _client.executeAction("/nodes/" + _node + "/network", HttpMethod.POST, parameters);
+                    _client.post("/nodes/" + _node + "/network", parameters);
                 }
 
                 /**
@@ -8387,11 +8398,11 @@ public class Client {
                  * @param type Network interface type Enum:
                  * bridge,bond,eth,alias,vlan,OVSBridge,OVSBond,OVSPort,OVSIntPort,unknown
                  */
-                public void createNetwork(String iface, String type) {
+                public void createNetwork(String iface, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("iface", iface);
                     parameters.put("type", type);
-                    _client.executeAction("/nodes/" + _node + "/network", HttpMethod.POST, parameters);
+                    _client.post("/nodes/" + _node + "/network", parameters);
                 }
             }
 
@@ -8452,18 +8463,18 @@ public class Client {
                          * @param limit
                          * @param start
                          */
-                        public JSONObject readTaskLog(Integer limit, Integer start) {
+                        public JSONObject readTaskLog(Integer limit, Integer start) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("limit", limit);
                             parameters.put("start", start);
-                            return _client.executeAction("/nodes/" + _node + "/tasks/" + _upid + "/log", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/tasks/" + _upid + "/log", parameters);
                         }
 
                         /**
                          * Read task log.
                          */
-                        public JSONObject readTaskLog() {
-                            return _client.executeAction("/nodes/" + _node + "/tasks/" + _upid + "/log", HttpMethod.GET, null);
+                        public JSONObject readTaskLog() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/tasks/" + _upid + "/log", null);
                         }
                     }
 
@@ -8481,23 +8492,23 @@ public class Client {
                         /**
                          * Read task status.
                          */
-                        public JSONObject readTaskStatus() {
-                            return _client.executeAction("/nodes/" + _node + "/tasks/" + _upid + "/status", HttpMethod.GET, null);
+                        public JSONObject readTaskStatus() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/tasks/" + _upid + "/status", null);
                         }
                     }
 
                     /**
                      * Stop a task.
                      */
-                    public void stopTask() {
-                        _client.executeAction("/nodes/" + _node + "/tasks/" + _upid + "", HttpMethod.DELETE, null);
+                    public void stopTask() throws JSONException {
+                        _client.delete("/nodes/" + _node + "/tasks/" + _upid + "", null);
                     }
 
                     /**
                      *
                      */
-                    public JSONObject upidIndex() {
-                        return _client.executeAction("/nodes/" + _node + "/tasks/" + _upid + "", HttpMethod.GET, null);
+                    public JSONObject upidIndex() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/tasks/" + _upid + "", null);
                     }
                 }
 
@@ -8510,21 +8521,21 @@ public class Client {
                  * @param userfilter
                  * @param vmid Only list tasks for this VM.
                  */
-                public JSONObject nodeTasks(Boolean errors, Integer limit, Integer start, String userfilter, Integer vmid) {
+                public JSONObject nodeTasks(Boolean errors, Integer limit, Integer start, String userfilter, Integer vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("errors", errors);
                     parameters.put("limit", limit);
                     parameters.put("start", start);
                     parameters.put("userfilter", userfilter);
                     parameters.put("vmid", vmid);
-                    return _client.executeAction("/nodes/" + _node + "/tasks", HttpMethod.GET, parameters);
+                    return _client.get("/nodes/" + _node + "/tasks", parameters);
                 }
 
                 /**
                  * Read task list for one node (finished tasks).
                  */
-                public JSONObject nodeTasks() {
-                    return _client.executeAction("/nodes/" + _node + "/tasks", HttpMethod.GET, null);
+                public JSONObject nodeTasks() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/tasks", null);
                 }
             }
 
@@ -8605,8 +8616,8 @@ public class Client {
                     /**
                      * Scan zfs pool list on local node.
                      */
-                    public JSONObject zfsscan() {
-                        return _client.executeAction("/nodes/" + _node + "/scan/zfs", HttpMethod.GET, null);
+                    public JSONObject zfsscan() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/scan/zfs", null);
                     }
                 }
 
@@ -8624,10 +8635,10 @@ public class Client {
                      *
                      * @param server
                      */
-                    public JSONObject nfsscan(String server) {
+                    public JSONObject nfsscan(String server) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("server", server);
-                        return _client.executeAction("/nodes/" + _node + "/scan/nfs", HttpMethod.GET, parameters);
+                        return _client.get("/nodes/" + _node + "/scan/nfs", parameters);
                     }
                 }
 
@@ -8645,10 +8656,10 @@ public class Client {
                      *
                      * @param server
                      */
-                    public JSONObject glusterfsscan(String server) {
+                    public JSONObject glusterfsscan(String server) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("server", server);
-                        return _client.executeAction("/nodes/" + _node + "/scan/glusterfs", HttpMethod.GET, parameters);
+                        return _client.get("/nodes/" + _node + "/scan/glusterfs", parameters);
                     }
                 }
 
@@ -8666,10 +8677,10 @@ public class Client {
                      *
                      * @param portal
                      */
-                    public JSONObject iscsiscan(String portal) {
+                    public JSONObject iscsiscan(String portal) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("portal", portal);
-                        return _client.executeAction("/nodes/" + _node + "/scan/iscsi", HttpMethod.GET, parameters);
+                        return _client.get("/nodes/" + _node + "/scan/iscsi", parameters);
                     }
                 }
 
@@ -8685,8 +8696,8 @@ public class Client {
                     /**
                      * List local LVM volume groups.
                      */
-                    public JSONObject lvmscan() {
-                        return _client.executeAction("/nodes/" + _node + "/scan/lvm", HttpMethod.GET, null);
+                    public JSONObject lvmscan() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/scan/lvm", null);
                     }
                 }
 
@@ -8704,10 +8715,10 @@ public class Client {
                      *
                      * @param vg
                      */
-                    public JSONObject lvmthinscan(String vg) {
+                    public JSONObject lvmthinscan(String vg) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("vg", vg);
-                        return _client.executeAction("/nodes/" + _node + "/scan/lvmthin", HttpMethod.GET, parameters);
+                        return _client.get("/nodes/" + _node + "/scan/lvmthin", parameters);
                     }
                 }
 
@@ -8723,16 +8734,16 @@ public class Client {
                     /**
                      * List local USB devices.
                      */
-                    public JSONObject usbscan() {
-                        return _client.executeAction("/nodes/" + _node + "/scan/usb", HttpMethod.GET, null);
+                    public JSONObject usbscan() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/scan/usb", null);
                     }
                 }
 
                 /**
                  * Index of available scan methods
                  */
-                public JSONObject index() {
-                    return _client.executeAction("/nodes/" + _node + "/scan", HttpMethod.GET, null);
+                public JSONObject index() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/scan", null);
                 }
             }
 
@@ -8831,15 +8842,15 @@ public class Client {
                             /**
                              * Delete volume
                              */
-                            public void delete() {
-                                _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", HttpMethod.DELETE, null);
+                            public void delete() throws JSONException {
+                                _client.delete("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", null);
                             }
 
                             /**
                              * Get volume attributes
                              */
-                            public JSONObject info() {
-                                return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", HttpMethod.GET, null);
+                            public JSONObject info() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", null);
                             }
 
                             /**
@@ -8850,11 +8861,11 @@ public class Client {
                              * @param target_node Target node. Default is local
                              * node.
                              */
-                            public JSONObject copy(String target, String target_node) {
+                            public JSONObject copy(String target, String target_node) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("target", target);
                                 parameters.put("target_node", target_node);
-                                return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", HttpMethod.POST, parameters);
+                                return _client.post("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", parameters);
                             }
 
                             /**
@@ -8863,10 +8874,10 @@ public class Client {
                              *
                              * @param target Target volume identifier
                              */
-                            public JSONObject copy(String target) {
+                            public JSONObject copy(String target) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<String, Object>();
                                 parameters.put("target", target);
-                                return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", HttpMethod.POST, parameters);
+                                return _client.post("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", parameters);
                             }
                         }
 
@@ -8876,18 +8887,18 @@ public class Client {
                          * @param content Only list content of this type.
                          * @param vmid Only list images for this VM
                          */
-                        public JSONObject index(String content, Integer vmid) {
+                        public JSONObject index(String content, Integer vmid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("content", content);
                             parameters.put("vmid", vmid);
-                            return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/content", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/storage/" + _storage + "/content", parameters);
                         }
 
                         /**
                          * List storage content.
                          */
-                        public JSONObject index() {
-                            return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/content", HttpMethod.GET, null);
+                        public JSONObject index() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/storage/" + _storage + "/content", null);
                         }
 
                         /**
@@ -8900,13 +8911,13 @@ public class Client {
                          * @param vmid Specify owner VM
                          * @param format Enum: raw,qcow2,subvol
                          */
-                        public JSONObject create(String filename, String size, int vmid, String format) {
+                        public JSONObject create(String filename, String size, int vmid, String format) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("filename", filename);
                             parameters.put("size", size);
                             parameters.put("vmid", vmid);
                             parameters.put("format", format);
-                            return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/content", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/storage/" + _storage + "/content", parameters);
                         }
 
                         /**
@@ -8918,12 +8929,12 @@ public class Client {
                          * 1024M)
                          * @param vmid Specify owner VM
                          */
-                        public JSONObject create(String filename, String size, int vmid) {
+                        public JSONObject create(String filename, String size, int vmid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("filename", filename);
                             parameters.put("size", size);
                             parameters.put("vmid", vmid);
-                            return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/content", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/storage/" + _storage + "/content", parameters);
                         }
                     }
 
@@ -8941,8 +8952,8 @@ public class Client {
                         /**
                          * Read storage status.
                          */
-                        public JSONObject readStatus() {
-                            return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/status", HttpMethod.GET, null);
+                        public JSONObject readStatus() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/storage/" + _storage + "/status", null);
                         }
                     }
 
@@ -8967,12 +8978,12 @@ public class Client {
                          * @param cf The RRD consolidation function Enum:
                          * AVERAGE,MAX
                          */
-                        public JSONObject rrd(String ds, String timeframe, String cf) {
+                        public JSONObject rrd(String ds, String timeframe, String cf) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
                             parameters.put("cf", cf);
-                            return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/rrd", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/storage/" + _storage + "/rrd", parameters);
                         }
 
                         /**
@@ -8983,11 +8994,11 @@ public class Client {
                          * @param timeframe Specify the time frame you are
                          * interested in. Enum: hour,day,week,month,year
                          */
-                        public JSONObject rrd(String ds, String timeframe) {
+                        public JSONObject rrd(String ds, String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
-                            return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/rrd", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/storage/" + _storage + "/rrd", parameters);
                         }
                     }
 
@@ -9010,11 +9021,11 @@ public class Client {
                          * @param cf The RRD consolidation function Enum:
                          * AVERAGE,MAX
                          */
-                        public JSONObject rrddata(String timeframe, String cf) {
+                        public JSONObject rrddata(String timeframe, String cf) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("timeframe", timeframe);
                             parameters.put("cf", cf);
-                            return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/rrddata", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/storage/" + _storage + "/rrddata", parameters);
                         }
 
                         /**
@@ -9023,10 +9034,10 @@ public class Client {
                          * @param timeframe Specify the time frame you are
                          * interested in. Enum: hour,day,week,month,year
                          */
-                        public JSONObject rrddata(String timeframe) {
+                        public JSONObject rrddata(String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("timeframe", timeframe);
-                            return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/rrddata", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/storage/" + _storage + "/rrddata", parameters);
                         }
                     }
 
@@ -9051,12 +9062,12 @@ public class Client {
                          * only overwrite it when connecting to the trustet port
                          * on localhost.
                          */
-                        public JSONObject upload(String content, String filename, String tmpfilename) {
+                        public JSONObject upload(String content, String filename, String tmpfilename) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("content", content);
                             parameters.put("filename", filename);
                             parameters.put("tmpfilename", tmpfilename);
-                            return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/upload", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/storage/" + _storage + "/upload", parameters);
                         }
 
                         /**
@@ -9065,19 +9076,19 @@ public class Client {
                          * @param content Content type.
                          * @param filename The name of the file to create.
                          */
-                        public JSONObject upload(String content, String filename) {
+                        public JSONObject upload(String content, String filename) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("content", content);
                             parameters.put("filename", filename);
-                            return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "/upload", HttpMethod.POST, parameters);
+                            return _client.post("/nodes/" + _node + "/storage/" + _storage + "/upload", parameters);
                         }
                     }
 
                     /**
                      *
                      */
-                    public JSONObject diridx() {
-                        return _client.executeAction("/nodes/" + _node + "/storage/" + _storage + "", HttpMethod.GET, null);
+                    public JSONObject diridx() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/storage/" + _storage + "", null);
                     }
                 }
 
@@ -9093,20 +9104,20 @@ public class Client {
                  * shared storages which content is accessible on this 'node'
                  * and the specified 'target' node.
                  */
-                public JSONObject index(String content, Boolean enabled, String storage, String target) {
+                public JSONObject index(String content, Boolean enabled, String storage, String target) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("content", content);
                     parameters.put("enabled", enabled);
                     parameters.put("storage", storage);
                     parameters.put("target", target);
-                    return _client.executeAction("/nodes/" + _node + "/storage", HttpMethod.GET, parameters);
+                    return _client.get("/nodes/" + _node + "/storage", parameters);
                 }
 
                 /**
                  * Get status for all datastores.
                  */
-                public JSONObject index() {
-                    return _client.executeAction("/nodes/" + _node + "/storage", HttpMethod.GET, null);
+                public JSONObject index() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/storage", null);
                 }
             }
 
@@ -9155,8 +9166,8 @@ public class Client {
                     /**
                      * List local disks.
                      */
-                    public JSONObject list() {
-                        return _client.executeAction("/nodes/" + _node + "/disks/list", HttpMethod.GET, null);
+                    public JSONObject list() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/disks/list", null);
                     }
                 }
 
@@ -9175,11 +9186,11 @@ public class Client {
                      * @param disk Block device name
                      * @param healthonly If true returns only the health status
                      */
-                    public JSONObject smart(String disk, Boolean healthonly) {
+                    public JSONObject smart(String disk, Boolean healthonly) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("disk", disk);
                         parameters.put("healthonly", healthonly);
-                        return _client.executeAction("/nodes/" + _node + "/disks/smart", HttpMethod.GET, parameters);
+                        return _client.get("/nodes/" + _node + "/disks/smart", parameters);
                     }
 
                     /**
@@ -9187,10 +9198,10 @@ public class Client {
                      *
                      * @param disk Block device name
                      */
-                    public JSONObject smart(String disk) {
+                    public JSONObject smart(String disk) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("disk", disk);
-                        return _client.executeAction("/nodes/" + _node + "/disks/smart", HttpMethod.GET, parameters);
+                        return _client.get("/nodes/" + _node + "/disks/smart", parameters);
                     }
                 }
 
@@ -9209,11 +9220,11 @@ public class Client {
                      * @param disk Block device name
                      * @param uuid UUID for the GPT table
                      */
-                    public JSONObject initgpt(String disk, String uuid) {
+                    public JSONObject initgpt(String disk, String uuid) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("disk", disk);
                         parameters.put("uuid", uuid);
-                        return _client.executeAction("/nodes/" + _node + "/disks/initgpt", HttpMethod.POST, parameters);
+                        return _client.post("/nodes/" + _node + "/disks/initgpt", parameters);
                     }
 
                     /**
@@ -9221,18 +9232,18 @@ public class Client {
                      *
                      * @param disk Block device name
                      */
-                    public JSONObject initgpt(String disk) {
+                    public JSONObject initgpt(String disk) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("disk", disk);
-                        return _client.executeAction("/nodes/" + _node + "/disks/initgpt", HttpMethod.POST, parameters);
+                        return _client.post("/nodes/" + _node + "/disks/initgpt", parameters);
                     }
                 }
 
                 /**
                  * Node index.
                  */
-                public JSONObject index() {
-                    return _client.executeAction("/nodes/" + _node + "/disks", HttpMethod.GET, null);
+                public JSONObject index() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/disks", null);
                 }
             }
 
@@ -9281,8 +9292,8 @@ public class Client {
                     /**
                      * List available updates.
                      */
-                    public JSONObject listUpdates() {
-                        return _client.executeAction("/nodes/" + _node + "/apt/update", HttpMethod.GET, null);
+                    public JSONObject listUpdates() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/apt/update", null);
                     }
 
                     /**
@@ -9294,19 +9305,19 @@ public class Client {
                      * @param quiet Only produces output suitable for logging,
                      * omitting progress indicators.
                      */
-                    public JSONObject updateDatabase(Boolean notify, Boolean quiet) {
+                    public JSONObject updateDatabase(Boolean notify, Boolean quiet) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("notify", notify);
                         parameters.put("quiet", quiet);
-                        return _client.executeAction("/nodes/" + _node + "/apt/update", HttpMethod.POST, parameters);
+                        return _client.post("/nodes/" + _node + "/apt/update", parameters);
                     }
 
                     /**
                      * This is used to resynchronize the package index files
                      * from their sources (apt-get update).
                      */
-                    public JSONObject updateDatabase() {
-                        return _client.executeAction("/nodes/" + _node + "/apt/update", HttpMethod.POST, null);
+                    public JSONObject updateDatabase() throws JSONException {
+                        return _client.post("/nodes/" + _node + "/apt/update", null);
                     }
                 }
 
@@ -9325,11 +9336,11 @@ public class Client {
                      * @param name Package name.
                      * @param version Package version.
                      */
-                    public JSONObject changelog(String name, String version) {
+                    public JSONObject changelog(String name, String version) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("name", name);
                         parameters.put("version", version);
-                        return _client.executeAction("/nodes/" + _node + "/apt/changelog", HttpMethod.GET, parameters);
+                        return _client.get("/nodes/" + _node + "/apt/changelog", parameters);
                     }
 
                     /**
@@ -9337,10 +9348,10 @@ public class Client {
                      *
                      * @param name Package name.
                      */
-                    public JSONObject changelog(String name) {
+                    public JSONObject changelog(String name) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("name", name);
-                        return _client.executeAction("/nodes/" + _node + "/apt/changelog", HttpMethod.GET, parameters);
+                        return _client.get("/nodes/" + _node + "/apt/changelog", parameters);
                     }
                 }
 
@@ -9356,16 +9367,16 @@ public class Client {
                     /**
                      * Get package information for important Proxmox packages.
                      */
-                    public JSONObject versions() {
-                        return _client.executeAction("/nodes/" + _node + "/apt/versions", HttpMethod.GET, null);
+                    public JSONObject versions() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/apt/versions", null);
                     }
                 }
 
                 /**
                  * Directory index for apt (Advanced Package Tool).
                  */
-                public JSONObject index() {
-                    return _client.executeAction("/nodes/" + _node + "/apt", HttpMethod.GET, null);
+                public JSONObject index() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/apt", null);
                 }
             }
 
@@ -9433,24 +9444,24 @@ public class Client {
                          * configuration file has different SHA1 digest. This
                          * can be used to prevent concurrent modifications.
                          */
-                        public void deleteRule(String digest) {
+                        public void deleteRule(String digest) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("digest", digest);
-                            _client.executeAction("/nodes/" + _node + "/firewall/rules/" + _pos + "", HttpMethod.DELETE, parameters);
+                            _client.delete("/nodes/" + _node + "/firewall/rules/" + _pos + "", parameters);
                         }
 
                         /**
                          * Delete rule.
                          */
-                        public void deleteRule() {
-                            _client.executeAction("/nodes/" + _node + "/firewall/rules/" + _pos + "", HttpMethod.DELETE, null);
+                        public void deleteRule() throws JSONException {
+                            _client.delete("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
                         }
 
                         /**
                          * Get single rule data.
                          */
-                        public JSONObject getRule() {
-                            return _client.executeAction("/nodes/" + _node + "/firewall/rules/" + _pos + "", HttpMethod.GET, null);
+                        public JSONObject getRule() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
                         }
 
                         /**
@@ -9502,7 +9513,7 @@ public class Client {
                          * ports or ranges.
                          * @param type Rule type. Enum: in,out,group
                          */
-                        public void updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) {
+                        public void updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("action", action);
                             parameters.put("comment", comment);
@@ -9518,22 +9529,22 @@ public class Client {
                             parameters.put("source", source);
                             parameters.put("sport", sport);
                             parameters.put("type", type);
-                            _client.executeAction("/nodes/" + _node + "/firewall/rules/" + _pos + "", HttpMethod.PUT, parameters);
+                            _client.put("/nodes/" + _node + "/firewall/rules/" + _pos + "", parameters);
                         }
 
                         /**
                          * Modify rule data.
                          */
-                        public void updateRule() {
-                            _client.executeAction("/nodes/" + _node + "/firewall/rules/" + _pos + "", HttpMethod.PUT, null);
+                        public void updateRule() throws JSONException {
+                            _client.put("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
                         }
                     }
 
                     /**
                      * List rules.
                      */
-                    public JSONObject getRules() {
-                        return _client.executeAction("/nodes/" + _node + "/firewall/rules", HttpMethod.GET, null);
+                    public JSONObject getRules() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/firewall/rules", null);
                     }
 
                     /**
@@ -9580,7 +9591,7 @@ public class Client {
                      * '\d+:\d+', for example '80:85', and you can use comma
                      * separated list to match several ports or ranges.
                      */
-                    public void createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) {
+                    public void createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("action", action);
                         parameters.put("type", type);
@@ -9595,7 +9606,7 @@ public class Client {
                         parameters.put("proto", proto);
                         parameters.put("source", source);
                         parameters.put("sport", sport);
-                        _client.executeAction("/nodes/" + _node + "/firewall/rules", HttpMethod.POST, parameters);
+                        _client.post("/nodes/" + _node + "/firewall/rules", parameters);
                     }
 
                     /**
@@ -9605,11 +9616,11 @@ public class Client {
                      * security group name.
                      * @param type Rule type. Enum: in,out,group
                      */
-                    public void createRule(String action, String type) {
+                    public void createRule(String action, String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("action", action);
                         parameters.put("type", type);
-                        _client.executeAction("/nodes/" + _node + "/firewall/rules", HttpMethod.POST, parameters);
+                        _client.post("/nodes/" + _node + "/firewall/rules", parameters);
                     }
                 }
 
@@ -9625,8 +9636,8 @@ public class Client {
                     /**
                      * Get host firewall options.
                      */
-                    public JSONObject getOptions() {
-                        return _client.executeAction("/nodes/" + _node + "/firewall/options", HttpMethod.GET, null);
+                    public JSONObject getOptions() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/firewall/options", null);
                     }
 
                     /**
@@ -9655,7 +9666,7 @@ public class Client {
                      * emerg,alert,crit,err,warning,notice,info,debug,nolog
                      * @param tcpflags Filter illegal combinations of TCP flags.
                      */
-                    public void setOptions(String delete, String digest, Boolean enable, String log_level_in, String log_level_out, Boolean ndp, Integer nf_conntrack_max, Integer nf_conntrack_tcp_timeout_established, Boolean nosmurfs, String smurf_log_level, String tcp_flags_log_level, Boolean tcpflags) {
+                    public void setOptions(String delete, String digest, Boolean enable, String log_level_in, String log_level_out, Boolean ndp, Integer nf_conntrack_max, Integer nf_conntrack_tcp_timeout_established, Boolean nosmurfs, String smurf_log_level, String tcp_flags_log_level, Boolean tcpflags) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("delete", delete);
                         parameters.put("digest", digest);
@@ -9669,14 +9680,14 @@ public class Client {
                         parameters.put("smurf_log_level", smurf_log_level);
                         parameters.put("tcp_flags_log_level", tcp_flags_log_level);
                         parameters.put("tcpflags", tcpflags);
-                        _client.executeAction("/nodes/" + _node + "/firewall/options", HttpMethod.PUT, parameters);
+                        _client.put("/nodes/" + _node + "/firewall/options", parameters);
                     }
 
                     /**
                      * Set Firewall options.
                      */
-                    public void setOptions() {
-                        _client.executeAction("/nodes/" + _node + "/firewall/options", HttpMethod.PUT, null);
+                    public void setOptions() throws JSONException {
+                        _client.put("/nodes/" + _node + "/firewall/options", null);
                     }
                 }
 
@@ -9695,26 +9706,26 @@ public class Client {
                      * @param limit
                      * @param start
                      */
-                    public JSONObject log(Integer limit, Integer start) {
+                    public JSONObject log(Integer limit, Integer start) throws JSONException {
                         Map<String, Object> parameters = new HashMap<String, Object>();
                         parameters.put("limit", limit);
                         parameters.put("start", start);
-                        return _client.executeAction("/nodes/" + _node + "/firewall/log", HttpMethod.GET, parameters);
+                        return _client.get("/nodes/" + _node + "/firewall/log", parameters);
                     }
 
                     /**
                      * Read firewall log
                      */
-                    public JSONObject log() {
-                        return _client.executeAction("/nodes/" + _node + "/firewall/log", HttpMethod.GET, null);
+                    public JSONObject log() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/firewall/log", null);
                     }
                 }
 
                 /**
                  * Directory index.
                  */
-                public JSONObject index() {
-                    return _client.executeAction("/nodes/" + _node + "/firewall", HttpMethod.GET, null);
+                public JSONObject index() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/firewall", null);
                 }
             }
 
@@ -9780,8 +9791,8 @@ public class Client {
                         /**
                          * Get replication job status.
                          */
-                        public JSONObject jobStatus() {
-                            return _client.executeAction("/nodes/" + _node + "/replication/" + _id + "/status", HttpMethod.GET, null);
+                        public JSONObject jobStatus() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/replication/" + _id + "/status", null);
                         }
                     }
 
@@ -9802,18 +9813,18 @@ public class Client {
                          * @param limit
                          * @param start
                          */
-                        public JSONObject readJobLog(Integer limit, Integer start) {
+                        public JSONObject readJobLog(Integer limit, Integer start) throws JSONException {
                             Map<String, Object> parameters = new HashMap<String, Object>();
                             parameters.put("limit", limit);
                             parameters.put("start", start);
-                            return _client.executeAction("/nodes/" + _node + "/replication/" + _id + "/log", HttpMethod.GET, parameters);
+                            return _client.get("/nodes/" + _node + "/replication/" + _id + "/log", parameters);
                         }
 
                         /**
                          * Read replication job log.
                          */
-                        public JSONObject readJobLog() {
-                            return _client.executeAction("/nodes/" + _node + "/replication/" + _id + "/log", HttpMethod.GET, null);
+                        public JSONObject readJobLog() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/replication/" + _id + "/log", null);
                         }
                     }
 
@@ -9832,16 +9843,16 @@ public class Client {
                          * Schedule replication job to start as soon as
                          * possible.
                          */
-                        public JSONObject scheduleNow() {
-                            return _client.executeAction("/nodes/" + _node + "/replication/" + _id + "/schedule_now", HttpMethod.POST, null);
+                        public JSONObject scheduleNow() throws JSONException {
+                            return _client.post("/nodes/" + _node + "/replication/" + _id + "/schedule_now", null);
                         }
                     }
 
                     /**
                      * Directory index.
                      */
-                    public JSONObject index() {
-                        return _client.executeAction("/nodes/" + _node + "/replication/" + _id + "", HttpMethod.GET, null);
+                    public JSONObject index() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/replication/" + _id + "", null);
                     }
                 }
 
@@ -9850,17 +9861,17 @@ public class Client {
                  *
                  * @param guest Only list replication jobs for this guest.
                  */
-                public JSONObject status(Integer guest) {
+                public JSONObject status(Integer guest) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("guest", guest);
-                    return _client.executeAction("/nodes/" + _node + "/replication", HttpMethod.GET, parameters);
+                    return _client.get("/nodes/" + _node + "/replication", parameters);
                 }
 
                 /**
                  * List status of all replication jobs on this node.
                  */
-                public JSONObject status() {
-                    return _client.executeAction("/nodes/" + _node + "/replication", HttpMethod.GET, null);
+                public JSONObject status() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/replication", null);
                 }
             }
 
@@ -9876,8 +9887,8 @@ public class Client {
                 /**
                  * API version details
                  */
-                public JSONObject version() {
-                    return _client.executeAction("/nodes/" + _node + "/version", HttpMethod.GET, null);
+                public JSONObject version() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/version", null);
                 }
             }
 
@@ -9893,8 +9904,8 @@ public class Client {
                 /**
                  * Read node status
                  */
-                public JSONObject status() {
-                    return _client.executeAction("/nodes/" + _node + "/status", HttpMethod.GET, null);
+                public JSONObject status() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/status", null);
                 }
 
                 /**
@@ -9902,10 +9913,10 @@ public class Client {
                  *
                  * @param command Specify the command. Enum: reboot,shutdown
                  */
-                public void nodeCmd(String command) {
+                public void nodeCmd(String command) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("command", command);
-                    _client.executeAction("/nodes/" + _node + "/status", HttpMethod.POST, parameters);
+                    _client.post("/nodes/" + _node + "/status", parameters);
                 }
             }
 
@@ -9921,8 +9932,8 @@ public class Client {
                 /**
                  * Read tap/vm network device interface counters
                  */
-                public JSONObject netstat() {
-                    return _client.executeAction("/nodes/" + _node + "/netstat", HttpMethod.GET, null);
+                public JSONObject netstat() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/netstat", null);
                 }
             }
 
@@ -9940,10 +9951,10 @@ public class Client {
                  *
                  * @param commands JSON encoded array of commands.
                  */
-                public JSONObject execute(String commands) {
+                public JSONObject execute(String commands) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("commands", commands);
-                    return _client.executeAction("/nodes/" + _node + "/execute", HttpMethod.POST, parameters);
+                    return _client.post("/nodes/" + _node + "/execute", parameters);
                 }
             }
 
@@ -9964,12 +9975,12 @@ public class Client {
                  * in. Enum: hour,day,week,month,year
                  * @param cf The RRD consolidation function Enum: AVERAGE,MAX
                  */
-                public JSONObject rrd(String ds, String timeframe, String cf) {
+                public JSONObject rrd(String ds, String timeframe, String cf) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("ds", ds);
                     parameters.put("timeframe", timeframe);
                     parameters.put("cf", cf);
-                    return _client.executeAction("/nodes/" + _node + "/rrd", HttpMethod.GET, parameters);
+                    return _client.get("/nodes/" + _node + "/rrd", parameters);
                 }
 
                 /**
@@ -9979,11 +9990,11 @@ public class Client {
                  * @param timeframe Specify the time frame you are interested
                  * in. Enum: hour,day,week,month,year
                  */
-                public JSONObject rrd(String ds, String timeframe) {
+                public JSONObject rrd(String ds, String timeframe) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("ds", ds);
                     parameters.put("timeframe", timeframe);
-                    return _client.executeAction("/nodes/" + _node + "/rrd", HttpMethod.GET, parameters);
+                    return _client.get("/nodes/" + _node + "/rrd", parameters);
                 }
             }
 
@@ -10003,11 +10014,11 @@ public class Client {
                  * in. Enum: hour,day,week,month,year
                  * @param cf The RRD consolidation function Enum: AVERAGE,MAX
                  */
-                public JSONObject rrddata(String timeframe, String cf) {
+                public JSONObject rrddata(String timeframe, String cf) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("timeframe", timeframe);
                     parameters.put("cf", cf);
-                    return _client.executeAction("/nodes/" + _node + "/rrddata", HttpMethod.GET, parameters);
+                    return _client.get("/nodes/" + _node + "/rrddata", parameters);
                 }
 
                 /**
@@ -10016,10 +10027,10 @@ public class Client {
                  * @param timeframe Specify the time frame you are interested
                  * in. Enum: hour,day,week,month,year
                  */
-                public JSONObject rrddata(String timeframe) {
+                public JSONObject rrddata(String timeframe) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("timeframe", timeframe);
-                    return _client.executeAction("/nodes/" + _node + "/rrddata", HttpMethod.GET, parameters);
+                    return _client.get("/nodes/" + _node + "/rrddata", parameters);
                 }
             }
 
@@ -10040,20 +10051,20 @@ public class Client {
                  * @param start
                  * @param until Display all log until this date-time string.
                  */
-                public JSONObject syslog(Integer limit, String since, Integer start, String until) {
+                public JSONObject syslog(Integer limit, String since, Integer start, String until) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("limit", limit);
                     parameters.put("since", since);
                     parameters.put("start", start);
                     parameters.put("until", until);
-                    return _client.executeAction("/nodes/" + _node + "/syslog", HttpMethod.GET, parameters);
+                    return _client.get("/nodes/" + _node + "/syslog", parameters);
                 }
 
                 /**
                  * Read system log
                  */
-                public JSONObject syslog() {
-                    return _client.executeAction("/nodes/" + _node + "/syslog", HttpMethod.GET, null);
+                public JSONObject syslog() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/syslog", null);
                 }
             }
 
@@ -10075,20 +10086,20 @@ public class Client {
                  * @param websocket use websocket instead of standard vnc.
                  * @param width sets the width of the console in pixels.
                  */
-                public JSONObject vncshell(Integer height, Boolean upgrade, Boolean websocket, Integer width) {
+                public JSONObject vncshell(Integer height, Boolean upgrade, Boolean websocket, Integer width) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("height", height);
                     parameters.put("upgrade", upgrade);
                     parameters.put("websocket", websocket);
                     parameters.put("width", width);
-                    return _client.executeAction("/nodes/" + _node + "/vncshell", HttpMethod.POST, parameters);
+                    return _client.post("/nodes/" + _node + "/vncshell", parameters);
                 }
 
                 /**
                  * Creates a VNC Shell proxy.
                  */
-                public JSONObject vncshell() {
-                    return _client.executeAction("/nodes/" + _node + "/vncshell", HttpMethod.POST, null);
+                public JSONObject vncshell() throws JSONException {
+                    return _client.post("/nodes/" + _node + "/vncshell", null);
                 }
             }
 
@@ -10107,11 +10118,11 @@ public class Client {
                  * @param port Port number returned by previous vncproxy call.
                  * @param vncticket Ticket from previous call to vncproxy.
                  */
-                public JSONObject vncwebsocket(int port, String vncticket) {
+                public JSONObject vncwebsocket(int port, String vncticket) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("port", port);
                     parameters.put("vncticket", vncticket);
-                    return _client.executeAction("/nodes/" + _node + "/vncwebsocket", HttpMethod.GET, parameters);
+                    return _client.get("/nodes/" + _node + "/vncwebsocket", parameters);
                 }
             }
 
@@ -10137,18 +10148,18 @@ public class Client {
                  * @param upgrade Run 'apt-get dist-upgrade' instead of normal
                  * shell.
                  */
-                public JSONObject spiceshell(String proxy, Boolean upgrade) {
+                public JSONObject spiceshell(String proxy, Boolean upgrade) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("proxy", proxy);
                     parameters.put("upgrade", upgrade);
-                    return _client.executeAction("/nodes/" + _node + "/spiceshell", HttpMethod.POST, parameters);
+                    return _client.post("/nodes/" + _node + "/spiceshell", parameters);
                 }
 
                 /**
                  * Creates a SPICE shell.
                  */
-                public JSONObject spiceshell() {
-                    return _client.executeAction("/nodes/" + _node + "/spiceshell", HttpMethod.POST, null);
+                public JSONObject spiceshell() throws JSONException {
+                    return _client.post("/nodes/" + _node + "/spiceshell", null);
                 }
             }
 
@@ -10164,8 +10175,8 @@ public class Client {
                 /**
                  * Read DNS settings.
                  */
-                public JSONObject dns() {
-                    return _client.executeAction("/nodes/" + _node + "/dns", HttpMethod.GET, null);
+                public JSONObject dns() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/dns", null);
                 }
 
                 /**
@@ -10176,13 +10187,13 @@ public class Client {
                  * @param dns2 Second name server IP address.
                  * @param dns3 Third name server IP address.
                  */
-                public void updateDns(String search, String dns1, String dns2, String dns3) {
+                public void updateDns(String search, String dns1, String dns2, String dns3) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("search", search);
                     parameters.put("dns1", dns1);
                     parameters.put("dns2", dns2);
                     parameters.put("dns3", dns3);
-                    _client.executeAction("/nodes/" + _node + "/dns", HttpMethod.PUT, parameters);
+                    _client.put("/nodes/" + _node + "/dns", parameters);
                 }
 
                 /**
@@ -10190,10 +10201,10 @@ public class Client {
                  *
                  * @param search Search domain for host-name lookup.
                  */
-                public void updateDns(String search) {
+                public void updateDns(String search) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("search", search);
-                    _client.executeAction("/nodes/" + _node + "/dns", HttpMethod.PUT, parameters);
+                    _client.put("/nodes/" + _node + "/dns", parameters);
                 }
             }
 
@@ -10209,8 +10220,8 @@ public class Client {
                 /**
                  * Read server time and time zone settings.
                  */
-                public JSONObject time() {
-                    return _client.executeAction("/nodes/" + _node + "/time", HttpMethod.GET, null);
+                public JSONObject time() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/time", null);
                 }
 
                 /**
@@ -10220,10 +10231,10 @@ public class Client {
                  * '/usr/share/zoneinfo/zone.tab' contains the list of valid
                  * names.
                  */
-                public void setTimezone(String timezone) {
+                public void setTimezone(String timezone) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("timezone", timezone);
-                    _client.executeAction("/nodes/" + _node + "/time", HttpMethod.PUT, parameters);
+                    _client.put("/nodes/" + _node + "/time", parameters);
                 }
             }
 
@@ -10239,8 +10250,8 @@ public class Client {
                 /**
                  * Get list of appliances.
                  */
-                public JSONObject aplinfo() {
-                    return _client.executeAction("/nodes/" + _node + "/aplinfo", HttpMethod.GET, null);
+                public JSONObject aplinfo() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/aplinfo", null);
                 }
 
                 /**
@@ -10249,11 +10260,11 @@ public class Client {
                  * @param storage The storage where the template will be stored
                  * @param template The template wich will downloaded
                  */
-                public JSONObject aplDownload(String storage, String template) {
+                public JSONObject aplDownload(String storage, String template) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("storage", storage);
                     parameters.put("template", template);
-                    return _client.executeAction("/nodes/" + _node + "/aplinfo", HttpMethod.POST, parameters);
+                    return _client.post("/nodes/" + _node + "/aplinfo", parameters);
                 }
             }
 
@@ -10269,8 +10280,8 @@ public class Client {
                 /**
                  * Gather various systems information about a node
                  */
-                public JSONObject report() {
-                    return _client.executeAction("/nodes/" + _node + "/report", HttpMethod.GET, null);
+                public JSONObject report() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/report", null);
                 }
             }
 
@@ -10289,18 +10300,18 @@ public class Client {
                  * @param force force if onboot=0.
                  * @param vms Only consider Guests with these IDs.
                  */
-                public JSONObject startall(Boolean force, String vms) {
+                public JSONObject startall(Boolean force, String vms) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("force", force);
                     parameters.put("vms", vms);
-                    return _client.executeAction("/nodes/" + _node + "/startall", HttpMethod.POST, parameters);
+                    return _client.post("/nodes/" + _node + "/startall", parameters);
                 }
 
                 /**
                  * Start all VMs and containers (when onboot=1).
                  */
-                public JSONObject startall() {
-                    return _client.executeAction("/nodes/" + _node + "/startall", HttpMethod.POST, null);
+                public JSONObject startall() throws JSONException {
+                    return _client.post("/nodes/" + _node + "/startall", null);
                 }
             }
 
@@ -10318,17 +10329,17 @@ public class Client {
                  *
                  * @param vms Only consider Guests with these IDs.
                  */
-                public JSONObject stopall(String vms) {
+                public JSONObject stopall(String vms) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("vms", vms);
-                    return _client.executeAction("/nodes/" + _node + "/stopall", HttpMethod.POST, parameters);
+                    return _client.post("/nodes/" + _node + "/stopall", parameters);
                 }
 
                 /**
                  * Stop all VMs and Containers.
                  */
-                public JSONObject stopall() {
-                    return _client.executeAction("/nodes/" + _node + "/stopall", HttpMethod.POST, null);
+                public JSONObject stopall() throws JSONException {
+                    return _client.post("/nodes/" + _node + "/stopall", null);
                 }
             }
 
@@ -10350,12 +10361,12 @@ public class Client {
                  * must be set!
                  * @param vms Only consider Guests with these IDs.
                  */
-                public JSONObject migrateall(String target, Integer maxworkers, String vms) {
+                public JSONObject migrateall(String target, Integer maxworkers, String vms) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("target", target);
                     parameters.put("maxworkers", maxworkers);
                     parameters.put("vms", vms);
-                    return _client.executeAction("/nodes/" + _node + "/migrateall", HttpMethod.POST, parameters);
+                    return _client.post("/nodes/" + _node + "/migrateall", parameters);
                 }
 
                 /**
@@ -10363,26 +10374,26 @@ public class Client {
                  *
                  * @param target Target node.
                  */
-                public JSONObject migrateall(String target) {
+                public JSONObject migrateall(String target) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("target", target);
-                    return _client.executeAction("/nodes/" + _node + "/migrateall", HttpMethod.POST, parameters);
+                    return _client.post("/nodes/" + _node + "/migrateall", parameters);
                 }
             }
 
             /**
              * Node index.
              */
-            public JSONObject index() {
-                return _client.executeAction("/nodes/" + _node + "", HttpMethod.GET, null);
+            public JSONObject index() throws JSONException {
+                return _client.get("/nodes/" + _node + "", null);
             }
         }
 
         /**
          * Cluster node index.
          */
-        public JSONObject index() {
-            return _client.executeAction("/nodes", HttpMethod.GET, null);
+        public JSONObject index() throws JSONException {
+            return _client.get("/nodes", null);
         }
     }
 
@@ -10408,15 +10419,15 @@ public class Client {
             /**
              * Delete storage configuration.
              */
-            public void delete() {
-                _client.executeAction("/storage/" + _storage + "", HttpMethod.DELETE, null);
+            public void delete() throws JSONException {
+                _client.delete("/storage/" + _storage + "", null);
             }
 
             /**
              * Read storage configuration.
              */
-            public JSONObject read() {
-                return _client.executeAction("/storage/" + _storage + "", HttpMethod.GET, null);
+            public JSONObject read() throws JSONException {
+                return _client.get("/storage/" + _storage + "", null);
             }
 
             /**
@@ -10460,7 +10471,7 @@ public class Client {
              * tcp,rdma,unix
              * @param username RBD Id.
              */
-            public void update(String blocksize, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String format, Boolean is_mountpoint, Boolean krbd, Integer maxfiles, Boolean mkdir, String nodes, Boolean nowritecache, String options, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, Boolean sparse, Boolean tagged_only, String transport, String username) {
+            public void update(String blocksize, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String format, Boolean is_mountpoint, Boolean krbd, Integer maxfiles, Boolean mkdir, String nodes, Boolean nowritecache, String options, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, Boolean sparse, Boolean tagged_only, String transport, String username) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("blocksize", blocksize);
                 parameters.put("comstar_hg", comstar_hg);
@@ -10488,14 +10499,14 @@ public class Client {
                 parameters.put("tagged_only", tagged_only);
                 parameters.put("transport", transport);
                 parameters.put("username", username);
-                _client.executeAction("/storage/" + _storage + "", HttpMethod.PUT, parameters);
+                _client.put("/storage/" + _storage + "", parameters);
             }
 
             /**
              * Update storage configuration.
              */
-            public void update() {
-                _client.executeAction("/storage/" + _storage + "", HttpMethod.PUT, null);
+            public void update() throws JSONException {
+                _client.put("/storage/" + _storage + "", null);
             }
         }
 
@@ -10505,17 +10516,17 @@ public class Client {
          * @param type Only list storage of specific type Enum:
          * dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
          */
-        public JSONObject index(String type) {
+        public JSONObject index(String type) throws JSONException {
             Map<String, Object> parameters = new HashMap<String, Object>();
             parameters.put("type", type);
-            return _client.executeAction("/storage", HttpMethod.GET, parameters);
+            return _client.get("/storage", parameters);
         }
 
         /**
          * Storage index.
          */
-        public JSONObject index() {
-            return _client.executeAction("/storage", HttpMethod.GET, null);
+        public JSONObject index() throws JSONException {
+            return _client.get("/storage", null);
         }
 
         /**
@@ -10567,7 +10578,7 @@ public class Client {
          * @param vgname Volume group name.
          * @param volume Glusterfs Volume.
          */
-        public void create(String storage, String type, String authsupported, String base_, String blocksize, String comstar_hg, String comstar_tg, String content, Boolean disable, String export, String format, Boolean is_mountpoint, String iscsiprovider, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, Boolean sparse, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) {
+        public void create(String storage, String type, String authsupported, String base_, String blocksize, String comstar_hg, String comstar_tg, String content, Boolean disable, String export, String format, Boolean is_mountpoint, String iscsiprovider, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, Boolean sparse, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
             Map<String, Object> parameters = new HashMap<String, Object>();
             parameters.put("storage", storage);
             parameters.put("type", type);
@@ -10606,7 +10617,7 @@ public class Client {
             parameters.put("username", username);
             parameters.put("vgname", vgname);
             parameters.put("volume", volume);
-            _client.executeAction("/storage", HttpMethod.POST, parameters);
+            _client.post("/storage", parameters);
         }
 
         /**
@@ -10616,11 +10627,11 @@ public class Client {
          * @param type Storage type. Enum:
          * dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
          */
-        public void create(String storage, String type) {
+        public void create(String storage, String type) throws JSONException {
             Map<String, Object> parameters = new HashMap<String, Object>();
             parameters.put("storage", storage);
             parameters.put("type", type);
-            _client.executeAction("/storage", HttpMethod.POST, parameters);
+            _client.post("/storage", parameters);
         }
     }
 
@@ -10708,15 +10719,15 @@ public class Client {
                 /**
                  * Delete user.
                  */
-                public void deleteUser() {
-                    _client.executeAction("/access/users/" + _userid + "", HttpMethod.DELETE, null);
+                public void deleteUser() throws JSONException {
+                    _client.delete("/access/users/" + _userid + "", null);
                 }
 
                 /**
                  * Get user configuration.
                  */
-                public JSONObject readUser() {
-                    return _client.executeAction("/access/users/" + _userid + "", HttpMethod.GET, null);
+                public JSONObject readUser() throws JSONException {
+                    return _client.get("/access/users/" + _userid + "", null);
                 }
 
                 /**
@@ -10733,7 +10744,7 @@ public class Client {
                  * @param keys Keys for two factor auth (yubico).
                  * @param lastname
                  */
-                public void updateUser(Boolean append, String comment, String email, Boolean enable, Integer expire, String firstname, String groups, String keys, String lastname) {
+                public void updateUser(Boolean append, String comment, String email, Boolean enable, Integer expire, String firstname, String groups, String keys, String lastname) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("append", append);
                     parameters.put("comment", comment);
@@ -10744,14 +10755,14 @@ public class Client {
                     parameters.put("groups", groups);
                     parameters.put("keys", keys);
                     parameters.put("lastname", lastname);
-                    _client.executeAction("/access/users/" + _userid + "", HttpMethod.PUT, parameters);
+                    _client.put("/access/users/" + _userid + "", parameters);
                 }
 
                 /**
                  * Update user configuration.
                  */
-                public void updateUser() {
-                    _client.executeAction("/access/users/" + _userid + "", HttpMethod.PUT, null);
+                public void updateUser() throws JSONException {
+                    _client.put("/access/users/" + _userid + "", null);
                 }
             }
 
@@ -10760,17 +10771,17 @@ public class Client {
              *
              * @param enabled Optional filter for enable property.
              */
-            public JSONObject index(Boolean enabled) {
+            public JSONObject index(Boolean enabled) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("enabled", enabled);
-                return _client.executeAction("/access/users", HttpMethod.GET, parameters);
+                return _client.get("/access/users", parameters);
             }
 
             /**
              * User index.
              */
-            public JSONObject index() {
-                return _client.executeAction("/access/users", HttpMethod.GET, null);
+            public JSONObject index() throws JSONException {
+                return _client.get("/access/users", null);
             }
 
             /**
@@ -10789,7 +10800,7 @@ public class Client {
              * @param lastname
              * @param password Initial password.
              */
-            public void createUser(String userid, String comment, String email, Boolean enable, Integer expire, String firstname, String groups, String keys, String lastname, String password) {
+            public void createUser(String userid, String comment, String email, Boolean enable, Integer expire, String firstname, String groups, String keys, String lastname, String password) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("userid", userid);
                 parameters.put("comment", comment);
@@ -10801,7 +10812,7 @@ public class Client {
                 parameters.put("keys", keys);
                 parameters.put("lastname", lastname);
                 parameters.put("password", password);
-                _client.executeAction("/access/users", HttpMethod.POST, parameters);
+                _client.post("/access/users", parameters);
             }
 
             /**
@@ -10809,10 +10820,10 @@ public class Client {
              *
              * @param userid User ID
              */
-            public void createUser(String userid) {
+            public void createUser(String userid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("userid", userid);
-                _client.executeAction("/access/users", HttpMethod.POST, parameters);
+                _client.post("/access/users", parameters);
             }
         }
 
@@ -10838,15 +10849,15 @@ public class Client {
                 /**
                  * Delete group.
                  */
-                public void deleteGroup() {
-                    _client.executeAction("/access/groups/" + _groupid + "", HttpMethod.DELETE, null);
+                public void deleteGroup() throws JSONException {
+                    _client.delete("/access/groups/" + _groupid + "", null);
                 }
 
                 /**
                  * Get group configuration.
                  */
-                public JSONObject readGroup() {
-                    return _client.executeAction("/access/groups/" + _groupid + "", HttpMethod.GET, null);
+                public JSONObject readGroup() throws JSONException {
+                    return _client.get("/access/groups/" + _groupid + "", null);
                 }
 
                 /**
@@ -10854,25 +10865,25 @@ public class Client {
                  *
                  * @param comment
                  */
-                public void updateGroup(String comment) {
+                public void updateGroup(String comment) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("comment", comment);
-                    _client.executeAction("/access/groups/" + _groupid + "", HttpMethod.PUT, parameters);
+                    _client.put("/access/groups/" + _groupid + "", parameters);
                 }
 
                 /**
                  * Update group data.
                  */
-                public void updateGroup() {
-                    _client.executeAction("/access/groups/" + _groupid + "", HttpMethod.PUT, null);
+                public void updateGroup() throws JSONException {
+                    _client.put("/access/groups/" + _groupid + "", null);
                 }
             }
 
             /**
              * Group index.
              */
-            public JSONObject index() {
-                return _client.executeAction("/access/groups", HttpMethod.GET, null);
+            public JSONObject index() throws JSONException {
+                return _client.get("/access/groups", null);
             }
 
             /**
@@ -10881,11 +10892,11 @@ public class Client {
              * @param groupid
              * @param comment
              */
-            public void createGroup(String groupid, String comment) {
+            public void createGroup(String groupid, String comment) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("groupid", groupid);
                 parameters.put("comment", comment);
-                _client.executeAction("/access/groups", HttpMethod.POST, parameters);
+                _client.post("/access/groups", parameters);
             }
 
             /**
@@ -10893,10 +10904,10 @@ public class Client {
              *
              * @param groupid
              */
-            public void createGroup(String groupid) {
+            public void createGroup(String groupid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("groupid", groupid);
-                _client.executeAction("/access/groups", HttpMethod.POST, parameters);
+                _client.post("/access/groups", parameters);
             }
         }
 
@@ -10922,15 +10933,15 @@ public class Client {
                 /**
                  * Delete role.
                  */
-                public void deleteRole() {
-                    _client.executeAction("/access/roles/" + _roleid + "", HttpMethod.DELETE, null);
+                public void deleteRole() throws JSONException {
+                    _client.delete("/access/roles/" + _roleid + "", null);
                 }
 
                 /**
                  * Get role configuration.
                  */
-                public JSONObject readRole() {
-                    return _client.executeAction("/access/roles/" + _roleid + "", HttpMethod.GET, null);
+                public JSONObject readRole() throws JSONException {
+                    return _client.get("/access/roles/" + _roleid + "", null);
                 }
 
                 /**
@@ -10939,11 +10950,11 @@ public class Client {
                  * @param privs
                  * @param append
                  */
-                public void updateRole(String privs, Boolean append) {
+                public void updateRole(String privs, Boolean append) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("privs", privs);
                     parameters.put("append", append);
-                    _client.executeAction("/access/roles/" + _roleid + "", HttpMethod.PUT, parameters);
+                    _client.put("/access/roles/" + _roleid + "", parameters);
                 }
 
                 /**
@@ -10951,18 +10962,18 @@ public class Client {
                  *
                  * @param privs
                  */
-                public void updateRole(String privs) {
+                public void updateRole(String privs) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("privs", privs);
-                    _client.executeAction("/access/roles/" + _roleid + "", HttpMethod.PUT, parameters);
+                    _client.put("/access/roles/" + _roleid + "", parameters);
                 }
             }
 
             /**
              * Role index.
              */
-            public JSONObject index() {
-                return _client.executeAction("/access/roles", HttpMethod.GET, null);
+            public JSONObject index() throws JSONException {
+                return _client.get("/access/roles", null);
             }
 
             /**
@@ -10971,11 +10982,11 @@ public class Client {
              * @param roleid
              * @param privs
              */
-            public void createRole(String roleid, String privs) {
+            public void createRole(String roleid, String privs) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("roleid", roleid);
                 parameters.put("privs", privs);
-                _client.executeAction("/access/roles", HttpMethod.POST, parameters);
+                _client.post("/access/roles", parameters);
             }
 
             /**
@@ -10983,10 +10994,10 @@ public class Client {
              *
              * @param roleid
              */
-            public void createRole(String roleid) {
+            public void createRole(String roleid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("roleid", roleid);
-                _client.executeAction("/access/roles", HttpMethod.POST, parameters);
+                _client.post("/access/roles", parameters);
             }
         }
 
@@ -10999,8 +11010,8 @@ public class Client {
             /**
              * Get Access Control List (ACLs).
              */
-            public JSONObject readAcl() {
-                return _client.executeAction("/access/acl", HttpMethod.GET, null);
+            public JSONObject readAcl() throws JSONException {
+                return _client.get("/access/acl", null);
             }
 
             /**
@@ -11013,7 +11024,7 @@ public class Client {
              * @param propagate Allow to propagate (inherit) permissions.
              * @param users List of users.
              */
-            public void updateAcl(String path, String roles, Boolean delete, String groups, Boolean propagate, String users) {
+            public void updateAcl(String path, String roles, Boolean delete, String groups, Boolean propagate, String users) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("path", path);
                 parameters.put("roles", roles);
@@ -11021,7 +11032,7 @@ public class Client {
                 parameters.put("groups", groups);
                 parameters.put("propagate", propagate);
                 parameters.put("users", users);
-                _client.executeAction("/access/acl", HttpMethod.PUT, parameters);
+                _client.put("/access/acl", parameters);
             }
 
             /**
@@ -11030,11 +11041,11 @@ public class Client {
              * @param path Access control path
              * @param roles List of roles.
              */
-            public void updateAcl(String path, String roles) {
+            public void updateAcl(String path, String roles) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("path", path);
                 parameters.put("roles", roles);
-                _client.executeAction("/access/acl", HttpMethod.PUT, parameters);
+                _client.put("/access/acl", parameters);
             }
         }
 
@@ -11060,15 +11071,15 @@ public class Client {
                 /**
                  * Delete an authentication server.
                  */
-                public void delete() {
-                    _client.executeAction("/access/domains/" + _realm + "", HttpMethod.DELETE, null);
+                public void delete() throws JSONException {
+                    _client.delete("/access/domains/" + _realm + "", null);
                 }
 
                 /**
                  * Get auth server configuration.
                  */
-                public JSONObject read() {
-                    return _client.executeAction("/access/domains/" + _realm + "", HttpMethod.GET, null);
+                public JSONObject read() throws JSONException {
+                    return _client.get("/access/domains/" + _realm + "", null);
                 }
 
                 /**
@@ -11090,7 +11101,7 @@ public class Client {
                  * @param tfa Use Two-factor authentication.
                  * @param user_attr LDAP user attribute name
                  */
-                public void update(String base_dn, String bind_dn, String comment, Boolean default_, String delete, String digest, String domain, Integer port, Boolean secure, String server1, String server2, String tfa, String user_attr) {
+                public void update(String base_dn, String bind_dn, String comment, Boolean default_, String delete, String digest, String domain, Integer port, Boolean secure, String server1, String server2, String tfa, String user_attr) throws JSONException {
                     Map<String, Object> parameters = new HashMap<String, Object>();
                     parameters.put("base_dn", base_dn);
                     parameters.put("bind_dn", bind_dn);
@@ -11105,22 +11116,22 @@ public class Client {
                     parameters.put("server2", server2);
                     parameters.put("tfa", tfa);
                     parameters.put("user_attr", user_attr);
-                    _client.executeAction("/access/domains/" + _realm + "", HttpMethod.PUT, parameters);
+                    _client.put("/access/domains/" + _realm + "", parameters);
                 }
 
                 /**
                  * Update authentication server settings.
                  */
-                public void update() {
-                    _client.executeAction("/access/domains/" + _realm + "", HttpMethod.PUT, null);
+                public void update() throws JSONException {
+                    _client.put("/access/domains/" + _realm + "", null);
                 }
             }
 
             /**
              * Authentication domain index.
              */
-            public JSONObject index() {
-                return _client.executeAction("/access/domains", HttpMethod.GET, null);
+            public JSONObject index() throws JSONException {
+                return _client.get("/access/domains", null);
             }
 
             /**
@@ -11140,7 +11151,7 @@ public class Client {
              * @param tfa Use Two-factor authentication.
              * @param user_attr LDAP user attribute name
              */
-            public void create(String realm, String type, String base_dn, String bind_dn, String comment, Boolean default_, String domain, Integer port, Boolean secure, String server1, String server2, String tfa, String user_attr) {
+            public void create(String realm, String type, String base_dn, String bind_dn, String comment, Boolean default_, String domain, Integer port, Boolean secure, String server1, String server2, String tfa, String user_attr) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("realm", realm);
                 parameters.put("type", type);
@@ -11155,7 +11166,7 @@ public class Client {
                 parameters.put("server2", server2);
                 parameters.put("tfa", tfa);
                 parameters.put("user_attr", user_attr);
-                _client.executeAction("/access/domains", HttpMethod.POST, parameters);
+                _client.post("/access/domains", parameters);
             }
 
             /**
@@ -11164,11 +11175,11 @@ public class Client {
              * @param realm Authentication domain ID
              * @param type Realm type. Enum: ad,ldap,pam,pve
              */
-            public void create(String realm, String type) {
+            public void create(String realm, String type) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("realm", realm);
                 parameters.put("type", type);
-                _client.executeAction("/access/domains", HttpMethod.POST, parameters);
+                _client.post("/access/domains", parameters);
             }
         }
 
@@ -11181,8 +11192,8 @@ public class Client {
             /**
              * Dummy. Useful for formaters which want to priovde a login page.
              */
-            public void getTicket() {
-                _client.executeAction("/access/ticket", HttpMethod.GET, null);
+            public void getTicket() throws JSONException {
+                _client.get("/access/ticket", null);
             }
 
             /**
@@ -11200,7 +11211,7 @@ public class Client {
              * parameter. Normally the realm is simply added to the username
              * &amp;lt;username&amp;gt;@&amp;lt;relam&amp;gt;.
              */
-            public JSONObject createTicket(String password, String username, String otp, String path, String privs, String realm) {
+            public JSONObject createTicket(String password, String username, String otp, String path, String privs, String realm) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("password", password);
                 parameters.put("username", username);
@@ -11208,7 +11219,7 @@ public class Client {
                 parameters.put("path", path);
                 parameters.put("privs", privs);
                 parameters.put("realm", realm);
-                return _client.executeAction("/access/ticket", HttpMethod.POST, parameters);
+                return _client.post("/access/ticket", parameters);
             }
 
             /**
@@ -11218,11 +11229,11 @@ public class Client {
              * ticket.
              * @param username User name
              */
-            public JSONObject createTicket(String password, String username) {
+            public JSONObject createTicket(String password, String username) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("password", password);
                 parameters.put("username", username);
-                return _client.executeAction("/access/ticket", HttpMethod.POST, parameters);
+                return _client.post("/access/ticket", parameters);
             }
         }
 
@@ -11238,19 +11249,19 @@ public class Client {
              * @param password The new password.
              * @param userid User ID
              */
-            public void changePasssword(String password, String userid) {
+            public void changePasssword(String password, String userid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("password", password);
                 parameters.put("userid", userid);
-                _client.executeAction("/access/password", HttpMethod.PUT, parameters);
+                _client.put("/access/password", parameters);
             }
         }
 
         /**
          * Directory index.
          */
-        public JSONObject index() {
-            return _client.executeAction("/access", HttpMethod.GET, null);
+        public JSONObject index() throws JSONException {
+            return _client.get("/access", null);
         }
     }
 
@@ -11276,15 +11287,15 @@ public class Client {
             /**
              * Delete pool.
              */
-            public void deletePool() {
-                _client.executeAction("/pools/" + _poolid + "", HttpMethod.DELETE, null);
+            public void deletePool() throws JSONException {
+                _client.delete("/pools/" + _poolid + "", null);
             }
 
             /**
              * Get pool configuration.
              */
-            public JSONObject readPool() {
-                return _client.executeAction("/pools/" + _poolid + "", HttpMethod.GET, null);
+            public JSONObject readPool() throws JSONException {
+                return _client.get("/pools/" + _poolid + "", null);
             }
 
             /**
@@ -11295,28 +11306,28 @@ public class Client {
              * @param storage List of storage IDs.
              * @param vms List of virtual machines.
              */
-            public void updatePool(String comment, Boolean delete, String storage, String vms) {
+            public void updatePool(String comment, Boolean delete, String storage, String vms) throws JSONException {
                 Map<String, Object> parameters = new HashMap<String, Object>();
                 parameters.put("comment", comment);
                 parameters.put("delete", delete);
                 parameters.put("storage", storage);
                 parameters.put("vms", vms);
-                _client.executeAction("/pools/" + _poolid + "", HttpMethod.PUT, parameters);
+                _client.put("/pools/" + _poolid + "", parameters);
             }
 
             /**
              * Update pool data.
              */
-            public void updatePool() {
-                _client.executeAction("/pools/" + _poolid + "", HttpMethod.PUT, null);
+            public void updatePool() throws JSONException {
+                _client.put("/pools/" + _poolid + "", null);
             }
         }
 
         /**
          * Pool index.
          */
-        public JSONObject index() {
-            return _client.executeAction("/pools", HttpMethod.GET, null);
+        public JSONObject index() throws JSONException {
+            return _client.get("/pools", null);
         }
 
         /**
@@ -11325,11 +11336,11 @@ public class Client {
          * @param poolid
          * @param comment
          */
-        public void createPool(String poolid, String comment) {
+        public void createPool(String poolid, String comment) throws JSONException {
             Map<String, Object> parameters = new HashMap<String, Object>();
             parameters.put("poolid", poolid);
             parameters.put("comment", comment);
-            _client.executeAction("/pools", HttpMethod.POST, parameters);
+            _client.post("/pools", parameters);
         }
 
         /**
@@ -11337,10 +11348,10 @@ public class Client {
          *
          * @param poolid
          */
-        public void createPool(String poolid) {
+        public void createPool(String poolid) throws JSONException {
             Map<String, Object> parameters = new HashMap<String, Object>();
             parameters.put("poolid", poolid);
-            _client.executeAction("/pools", HttpMethod.POST, parameters);
+            _client.post("/pools", parameters);
         }
     }
 
@@ -11354,8 +11365,8 @@ public class Client {
          * API version details. The result also includes the global datacenter
          * confguration.
          */
-        public JSONObject version() {
-            return _client.executeAction("/version", HttpMethod.GET, null);
+        public JSONObject version() throws JSONException {
+            return _client.get("/version", null);
         }
     }
 }

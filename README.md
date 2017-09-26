@@ -1,21 +1,40 @@
 # eve2pve-api-java
 ProxmoVE Client API JAVA
 
-General
-------------
+[ProxmoxVE Api](https://pve.proxmox.com/pve-docs/api-viewer/)
 
+#General
 The client is generated from a JSON Api on ProxmoxVE.
 The result is a complete response from server and converted in JSONObject.
 
-[ProxmoxVE Api](https://pve.proxmox.com/pve-docs/api-viewer/)
+#Main features
+* Easy to learn
+* Method named
+* Full method generated from documentation
+* Comment any method and parameters
+* Parameters indexed eg [n] is structured in array index and value
+* Tree structure
+    * client.getNodes().get("pve1").getQemu().vmlist().getJSONArray("data")
+* Return data proxmox
+* Return result status
+    * getStatusCode
+    * getReasonPhrase
+* Method directry access
+    * get
+    * post
+    * put
+    * delete
+* login return bool if access
 
-Usage
------
+#Usage
 
 ```java
 
 Client client = new Client("192.168.22", 8006);
 client.login("root", "password", "pam");
+
+System.out.println(client->get('/version'));
+// same for put/post/delete
 
 //loop nodes for
 JSONArray nodes = client.getNodes().index().getJSONArray("data");
