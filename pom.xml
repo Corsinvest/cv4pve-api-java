@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.enterpriseve.proxmoxve.api</groupId>
     <artifactId>eve2pve-api-java</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
     <packaging>jar</packaging>
     <dependencies>
         <dependency>
@@ -30,4 +30,6 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
+    <name>eve2pve-api-java</name>
+    <description>ProxmoVE Client API JAVA </description>
 </project>
