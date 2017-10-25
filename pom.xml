@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.enterpriseve.proxmoxve.api</groupId>
     <artifactId>eve2pve-api-java</artifactId>
-    <version>1.0.3</version>
+    <version>1.0.4</version>
     <packaging>jar</packaging>
     <dependencies>
         <dependency>

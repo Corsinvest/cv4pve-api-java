@@ -1,9 +1,10 @@
 # eve2pve-api-java
+
 ProxmoVE Client API JAVA
 
 [ProxmoxVE Api](https://pve.proxmox.com/pve-docs/api-viewer/)
 
-```
+```text
     ______      __                       _              _    ________
    / ____/___  / /____  _________  _____(_)_______     | |  / / ____/
   / __/ / __ \/ __/ _ \/ ___/ __ \/ ___/ / ___/ _ \    | | / / __/
@@ -14,13 +15,14 @@ ProxmoVE Client API JAVA
                                                        (Made in Italy)
 ```
 
-# General
+## General
 
 The client is generated from a JSON Api on ProxmoxVE.
 
-# Result
+## Result
 
 The result is class **Result** and contain methods:
+
 * **getResponse()** returned from ProxmoxVE (data,errors,...) JSONObject
 * **responseInError** (bool) : Contains errors from ProxmoxVE.
 * **getStatusCode()** (int) : Status code of the HTTP response.
@@ -28,30 +30,36 @@ The result is class **Result** and contain methods:
 * **isSuccessStatusCode()** (bool) : Gets a value that indicates if the HTTP response was successful.
 * **getError()** (string) : Get error.
 
-# Main features
+## Main features
+
 * Easy to learn
 * Method named
+* Method no named rest (same parameters)
+  * getRest
+  * setRest
+  * createRest
+  * deleteRest
 * Full method generated from documentation
 * Comment any method and parameters
 * Parameters indexed eg [n] is structured in array index and value
 * Tree structure
-    * client.getNodes().get("pve1").getQemu().vmlist().getResponse().getJSONArray("data")
+  * client.getNodes().get("pve1").getQemu().vmlist().getResponse().getJSONArray("data")
 * Return data Proxmox VE
 * Return result status
-    * getStatusCode
-    * getReasonPhrase
-    * isSuccessStatusCode
+  * getStatusCode
+  * getReasonPhrase
+  * isSuccessStatusCode
 * Wait task finish task
-    * waitForTaskToFinish
+  * waitForTaskToFinish
 * Method directry access
-    * get
-    * post
-    * put
-    * delete
+  * get
+  * set
+  * create
+  * delete
 * Login return bool if access
 * Return Result class more information
 
-# Usage
+## Usage
 
 ```java
 

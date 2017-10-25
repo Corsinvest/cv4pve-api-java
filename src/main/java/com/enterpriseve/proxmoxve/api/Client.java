@@ -91,7 +91,7 @@ public class Client {
      * @throws JSONException
      */
     public boolean login(String userName, String password, String realm) throws JSONException {
-        Result result = getAccess().getTicket().createTicket(password, userName, null, null, null, realm);
+        Result result = getAccess().getTicket().createRest(password, userName, null, null, null, realm);
         if (result.isSuccessStatusCode()) {
             _ticketCSRFPreventionToken = result.getResponse().getJSONObject("data").getString("CSRFPreventionToken");
             _ticketPVEAuthCookie = result.getResponse().getJSONObject("data").getString("ticket");
@@ -109,11 +109,11 @@ public class Client {
         return executeAction(resource, HttpMethod.GET, parameters);
     }
 
-    public Result put(String resource, Map<String, Object> parameters) throws JSONException {
+    public Result set(String resource, Map<String, Object> parameters) throws JSONException {
         return executeAction(resource, HttpMethod.PUT, parameters);
     }
 
-    public Result post(String resource, Map<String, Object> parameters) throws JSONException {
+    public Result create(String resource, Map<String, Object> parameters) throws JSONException {
         return executeAction(resource, HttpMethod.POST, parameters);
     }
 
@@ -123,8 +123,8 @@ public class Client {
 
     private Result executeAction(String resource, HttpMethod method, Map<String, Object> parameters) throws JSONException {
         String url = "https://" + _hostName + ":" + _port + "/api2/json" + resource;
-        //fix parms
-        ArrayList<NameValuePair> parms = new ArrayList<>();
+        //fix params
+        ArrayList<NameValuePair> params = new ArrayList<>();
         if (parameters != null) {
             parameters.entrySet().stream().filter((entry) -> (entry.getValue() != null)).forEachOrdered((entry) -> {
                 String value = entry.getValue().toString();
@@ -132,7 +132,7 @@ public class Client {
                     value = ((Boolean) entry.getValue()) ? "1" : "0";
                 }
                 try {
-                    parms.add(new BasicNameValuePair(entry.getKey(), URLEncoder.encode(value, "UTF-8")));
+                    params.add(new BasicNameValuePair(entry.getKey(), URLEncoder.encode(value, "UTF-8")));
                 } catch (UnsupportedEncodingException ex) {
                     Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -141,15 +141,15 @@ public class Client {
         HttpRequestBase request = null;
         switch (method) {
             case GET: {
-                if (!parms.isEmpty()) {
-                    StringBuilder urlParms = new StringBuilder();
-                    parms.forEach((parm) -> {
-                        urlParms.append(urlParms.length() > 1 ? "&" : "")
-                                .append(parm.getName())
+                if (!params.isEmpty()) {
+                    StringBuilder urlParams = new StringBuilder();
+                    params.forEach((param) -> {
+                        urlParams.append(urlParams.length() > 1 ? "&" : "")
+                                .append(param.getName())
                                 .append("=")
-                                .append(parm.getValue());
+                                .append(param.getValue());
                     });
-                    url += "?" + urlParms.toString();
+                    url += "?" + urlParams.toString();
                 }
                 request = new HttpGet(url);
                 break;
@@ -157,7 +157,7 @@ public class Client {
             case POST: {
                 request = new HttpPost(url);
                 try {
-                    ((HttpPost) request).setEntity(new UrlEncodedFormEntity(parms));
+                    ((HttpPost) request).setEntity(new UrlEncodedFormEntity(params));
                 } catch (UnsupportedEncodingException ex) {
                     Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -166,7 +166,7 @@ public class Client {
             case PUT: {
                 request = new HttpPut(url);
                 try {
-                    ((HttpPut) request).setEntity(new UrlEncodedFormEntity(parms));
+                    ((HttpPut) request).setEntity(new UrlEncodedFormEntity(params));
                 } catch (UnsupportedEncodingException ex) {
                     Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -217,14 +217,14 @@ public class Client {
         return new Result(response, statusCode, reasonPhrase);
     }
 
-    protected static void addIndexedParmeter(Map<String, Object> parameters, String name, Map<Integer, String> value) {
+    protected static void addIndexedParameter(Map<String, Object> parameters, String name, Map<Integer, String> value) {
         value.entrySet().forEach((entry) -> {
             parameters.put(name + entry.getKey(), entry.getValue());
         });
     }
 
     /**
-     * Wait for task to finisih
+     * Wait for task to finish
      *
      * @param node Node identifier
      * @param task Task identifier
@@ -246,7 +246,7 @@ public class Client {
             if ((System.currentTimeMillis() - waitTime) >= wait) {
                 waitTime = System.currentTimeMillis();
                 isRunning = getNodes().get(node).getTasks().get(task)
-                        .getStatus().readTaskStatus().getResponse()
+                        .getStatus().getRest().getResponse()
                         .getJSONObject("data").getString("status").equals("running");
             }
         }
@@ -340,11 +340,14 @@ public class Client {
             if (responseInError()) {
                 JSONObject errors = _response.getJSONObject("errors");
                 for (int i = 0; i < errors.names().length(); i++) {
+                    if (ret.length() > 0) {
+                        ret.append("\n");
+                    }
+
                     String name = errors.names().getString(i);
                     ret.append(name)
                             .append(" : ")
-                            .append(errors.get(name))
-                            .append("\n");
+                            .append(errors.get(name));
                 }
             }
             return ret.toString();
@@ -518,10 +521,10 @@ public class Client {
                  * @param force Will remove the jobconfig entry, but will not
                  * cleanup.
                  * @param keep Keep replicated data at target (do not remove).
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result delete(Boolean force, Boolean keep) throws JSONException {
+                public Result deleteRest(Boolean force, Boolean keep) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("force", force);
                     parameters.put("keep", keep);
@@ -531,21 +534,54 @@ public class Client {
                 /**
                  * Mark replication job for removal.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param force Will remove the jobconfig entry, but will not
+                 * cleanup.
+                 * @param keep Keep replicated data at target (do not remove).
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result delete(Boolean force, Boolean keep) throws JSONException {
+                    return deleteRest(force, keep);
+                }
+
+                /**
+                 * Mark replication job for removal.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result deleteRest() throws JSONException {
+                    return _client.delete("/cluster/replication/" + _id + "", null);
+                }
+
+                /**
+                 * Mark replication job for removal.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result delete() throws JSONException {
-                    return _client.delete("/cluster/replication/" + _id + "", null);
+                    return deleteRest();
                 }
 
                 /**
                  * Read replication job configuration.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/replication/" + _id + "", null);
+                }
+
+                /**
+                 * Read replication job configuration.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result read() throws JSONException {
-                    return _client.get("/cluster/replication/" + _id + "", null);
+                    return getRest();
                 }
 
                 /**
@@ -566,10 +602,10 @@ public class Client {
                  * file. Enum: local,full
                  * @param schedule Storage replication schedule. The format is a
                  * subset of `systemd` calender events.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result update(String comment, String delete, String digest, Boolean disable, Integer rate, String remove_job, String schedule) throws JSONException {
+                public Result setRest(String comment, String delete, String digest, Boolean disable, Integer rate, String remove_job, String schedule) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("comment", comment);
                     parameters.put("delete", delete);
@@ -578,28 +614,73 @@ public class Client {
                     parameters.put("rate", rate);
                     parameters.put("remove_job", remove_job);
                     parameters.put("schedule", schedule);
-                    return _client.put("/cluster/replication/" + _id + "", parameters);
+                    return _client.set("/cluster/replication/" + _id + "", parameters);
                 }
 
                 /**
                  * Update replication job configuration.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param comment Description.
+                 * @param delete A list of settings you want to delete.
+                 * @param digest Prevent changes if current configuration file
+                 * has different SHA1 digest. This can be used to prevent
+                 * concurrent modifications.
+                 * @param disable Flag to disable/deactivate the entry.
+                 * @param rate Rate limit in mbps (megabytes per second) as
+                 * floating point number.
+                 * @param remove_job Mark the replication job for removal. The
+                 * job will remove all local replication snapshots. When set to
+                 * 'full', it also tries to remove replicated volumes on the
+                 * target. The job then removes itself from the configuration
+                 * file. Enum: local,full
+                 * @param schedule Storage replication schedule. The format is a
+                 * subset of `systemd` calender events.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result update(String comment, String delete, String digest, Boolean disable, Integer rate, String remove_job, String schedule) throws JSONException {
+                    return setRest(comment, delete, digest, disable, rate, remove_job, schedule);
+                }
+
+                /**
+                 * Update replication job configuration.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result setRest() throws JSONException {
+                    return _client.set("/cluster/replication/" + _id + "", null);
+                }
+
+                /**
+                 * Update replication job configuration.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result update() throws JSONException {
-                    return _client.put("/cluster/replication/" + _id + "", null);
+                    return setRest();
                 }
             }
 
             /**
              * List replication jobs.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/cluster/replication", null);
+            }
+
+            /**
+             * List replication jobs.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result index() throws JSONException {
-                return _client.get("/cluster/replication", null);
+                return getRest();
             }
 
             /**
@@ -620,10 +701,10 @@ public class Client {
              * then removes itself from the configuration file. Enum: local,full
              * @param schedule Storage replication schedule. The format is a
              * subset of `systemd` calender events.
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result create(String id, String target, String type, String comment, Boolean disable, Integer rate, String remove_job, String schedule) throws JSONException {
+            public Result createRest(String id, String target, String type, String comment, Boolean disable, Integer rate, String remove_job, String schedule) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("id", id);
                 parameters.put("target", target);
@@ -633,7 +714,7 @@ public class Client {
                 parameters.put("rate", rate);
                 parameters.put("remove_job", remove_job);
                 parameters.put("schedule", schedule);
-                return _client.post("/cluster/replication", parameters);
+                return _client.create("/cluster/replication", parameters);
             }
 
             /**
@@ -644,15 +725,55 @@ public class Client {
              * '&amp;lt;GUEST&amp;gt;-&amp;lt;JOBNUM&amp;gt;'.
              * @param target Target node.
              * @param type Section type. Enum: local
-             * @return
-             * @throws org.json.JSONException
+             * @param comment Description.
+             * @param disable Flag to disable/deactivate the entry.
+             * @param rate Rate limit in mbps (megabytes per second) as floating
+             * point number.
+             * @param remove_job Mark the replication job for removal. The job
+             * will remove all local replication snapshots. When set to 'full',
+             * it also tries to remove replicated volumes on the target. The job
+             * then removes itself from the configuration file. Enum: local,full
+             * @param schedule Storage replication schedule. The format is a
+             * subset of `systemd` calender events.
+             * @return Result
+             * @throws JSONException
              */
-            public Result create(String id, String target, String type) throws JSONException {
+            public Result create(String id, String target, String type, String comment, Boolean disable, Integer rate, String remove_job, String schedule) throws JSONException {
+                return createRest(id, target, type, comment, disable, rate, remove_job, schedule);
+            }
+
+            /**
+             * Create a new replication job
+             *
+             * @param id Replication Job ID. The ID is composed of a Guest ID
+             * and a job number, separated by a hyphen, i.e.
+             * '&amp;lt;GUEST&amp;gt;-&amp;lt;JOBNUM&amp;gt;'.
+             * @param target Target node.
+             * @param type Section type. Enum: local
+             * @return Result
+             * @throws JSONException
+             */
+            public Result createRest(String id, String target, String type) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("id", id);
                 parameters.put("target", target);
                 parameters.put("type", type);
-                return _client.post("/cluster/replication", parameters);
+                return _client.create("/cluster/replication", parameters);
+            }
+
+            /**
+             * Create a new replication job
+             *
+             * @param id Replication Job ID. The ID is composed of a Guest ID
+             * and a job number, separated by a hyphen, i.e.
+             * '&amp;lt;GUEST&amp;gt;-&amp;lt;JOBNUM&amp;gt;'.
+             * @param target Target node.
+             * @param type Section type. Enum: local
+             * @return Result
+             * @throws JSONException
+             */
+            public Result create(String id, String target, String type) throws JSONException {
+                return createRest(id, target, type);
             }
         }
 
@@ -687,11 +808,21 @@ public class Client {
                 /**
                  * Corosync node list.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/config/nodes", null);
+                }
+
+                /**
+                 * Corosync node list.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result nodes() throws JSONException {
-                    return _client.get("/cluster/config/nodes", null);
+                    return getRest();
                 }
             }
 
@@ -704,22 +835,42 @@ public class Client {
                 /**
                  * Get corosync totem protocol settings.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/config/totem", null);
+                }
+
+                /**
+                 * Get corosync totem protocol settings.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result totem() throws JSONException {
-                    return _client.get("/cluster/config/totem", null);
+                    return getRest();
                 }
             }
 
             /**
              * Directory index.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/cluster/config", null);
+            }
+
+            /**
+             * Directory index.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result index() throws JSONException {
-                return _client.get("/cluster/config", null);
+                return getRest();
             }
         }
 
@@ -825,10 +976,10 @@ public class Client {
                          * @param digest Prevent changes if current
                          * configuration file has different SHA1 digest. This
                          * can be used to prevent concurrent modifications.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result deleteRule(String digest) throws JSONException {
+                        public Result deleteRest(String digest) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("digest", digest);
                             return _client.delete("/cluster/firewall/groups/" + _group + "/" + _pos + "", parameters);
@@ -837,21 +988,54 @@ public class Client {
                         /**
                          * Delete rule.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param digest Prevent changes if current
+                         * configuration file has different SHA1 digest. This
+                         * can be used to prevent concurrent modifications.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRule(String digest) throws JSONException {
+                            return deleteRest(digest);
+                        }
+
+                        /**
+                         * Delete rule.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest() throws JSONException {
+                            return _client.delete("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
+                        }
+
+                        /**
+                         * Delete rule.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result deleteRule() throws JSONException {
-                            return _client.delete("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
+                            return deleteRest();
                         }
 
                         /**
                          * Get single rule data.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
+                        }
+
+                        /**
+                         * Get single rule data.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result getRule() throws JSONException {
-                            return _client.get("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
+                            return getRest();
                         }
 
                         /**
@@ -902,10 +1086,10 @@ public class Client {
                          * you can use comma separated list to match several
                          * ports or ranges.
                          * @param type Rule type. Enum: in,out,group
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                        public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("action", action);
                             parameters.put("comment", comment);
@@ -921,38 +1105,123 @@ public class Client {
                             parameters.put("source", source);
                             parameters.put("sport", sport);
                             parameters.put("type", type);
-                            return _client.put("/cluster/firewall/groups/" + _group + "/" + _pos + "", parameters);
+                            return _client.set("/cluster/firewall/groups/" + _group + "/" + _pos + "", parameters);
                         }
 
                         /**
                          * Modify rule data.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param action Rule action ('ACCEPT', 'DROP',
+                         * 'REJECT') or security group name.
+                         * @param comment Descriptive comment.
+                         * @param delete A list of settings you want to delete.
+                         * @param dest Restrict packet destination address. This
+                         * can refer to a single IP address, an IP set
+                         * ('+ipsetname') or an IP alias definition. You can
+                         * also specify an address range like
+                         * '20.34.101.207-201.3.9.99', or a list of IP addresses
+                         * and networks (entries are separated by comma). Please
+                         * do not mix IPv4 and IPv6 addresses inside such lists.
+                         * @param digest Prevent changes if current
+                         * configuration file has different SHA1 digest. This
+                         * can be used to prevent concurrent modifications.
+                         * @param dport Restrict TCP/UDP destination port. You
+                         * can use service names or simple numbers (0-65535), as
+                         * defined in '/etc/services'. Port ranges can be
+                         * specified with '\d+:\d+', for example '80:85', and
+                         * you can use comma separated list to match several
+                         * ports or ranges.
+                         * @param enable Flag to enable/disable a rule.
+                         * @param iface Network interface name. You have to use
+                         * network configuration key names for VMs and
+                         * containers ('net\d+'). Host related rules can use
+                         * arbitrary strings.
+                         * @param macro Use predefined standard macro.
+                         * @param moveto Move rule to new position
+                         * &amp;lt;moveto&amp;gt;. Other arguments are ignored.
+                         * @param proto IP protocol. You can use protocol names
+                         * ('tcp'/'udp') or simple numbers, as defined in
+                         * '/etc/protocols'.
+                         * @param source Restrict packet source address. This
+                         * can refer to a single IP address, an IP set
+                         * ('+ipsetname') or an IP alias definition. You can
+                         * also specify an address range like
+                         * '20.34.101.207-201.3.9.99', or a list of IP addresses
+                         * and networks (entries are separated by comma). Please
+                         * do not mix IPv4 and IPv6 addresses inside such lists.
+                         * @param sport Restrict TCP/UDP source port. You can
+                         * use service names or simple numbers (0-65535), as
+                         * defined in '/etc/services'. Port ranges can be
+                         * specified with '\d+:\d+', for example '80:85', and
+                         * you can use comma separated list to match several
+                         * ports or ranges.
+                         * @param type Rule type. Enum: in,out,group
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                            return setRest(action, comment, delete, dest, digest, dport, enable, iface, macro, moveto, proto, source, sport, type);
+                        }
+
+                        /**
+                         * Modify rule data.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result setRest() throws JSONException {
+                            return _client.set("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
+                        }
+
+                        /**
+                         * Modify rule data.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result updateRule() throws JSONException {
-                            return _client.put("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
+                            return setRest();
                         }
                     }
 
                     /**
                      * Delete security group.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result deleteRest() throws JSONException {
+                        return _client.delete("/cluster/firewall/groups/" + _group + "", null);
+                    }
+
+                    /**
+                     * Delete security group.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result deleteSecurityGroup() throws JSONException {
-                        return _client.delete("/cluster/firewall/groups/" + _group + "", null);
+                        return deleteRest();
                     }
 
                     /**
                      * List rules.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/cluster/firewall/groups/" + _group + "", null);
+                    }
+
+                    /**
+                     * List rules.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result getRules() throws JSONException {
-                        return _client.get("/cluster/firewall/groups/" + _group + "", null);
+                        return getRest();
                     }
 
                     /**
@@ -998,10 +1267,10 @@ public class Client {
                      * '/etc/services'. Port ranges can be specified with
                      * '\d+:\d+', for example '80:85', and you can use comma
                      * separated list to match several ports or ranges.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                    public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
                         parameters.put("type", type);
@@ -1016,7 +1285,7 @@ public class Client {
                         parameters.put("proto", proto);
                         parameters.put("source", source);
                         parameters.put("sport", sport);
-                        return _client.post("/cluster/firewall/groups/" + _group + "", parameters);
+                        return _client.create("/cluster/firewall/groups/" + _group + "", parameters);
                     }
 
                     /**
@@ -1025,25 +1294,98 @@ public class Client {
                      * @param action Rule action ('ACCEPT', 'DROP', 'REJECT') or
                      * security group name.
                      * @param type Rule type. Enum: in,out,group
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param comment Descriptive comment.
+                     * @param dest Restrict packet destination address. This can
+                     * refer to a single IP address, an IP set ('+ipsetname') or
+                     * an IP alias definition. You can also specify an address
+                     * range like '20.34.101.207-201.3.9.99', or a list of IP
+                     * addresses and networks (entries are separated by comma).
+                     * Please do not mix IPv4 and IPv6 addresses inside such
+                     * lists.
+                     * @param digest Prevent changes if current configuration
+                     * file has different SHA1 digest. This can be used to
+                     * prevent concurrent modifications.
+                     * @param dport Restrict TCP/UDP destination port. You can
+                     * use service names or simple numbers (0-65535), as defined
+                     * in '/etc/services'. Port ranges can be specified with
+                     * '\d+:\d+', for example '80:85', and you can use comma
+                     * separated list to match several ports or ranges.
+                     * @param enable Flag to enable/disable a rule.
+                     * @param iface Network interface name. You have to use
+                     * network configuration key names for VMs and containers
+                     * ('net\d+'). Host related rules can use arbitrary strings.
+                     * @param macro Use predefined standard macro.
+                     * @param pos Update rule at position &amp;lt;pos&amp;gt;.
+                     * @param proto IP protocol. You can use protocol names
+                     * ('tcp'/'udp') or simple numbers, as defined in
+                     * '/etc/protocols'.
+                     * @param source Restrict packet source address. This can
+                     * refer to a single IP address, an IP set ('+ipsetname') or
+                     * an IP alias definition. You can also specify an address
+                     * range like '20.34.101.207-201.3.9.99', or a list of IP
+                     * addresses and networks (entries are separated by comma).
+                     * Please do not mix IPv4 and IPv6 addresses inside such
+                     * lists.
+                     * @param sport Restrict TCP/UDP source port. You can use
+                     * service names or simple numbers (0-65535), as defined in
+                     * '/etc/services'. Port ranges can be specified with
+                     * '\d+:\d+', for example '80:85', and you can use comma
+                     * separated list to match several ports or ranges.
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result createRule(String action, String type) throws JSONException {
+                    public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                        return createRest(action, type, comment, dest, digest, dport, enable, iface, macro, pos, proto, source, sport);
+                    }
+
+                    /**
+                     * Create new rule.
+                     *
+                     * @param action Rule action ('ACCEPT', 'DROP', 'REJECT') or
+                     * security group name.
+                     * @param type Rule type. Enum: in,out,group
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRest(String action, String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
                         parameters.put("type", type);
-                        return _client.post("/cluster/firewall/groups/" + _group + "", parameters);
+                        return _client.create("/cluster/firewall/groups/" + _group + "", parameters);
+                    }
+
+                    /**
+                     * Create new rule.
+                     *
+                     * @param action Rule action ('ACCEPT', 'DROP', 'REJECT') or
+                     * security group name.
+                     * @param type Rule type. Enum: in,out,group
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRule(String action, String type) throws JSONException {
+                        return createRest(action, type);
                     }
                 }
 
                 /**
                  * List security groups.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/firewall/groups", null);
+                }
+
+                /**
+                 * List security groups.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result listSecurityGroups() throws JSONException {
-                    return _client.get("/cluster/firewall/groups", null);
+                    return getRest();
                 }
 
                 /**
@@ -1057,29 +1399,58 @@ public class Client {
                  * @param rename Rename/update an existing security group. You
                  * can set 'rename' to the same value as 'name' to update the
                  * 'comment' of an existing group.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result createSecurityGroup(String group, String comment, String digest, String rename) throws JSONException {
+                public Result createRest(String group, String comment, String digest, String rename) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
                     parameters.put("comment", comment);
                     parameters.put("digest", digest);
                     parameters.put("rename", rename);
-                    return _client.post("/cluster/firewall/groups", parameters);
+                    return _client.create("/cluster/firewall/groups", parameters);
                 }
 
                 /**
                  * Create new security group.
                  *
                  * @param group Security Group name.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param comment
+                 * @param digest Prevent changes if current configuration file
+                 * has different SHA1 digest. This can be used to prevent
+                 * concurrent modifications.
+                 * @param rename Rename/update an existing security group. You
+                 * can set 'rename' to the same value as 'name' to update the
+                 * 'comment' of an existing group.
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result createSecurityGroup(String group) throws JSONException {
+                public Result createSecurityGroup(String group, String comment, String digest, String rename) throws JSONException {
+                    return createRest(group, comment, digest, rename);
+                }
+
+                /**
+                 * Create new security group.
+                 *
+                 * @param group Security Group name.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest(String group) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
-                    return _client.post("/cluster/firewall/groups", parameters);
+                    return _client.create("/cluster/firewall/groups", parameters);
+                }
+
+                /**
+                 * Create new security group.
+                 *
+                 * @param group Security Group name.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createSecurityGroup(String group) throws JSONException {
+                    return createRest(group);
                 }
             }
 
@@ -1108,10 +1479,10 @@ public class Client {
                      * @param digest Prevent changes if current configuration
                      * file has different SHA1 digest. This can be used to
                      * prevent concurrent modifications.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result deleteRule(String digest) throws JSONException {
+                    public Result deleteRest(String digest) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("digest", digest);
                         return _client.delete("/cluster/firewall/rules/" + _pos + "", parameters);
@@ -1120,21 +1491,54 @@ public class Client {
                     /**
                      * Delete rule.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param digest Prevent changes if current configuration
+                     * file has different SHA1 digest. This can be used to
+                     * prevent concurrent modifications.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result deleteRule(String digest) throws JSONException {
+                        return deleteRest(digest);
+                    }
+
+                    /**
+                     * Delete rule.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result deleteRest() throws JSONException {
+                        return _client.delete("/cluster/firewall/rules/" + _pos + "", null);
+                    }
+
+                    /**
+                     * Delete rule.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result deleteRule() throws JSONException {
-                        return _client.delete("/cluster/firewall/rules/" + _pos + "", null);
+                        return deleteRest();
                     }
 
                     /**
                      * Get single rule data.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/cluster/firewall/rules/" + _pos + "", null);
+                    }
+
+                    /**
+                     * Get single rule data.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result getRule() throws JSONException {
-                        return _client.get("/cluster/firewall/rules/" + _pos + "", null);
+                        return getRest();
                     }
 
                     /**
@@ -1182,10 +1586,10 @@ public class Client {
                      * '\d+:\d+', for example '80:85', and you can use comma
                      * separated list to match several ports or ranges.
                      * @param type Rule type. Enum: in,out,group
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                    public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
                         parameters.put("comment", comment);
@@ -1201,28 +1605,100 @@ public class Client {
                         parameters.put("source", source);
                         parameters.put("sport", sport);
                         parameters.put("type", type);
-                        return _client.put("/cluster/firewall/rules/" + _pos + "", parameters);
+                        return _client.set("/cluster/firewall/rules/" + _pos + "", parameters);
                     }
 
                     /**
                      * Modify rule data.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param action Rule action ('ACCEPT', 'DROP', 'REJECT') or
+                     * security group name.
+                     * @param comment Descriptive comment.
+                     * @param delete A list of settings you want to delete.
+                     * @param dest Restrict packet destination address. This can
+                     * refer to a single IP address, an IP set ('+ipsetname') or
+                     * an IP alias definition. You can also specify an address
+                     * range like '20.34.101.207-201.3.9.99', or a list of IP
+                     * addresses and networks (entries are separated by comma).
+                     * Please do not mix IPv4 and IPv6 addresses inside such
+                     * lists.
+                     * @param digest Prevent changes if current configuration
+                     * file has different SHA1 digest. This can be used to
+                     * prevent concurrent modifications.
+                     * @param dport Restrict TCP/UDP destination port. You can
+                     * use service names or simple numbers (0-65535), as defined
+                     * in '/etc/services'. Port ranges can be specified with
+                     * '\d+:\d+', for example '80:85', and you can use comma
+                     * separated list to match several ports or ranges.
+                     * @param enable Flag to enable/disable a rule.
+                     * @param iface Network interface name. You have to use
+                     * network configuration key names for VMs and containers
+                     * ('net\d+'). Host related rules can use arbitrary strings.
+                     * @param macro Use predefined standard macro.
+                     * @param moveto Move rule to new position
+                     * &amp;lt;moveto&amp;gt;. Other arguments are ignored.
+                     * @param proto IP protocol. You can use protocol names
+                     * ('tcp'/'udp') or simple numbers, as defined in
+                     * '/etc/protocols'.
+                     * @param source Restrict packet source address. This can
+                     * refer to a single IP address, an IP set ('+ipsetname') or
+                     * an IP alias definition. You can also specify an address
+                     * range like '20.34.101.207-201.3.9.99', or a list of IP
+                     * addresses and networks (entries are separated by comma).
+                     * Please do not mix IPv4 and IPv6 addresses inside such
+                     * lists.
+                     * @param sport Restrict TCP/UDP source port. You can use
+                     * service names or simple numbers (0-65535), as defined in
+                     * '/etc/services'. Port ranges can be specified with
+                     * '\d+:\d+', for example '80:85', and you can use comma
+                     * separated list to match several ports or ranges.
+                     * @param type Rule type. Enum: in,out,group
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                        return setRest(action, comment, delete, dest, digest, dport, enable, iface, macro, moveto, proto, source, sport, type);
+                    }
+
+                    /**
+                     * Modify rule data.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result setRest() throws JSONException {
+                        return _client.set("/cluster/firewall/rules/" + _pos + "", null);
+                    }
+
+                    /**
+                     * Modify rule data.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result updateRule() throws JSONException {
-                        return _client.put("/cluster/firewall/rules/" + _pos + "", null);
+                        return setRest();
                     }
                 }
 
                 /**
                  * List rules.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/firewall/rules", null);
+                }
+
+                /**
+                 * List rules.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result getRules() throws JSONException {
-                    return _client.get("/cluster/firewall/rules", null);
+                    return getRest();
                 }
 
                 /**
@@ -1266,10 +1742,10 @@ public class Client {
                  * '/etc/services'. Port ranges can be specified with '\d+:\d+',
                  * for example '80:85', and you can use comma separated list to
                  * match several ports or ranges.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("action", action);
                     parameters.put("type", type);
@@ -1284,7 +1760,7 @@ public class Client {
                     parameters.put("proto", proto);
                     parameters.put("source", source);
                     parameters.put("sport", sport);
-                    return _client.post("/cluster/firewall/rules", parameters);
+                    return _client.create("/cluster/firewall/rules", parameters);
                 }
 
                 /**
@@ -1293,14 +1769,75 @@ public class Client {
                  * @param action Rule action ('ACCEPT', 'DROP', 'REJECT') or
                  * security group name.
                  * @param type Rule type. Enum: in,out,group
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param comment Descriptive comment.
+                 * @param dest Restrict packet destination address. This can
+                 * refer to a single IP address, an IP set ('+ipsetname') or an
+                 * IP alias definition. You can also specify an address range
+                 * like '20.34.101.207-201.3.9.99', or a list of IP addresses
+                 * and networks (entries are separated by comma). Please do not
+                 * mix IPv4 and IPv6 addresses inside such lists.
+                 * @param digest Prevent changes if current configuration file
+                 * has different SHA1 digest. This can be used to prevent
+                 * concurrent modifications.
+                 * @param dport Restrict TCP/UDP destination port. You can use
+                 * service names or simple numbers (0-65535), as defined in
+                 * '/etc/services'. Port ranges can be specified with '\d+:\d+',
+                 * for example '80:85', and you can use comma separated list to
+                 * match several ports or ranges.
+                 * @param enable Flag to enable/disable a rule.
+                 * @param iface Network interface name. You have to use network
+                 * configuration key names for VMs and containers ('net\d+').
+                 * Host related rules can use arbitrary strings.
+                 * @param macro Use predefined standard macro.
+                 * @param pos Update rule at position &amp;lt;pos&amp;gt;.
+                 * @param proto IP protocol. You can use protocol names
+                 * ('tcp'/'udp') or simple numbers, as defined in
+                 * '/etc/protocols'.
+                 * @param source Restrict packet source address. This can refer
+                 * to a single IP address, an IP set ('+ipsetname') or an IP
+                 * alias definition. You can also specify an address range like
+                 * '20.34.101.207-201.3.9.99', or a list of IP addresses and
+                 * networks (entries are separated by comma). Please do not mix
+                 * IPv4 and IPv6 addresses inside such lists.
+                 * @param sport Restrict TCP/UDP source port. You can use
+                 * service names or simple numbers (0-65535), as defined in
+                 * '/etc/services'. Port ranges can be specified with '\d+:\d+',
+                 * for example '80:85', and you can use comma separated list to
+                 * match several ports or ranges.
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result createRule(String action, String type) throws JSONException {
+                public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                    return createRest(action, type, comment, dest, digest, dport, enable, iface, macro, pos, proto, source, sport);
+                }
+
+                /**
+                 * Create new rule.
+                 *
+                 * @param action Rule action ('ACCEPT', 'DROP', 'REJECT') or
+                 * security group name.
+                 * @param type Rule type. Enum: in,out,group
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest(String action, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("action", action);
                     parameters.put("type", type);
-                    return _client.post("/cluster/firewall/rules", parameters);
+                    return _client.create("/cluster/firewall/rules", parameters);
+                }
+
+                /**
+                 * Create new rule.
+                 *
+                 * @param action Rule action ('ACCEPT', 'DROP', 'REJECT') or
+                 * security group name.
+                 * @param type Rule type. Enum: in,out,group
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRule(String action, String type) throws JSONException {
+                    return createRest(action, type);
                 }
             }
 
@@ -1344,10 +1881,10 @@ public class Client {
                          * @param digest Prevent changes if current
                          * configuration file has different SHA1 digest. This
                          * can be used to prevent concurrent modifications.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result removeIp(String digest) throws JSONException {
+                        public Result deleteRest(String digest) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("digest", digest);
                             return _client.delete("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
@@ -1356,21 +1893,54 @@ public class Client {
                         /**
                          * Remove IP or Network from IPSet.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param digest Prevent changes if current
+                         * configuration file has different SHA1 digest. This
+                         * can be used to prevent concurrent modifications.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result removeIp(String digest) throws JSONException {
+                            return deleteRest(digest);
+                        }
+
+                        /**
+                         * Remove IP or Network from IPSet.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest() throws JSONException {
+                            return _client.delete("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                        }
+
+                        /**
+                         * Remove IP or Network from IPSet.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result removeIp() throws JSONException {
-                            return _client.delete("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                            return deleteRest();
                         }
 
                         /**
                          * Read IP or Network settings from IPSet.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                        }
+
+                        /**
+                         * Read IP or Network settings from IPSet.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result readIp() throws JSONException {
-                            return _client.get("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                            return getRest();
                         }
 
                         /**
@@ -1381,46 +1951,91 @@ public class Client {
                          * configuration file has different SHA1 digest. This
                          * can be used to prevent concurrent modifications.
                          * @param nomatch
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result updateIp(String comment, String digest, Boolean nomatch) throws JSONException {
+                        public Result setRest(String comment, String digest, Boolean nomatch) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("comment", comment);
                             parameters.put("digest", digest);
                             parameters.put("nomatch", nomatch);
-                            return _client.put("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
+                            return _client.set("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
                         }
 
                         /**
                          * Update IP or Network settings
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param comment
+                         * @param digest Prevent changes if current
+                         * configuration file has different SHA1 digest. This
+                         * can be used to prevent concurrent modifications.
+                         * @param nomatch
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result updateIp(String comment, String digest, Boolean nomatch) throws JSONException {
+                            return setRest(comment, digest, nomatch);
+                        }
+
+                        /**
+                         * Update IP or Network settings
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result setRest() throws JSONException {
+                            return _client.set("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                        }
+
+                        /**
+                         * Update IP or Network settings
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result updateIp() throws JSONException {
-                            return _client.put("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                            return setRest();
                         }
                     }
 
                     /**
                      * Delete IPSet
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result deleteRest() throws JSONException {
+                        return _client.delete("/cluster/firewall/ipset/" + _name + "", null);
+                    }
+
+                    /**
+                     * Delete IPSet
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result deleteIpset() throws JSONException {
-                        return _client.delete("/cluster/firewall/ipset/" + _name + "", null);
+                        return deleteRest();
                     }
 
                     /**
                      * List IPSet content
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/cluster/firewall/ipset/" + _name + "", null);
+                    }
+
+                    /**
+                     * List IPSet content
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result getIpset() throws JSONException {
-                        return _client.get("/cluster/firewall/ipset/" + _name + "", null);
+                        return getRest();
                     }
 
                     /**
@@ -1429,39 +2044,73 @@ public class Client {
                      * @param cidr Network/IP specification in CIDR format.
                      * @param comment
                      * @param nomatch
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result createIp(String cidr, String comment, Boolean nomatch) throws JSONException {
+                    public Result createRest(String cidr, String comment, Boolean nomatch) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
                         parameters.put("comment", comment);
                         parameters.put("nomatch", nomatch);
-                        return _client.post("/cluster/firewall/ipset/" + _name + "", parameters);
+                        return _client.create("/cluster/firewall/ipset/" + _name + "", parameters);
                     }
 
                     /**
                      * Add IP or Network to IPSet.
                      *
                      * @param cidr Network/IP specification in CIDR format.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param comment
+                     * @param nomatch
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result createIp(String cidr) throws JSONException {
+                    public Result createIp(String cidr, String comment, Boolean nomatch) throws JSONException {
+                        return createRest(cidr, comment, nomatch);
+                    }
+
+                    /**
+                     * Add IP or Network to IPSet.
+                     *
+                     * @param cidr Network/IP specification in CIDR format.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRest(String cidr) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
-                        return _client.post("/cluster/firewall/ipset/" + _name + "", parameters);
+                        return _client.create("/cluster/firewall/ipset/" + _name + "", parameters);
+                    }
+
+                    /**
+                     * Add IP or Network to IPSet.
+                     *
+                     * @param cidr Network/IP specification in CIDR format.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createIp(String cidr) throws JSONException {
+                        return createRest(cidr);
                     }
                 }
 
                 /**
                  * List IPSets
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/firewall/ipset", null);
+                }
+
+                /**
+                 * List IPSets
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result ipsetIndex() throws JSONException {
-                    return _client.get("/cluster/firewall/ipset", null);
+                    return getRest();
                 }
 
                 /**
@@ -1475,29 +2124,58 @@ public class Client {
                  * @param rename Rename an existing IPSet. You can set 'rename'
                  * to the same value as 'name' to update the 'comment' of an
                  * existing IPSet.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result createIpset(String name, String comment, String digest, String rename) throws JSONException {
+                public Result createRest(String name, String comment, String digest, String rename) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("name", name);
                     parameters.put("comment", comment);
                     parameters.put("digest", digest);
                     parameters.put("rename", rename);
-                    return _client.post("/cluster/firewall/ipset", parameters);
+                    return _client.create("/cluster/firewall/ipset", parameters);
                 }
 
                 /**
                  * Create new IPSet
                  *
                  * @param name IP set name.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param comment
+                 * @param digest Prevent changes if current configuration file
+                 * has different SHA1 digest. This can be used to prevent
+                 * concurrent modifications.
+                 * @param rename Rename an existing IPSet. You can set 'rename'
+                 * to the same value as 'name' to update the 'comment' of an
+                 * existing IPSet.
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result createIpset(String name) throws JSONException {
+                public Result createIpset(String name, String comment, String digest, String rename) throws JSONException {
+                    return createRest(name, comment, digest, rename);
+                }
+
+                /**
+                 * Create new IPSet
+                 *
+                 * @param name IP set name.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest(String name) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("name", name);
-                    return _client.post("/cluster/firewall/ipset", parameters);
+                    return _client.create("/cluster/firewall/ipset", parameters);
+                }
+
+                /**
+                 * Create new IPSet
+                 *
+                 * @param name IP set name.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createIpset(String name) throws JSONException {
+                    return createRest(name);
                 }
             }
 
@@ -1526,10 +2204,10 @@ public class Client {
                      * @param digest Prevent changes if current configuration
                      * file has different SHA1 digest. This can be used to
                      * prevent concurrent modifications.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result removeAlias(String digest) throws JSONException {
+                    public Result deleteRest(String digest) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("digest", digest);
                         return _client.delete("/cluster/firewall/aliases/" + _name + "", parameters);
@@ -1538,21 +2216,54 @@ public class Client {
                     /**
                      * Remove IP or Network alias.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param digest Prevent changes if current configuration
+                     * file has different SHA1 digest. This can be used to
+                     * prevent concurrent modifications.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result removeAlias(String digest) throws JSONException {
+                        return deleteRest(digest);
+                    }
+
+                    /**
+                     * Remove IP or Network alias.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result deleteRest() throws JSONException {
+                        return _client.delete("/cluster/firewall/aliases/" + _name + "", null);
+                    }
+
+                    /**
+                     * Remove IP or Network alias.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result removeAlias() throws JSONException {
-                        return _client.delete("/cluster/firewall/aliases/" + _name + "", null);
+                        return deleteRest();
                     }
 
                     /**
                      * Read alias.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/cluster/firewall/aliases/" + _name + "", null);
+                    }
+
+                    /**
+                     * Read alias.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result readAlias() throws JSONException {
-                        return _client.get("/cluster/firewall/aliases/" + _name + "", null);
+                        return getRest();
                     }
 
                     /**
@@ -1564,40 +2275,77 @@ public class Client {
                      * file has different SHA1 digest. This can be used to
                      * prevent concurrent modifications.
                      * @param rename Rename an existing alias.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result updateAlias(String cidr, String comment, String digest, String rename) throws JSONException {
+                    public Result setRest(String cidr, String comment, String digest, String rename) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
                         parameters.put("comment", comment);
                         parameters.put("digest", digest);
                         parameters.put("rename", rename);
-                        return _client.put("/cluster/firewall/aliases/" + _name + "", parameters);
+                        return _client.set("/cluster/firewall/aliases/" + _name + "", parameters);
                     }
 
                     /**
                      * Update IP or Network alias.
                      *
                      * @param cidr Network/IP specification in CIDR format.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param comment
+                     * @param digest Prevent changes if current configuration
+                     * file has different SHA1 digest. This can be used to
+                     * prevent concurrent modifications.
+                     * @param rename Rename an existing alias.
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result updateAlias(String cidr) throws JSONException {
+                    public Result updateAlias(String cidr, String comment, String digest, String rename) throws JSONException {
+                        return setRest(cidr, comment, digest, rename);
+                    }
+
+                    /**
+                     * Update IP or Network alias.
+                     *
+                     * @param cidr Network/IP specification in CIDR format.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result setRest(String cidr) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
-                        return _client.put("/cluster/firewall/aliases/" + _name + "", parameters);
+                        return _client.set("/cluster/firewall/aliases/" + _name + "", parameters);
+                    }
+
+                    /**
+                     * Update IP or Network alias.
+                     *
+                     * @param cidr Network/IP specification in CIDR format.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result updateAlias(String cidr) throws JSONException {
+                        return setRest(cidr);
                     }
                 }
 
                 /**
                  * List aliases
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/firewall/aliases", null);
+                }
+
+                /**
+                 * List aliases
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result getAliases() throws JSONException {
-                    return _client.get("/cluster/firewall/aliases", null);
+                    return getRest();
                 }
 
                 /**
@@ -1606,15 +2354,15 @@ public class Client {
                  * @param cidr Network/IP specification in CIDR format.
                  * @param name Alias name.
                  * @param comment
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result createAlias(String cidr, String name, String comment) throws JSONException {
+                public Result createRest(String cidr, String name, String comment) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("cidr", cidr);
                     parameters.put("name", name);
                     parameters.put("comment", comment);
-                    return _client.post("/cluster/firewall/aliases", parameters);
+                    return _client.create("/cluster/firewall/aliases", parameters);
                 }
 
                 /**
@@ -1622,14 +2370,39 @@ public class Client {
                  *
                  * @param cidr Network/IP specification in CIDR format.
                  * @param name Alias name.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param comment
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result createAlias(String cidr, String name) throws JSONException {
+                public Result createAlias(String cidr, String name, String comment) throws JSONException {
+                    return createRest(cidr, name, comment);
+                }
+
+                /**
+                 * Create IP or Network Alias.
+                 *
+                 * @param cidr Network/IP specification in CIDR format.
+                 * @param name Alias name.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest(String cidr, String name) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("cidr", cidr);
                     parameters.put("name", name);
-                    return _client.post("/cluster/firewall/aliases", parameters);
+                    return _client.create("/cluster/firewall/aliases", parameters);
+                }
+
+                /**
+                 * Create IP or Network Alias.
+                 *
+                 * @param cidr Network/IP specification in CIDR format.
+                 * @param name Alias name.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createAlias(String cidr, String name) throws JSONException {
+                    return createRest(cidr, name);
                 }
             }
 
@@ -1642,11 +2415,21 @@ public class Client {
                 /**
                  * Get Firewall options.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/firewall/options", null);
+                }
+
+                /**
+                 * Get Firewall options.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result getOptions() throws JSONException {
-                    return _client.get("/cluster/firewall/options", null);
+                    return getRest();
                 }
 
                 /**
@@ -1659,27 +2442,54 @@ public class Client {
                  * @param enable Enable or disable the firewall cluster wide.
                  * @param policy_in Input policy. Enum: ACCEPT,REJECT,DROP
                  * @param policy_out Output policy. Enum: ACCEPT,REJECT,DROP
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result setOptions(String delete, String digest, Integer enable, String policy_in, String policy_out) throws JSONException {
+                public Result setRest(String delete, String digest, Integer enable, String policy_in, String policy_out) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("delete", delete);
                     parameters.put("digest", digest);
                     parameters.put("enable", enable);
                     parameters.put("policy_in", policy_in);
                     parameters.put("policy_out", policy_out);
-                    return _client.put("/cluster/firewall/options", parameters);
+                    return _client.set("/cluster/firewall/options", parameters);
                 }
 
                 /**
                  * Set Firewall options.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param delete A list of settings you want to delete.
+                 * @param digest Prevent changes if current configuration file
+                 * has different SHA1 digest. This can be used to prevent
+                 * concurrent modifications.
+                 * @param enable Enable or disable the firewall cluster wide.
+                 * @param policy_in Input policy. Enum: ACCEPT,REJECT,DROP
+                 * @param policy_out Output policy. Enum: ACCEPT,REJECT,DROP
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result setOptions(String delete, String digest, Integer enable, String policy_in, String policy_out) throws JSONException {
+                    return setRest(delete, digest, enable, policy_in, policy_out);
+                }
+
+                /**
+                 * Set Firewall options.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result setRest() throws JSONException {
+                    return _client.set("/cluster/firewall/options", null);
+                }
+
+                /**
+                 * Set Firewall options.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result setOptions() throws JSONException {
-                    return _client.put("/cluster/firewall/options", null);
+                    return setRest();
                 }
             }
 
@@ -1692,11 +2502,21 @@ public class Client {
                 /**
                  * List available macros
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/firewall/macros", null);
+                }
+
+                /**
+                 * List available macros
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result getMacros() throws JSONException {
-                    return _client.get("/cluster/firewall/macros", null);
+                    return getRest();
                 }
             }
 
@@ -1712,10 +2532,10 @@ public class Client {
                  *
                  * @param type Only list references of specified type. Enum:
                  * alias,ipset
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result refs(String type) throws JSONException {
+                public Result getRest(String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     return _client.get("/cluster/firewall/refs", parameters);
@@ -1725,22 +2545,56 @@ public class Client {
                  * Lists possible IPSet/Alias reference which are allowed in
                  * source/dest properties.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param type Only list references of specified type. Enum:
+                 * alias,ipset
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result refs(String type) throws JSONException {
+                    return getRest(type);
+                }
+
+                /**
+                 * Lists possible IPSet/Alias reference which are allowed in
+                 * source/dest properties.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/firewall/refs", null);
+                }
+
+                /**
+                 * Lists possible IPSet/Alias reference which are allowed in
+                 * source/dest properties.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result refs() throws JSONException {
-                    return _client.get("/cluster/firewall/refs", null);
+                    return getRest();
                 }
             }
 
             /**
              * Directory index.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/cluster/firewall", null);
+            }
+
+            /**
+             * Directory index.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result index() throws JSONException {
-                return _client.get("/cluster/firewall", null);
+                return getRest();
             }
         }
 
@@ -1766,21 +2620,41 @@ public class Client {
                 /**
                  * Delete vzdump backup job definition.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result deleteRest() throws JSONException {
+                    return _client.delete("/cluster/backup/" + _id + "", null);
+                }
+
+                /**
+                 * Delete vzdump backup job definition.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result deleteJob() throws JSONException {
-                    return _client.delete("/cluster/backup/" + _id + "", null);
+                    return deleteRest();
                 }
 
                 /**
                  * Read vzdump backup job definition.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/backup/" + _id + "", null);
+                }
+
+                /**
+                 * Read vzdump backup job definition.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result readJob() throws JSONException {
-                    return _client.get("/cluster/backup/" + _id + "", null);
+                    return getRest();
                 }
 
                 /**
@@ -1823,10 +2697,10 @@ public class Client {
                  * @param storage Store resulting file to this storage.
                  * @param tmpdir Store temporary files to specified directory.
                  * @param vmid The ID of the guest system you want to backup.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result updateJob(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
+                public Result setRest(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("starttime", starttime);
                     parameters.put("all", all);
@@ -1856,31 +2730,99 @@ public class Client {
                     parameters.put("storage", storage);
                     parameters.put("tmpdir", tmpdir);
                     parameters.put("vmid", vmid);
-                    return _client.put("/cluster/backup/" + _id + "", parameters);
+                    return _client.set("/cluster/backup/" + _id + "", parameters);
                 }
 
                 /**
                  * Update vzdump backup job definition.
                  *
                  * @param starttime Job Start time.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param all Backup all known guest systems on this host.
+                 * @param bwlimit Limit I/O bandwidth (KBytes per second).
+                 * @param compress Compress dump file. Enum: 0,1,gzip,lzo
+                 * @param delete A list of settings you want to delete.
+                 * @param dow Day of week selection.
+                 * @param dumpdir Store resulting files to specified directory.
+                 * @param enabled Enable or disable the job.
+                 * @param exclude Exclude specified guest systems (assumes
+                 * --all)
+                 * @param exclude_path Exclude certain files/directories (shell
+                 * globs).
+                 * @param ionice Set CFQ ionice priority.
+                 * @param lockwait Maximal time to wait for the global lock
+                 * (minutes).
+                 * @param mailnotification Specify when to send an email Enum:
+                 * always,failure
+                 * @param mailto Comma-separated list of email addresses that
+                 * should receive email notifications.
+                 * @param maxfiles Maximal number of backup files per guest
+                 * system.
+                 * @param mode Backup mode. Enum: snapshot,suspend,stop
+                 * @param node Only run if executed on this node.
+                 * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1
+                 * uses half of cores, N&amp;gt;1 uses N as thread count.
+                 * @param quiet Be quiet.
+                 * @param remove Remove old backup files if there are more than
+                 * 'maxfiles' backup files.
+                 * @param script Use specified hook script.
+                 * @param size Unused, will be removed in a future release.
+                 * @param stdexcludes Exclude temporary files and logs.
+                 * @param stop Stop runnig backup jobs on this host.
+                 * @param stopwait Maximal time to wait until a guest system is
+                 * stopped (minutes).
+                 * @param storage Store resulting file to this storage.
+                 * @param tmpdir Store temporary files to specified directory.
+                 * @param vmid The ID of the guest system you want to backup.
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result updateJob(String starttime) throws JSONException {
+                public Result updateJob(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
+                    return setRest(starttime, all, bwlimit, compress, delete, dow, dumpdir, enabled, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, node, pigz, quiet, remove, script, size, stdexcludes, stop, stopwait, storage, tmpdir, vmid);
+                }
+
+                /**
+                 * Update vzdump backup job definition.
+                 *
+                 * @param starttime Job Start time.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result setRest(String starttime) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("starttime", starttime);
-                    return _client.put("/cluster/backup/" + _id + "", parameters);
+                    return _client.set("/cluster/backup/" + _id + "", parameters);
+                }
+
+                /**
+                 * Update vzdump backup job definition.
+                 *
+                 * @param starttime Job Start time.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result updateJob(String starttime) throws JSONException {
+                    return setRest(starttime);
                 }
             }
 
             /**
              * List vzdump backup schedule.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/cluster/backup", null);
+            }
+
+            /**
+             * List vzdump backup schedule.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result index() throws JSONException {
-                return _client.get("/cluster/backup", null);
+                return getRest();
             }
 
             /**
@@ -1920,10 +2862,10 @@ public class Client {
              * @param storage Store resulting file to this storage.
              * @param tmpdir Store temporary files to specified directory.
              * @param vmid The ID of the guest system you want to backup.
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result createJob(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
+            public Result createRest(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("starttime", starttime);
                 parameters.put("all", all);
@@ -1952,20 +2894,75 @@ public class Client {
                 parameters.put("storage", storage);
                 parameters.put("tmpdir", tmpdir);
                 parameters.put("vmid", vmid);
-                return _client.post("/cluster/backup", parameters);
+                return _client.create("/cluster/backup", parameters);
             }
 
             /**
              * Create new vzdump backup job.
              *
              * @param starttime Job Start time.
-             * @return
-             * @throws org.json.JSONException
+             * @param all Backup all known guest systems on this host.
+             * @param bwlimit Limit I/O bandwidth (KBytes per second).
+             * @param compress Compress dump file. Enum: 0,1,gzip,lzo
+             * @param dow Day of week selection.
+             * @param dumpdir Store resulting files to specified directory.
+             * @param enabled Enable or disable the job.
+             * @param exclude Exclude specified guest systems (assumes --all)
+             * @param exclude_path Exclude certain files/directories (shell
+             * globs).
+             * @param ionice Set CFQ ionice priority.
+             * @param lockwait Maximal time to wait for the global lock
+             * (minutes).
+             * @param mailnotification Specify when to send an email Enum:
+             * always,failure
+             * @param mailto Comma-separated list of email addresses that should
+             * receive email notifications.
+             * @param maxfiles Maximal number of backup files per guest system.
+             * @param mode Backup mode. Enum: snapshot,suspend,stop
+             * @param node Only run if executed on this node.
+             * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1 uses
+             * half of cores, N&amp;gt;1 uses N as thread count.
+             * @param quiet Be quiet.
+             * @param remove Remove old backup files if there are more than
+             * 'maxfiles' backup files.
+             * @param script Use specified hook script.
+             * @param size Unused, will be removed in a future release.
+             * @param stdexcludes Exclude temporary files and logs.
+             * @param stop Stop runnig backup jobs on this host.
+             * @param stopwait Maximal time to wait until a guest system is
+             * stopped (minutes).
+             * @param storage Store resulting file to this storage.
+             * @param tmpdir Store temporary files to specified directory.
+             * @param vmid The ID of the guest system you want to backup.
+             * @return Result
+             * @throws JSONException
              */
-            public Result createJob(String starttime) throws JSONException {
+            public Result createJob(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
+                return createRest(starttime, all, bwlimit, compress, dow, dumpdir, enabled, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, node, pigz, quiet, remove, script, size, stdexcludes, stop, stopwait, storage, tmpdir, vmid);
+            }
+
+            /**
+             * Create new vzdump backup job.
+             *
+             * @param starttime Job Start time.
+             * @return Result
+             * @throws JSONException
+             */
+            public Result createRest(String starttime) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("starttime", starttime);
-                return _client.post("/cluster/backup", parameters);
+                return _client.create("/cluster/backup", parameters);
+            }
+
+            /**
+             * Create new vzdump backup job.
+             *
+             * @param starttime Job Start time.
+             * @return Result
+             * @throws JSONException
+             */
+            public Result createJob(String starttime) throws JSONException {
+                return createRest(starttime);
             }
         }
 
@@ -2047,13 +3044,24 @@ public class Client {
                          * Request resource migration (online) to another node.
                          *
                          * @param node The cluster node name.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result migrate(String node) throws JSONException {
+                        public Result createRest(String node) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("node", node);
-                            return _client.post("/cluster/ha/resources/" + _sid + "/migrate", parameters);
+                            return _client.create("/cluster/ha/resources/" + _sid + "/migrate", parameters);
+                        }
+
+                        /**
+                         * Request resource migration (online) to another node.
+                         *
+                         * @param node The cluster node name.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result migrate(String node) throws JSONException {
+                            return createRest(node);
                         }
                     }
 
@@ -2072,34 +3080,67 @@ public class Client {
                          * the target node.
                          *
                          * @param node The cluster node name.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result relocate(String node) throws JSONException {
+                        public Result createRest(String node) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("node", node);
-                            return _client.post("/cluster/ha/resources/" + _sid + "/relocate", parameters);
+                            return _client.create("/cluster/ha/resources/" + _sid + "/relocate", parameters);
+                        }
+
+                        /**
+                         * Request resource relocatzion to another node. This
+                         * stops the service on the old node, and restarts it on
+                         * the target node.
+                         *
+                         * @param node The cluster node name.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result relocate(String node) throws JSONException {
+                            return createRest(node);
                         }
                     }
 
                     /**
                      * Delete resource configuration.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result deleteRest() throws JSONException {
+                        return _client.delete("/cluster/ha/resources/" + _sid + "", null);
+                    }
+
+                    /**
+                     * Delete resource configuration.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result delete() throws JSONException {
-                        return _client.delete("/cluster/ha/resources/" + _sid + "", null);
+                        return deleteRest();
                     }
 
                     /**
                      * Read resource configuration.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/cluster/ha/resources/" + _sid + "", null);
+                    }
+
+                    /**
+                     * Read resource configuration.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result read() throws JSONException {
-                        return _client.get("/cluster/ha/resources/" + _sid + "", null);
+                        return getRest();
                     }
 
                     /**
@@ -2116,11 +3157,11 @@ public class Client {
                      * @param max_restart Maximal number of tries to restart the
                      * service on a node after its start failed.
                      * @param state Requested resource state. Enum:
-                     * started,stopped,enabled,disabled
-                     * @return
-                     * @throws org.json.JSONException
+                     * started,stopped,enabled,disabled,ignored
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result update(String comment, String delete, String digest, String group, Integer max_relocate, Integer max_restart, String state) throws JSONException {
+                    public Result setRest(String comment, String delete, String digest, String group, Integer max_relocate, Integer max_restart, String state) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("comment", comment);
                         parameters.put("delete", delete);
@@ -2129,17 +3170,49 @@ public class Client {
                         parameters.put("max_relocate", max_relocate);
                         parameters.put("max_restart", max_restart);
                         parameters.put("state", state);
-                        return _client.put("/cluster/ha/resources/" + _sid + "", parameters);
+                        return _client.set("/cluster/ha/resources/" + _sid + "", parameters);
                     }
 
                     /**
                      * Update resource configuration.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param comment Description.
+                     * @param delete A list of settings you want to delete.
+                     * @param digest Prevent changes if current configuration
+                     * file has different SHA1 digest. This can be used to
+                     * prevent concurrent modifications.
+                     * @param group The HA group identifier.
+                     * @param max_relocate Maximal number of service relocate
+                     * tries when a service failes to start.
+                     * @param max_restart Maximal number of tries to restart the
+                     * service on a node after its start failed.
+                     * @param state Requested resource state. Enum:
+                     * started,stopped,enabled,disabled,ignored
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result update(String comment, String delete, String digest, String group, Integer max_relocate, Integer max_restart, String state) throws JSONException {
+                        return setRest(comment, delete, digest, group, max_relocate, max_restart, state);
+                    }
+
+                    /**
+                     * Update resource configuration.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result setRest() throws JSONException {
+                        return _client.set("/cluster/ha/resources/" + _sid + "", null);
+                    }
+
+                    /**
+                     * Update resource configuration.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result update() throws JSONException {
-                        return _client.put("/cluster/ha/resources/" + _sid + "", null);
+                        return setRest();
                     }
                 }
 
@@ -2147,10 +3220,10 @@ public class Client {
                  * List HA resources.
                  *
                  * @param type Only list resources of specific type Enum: ct,vm
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result index(String type) throws JSONException {
+                public Result getRest(String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     return _client.get("/cluster/ha/resources", parameters);
@@ -2159,11 +3232,32 @@ public class Client {
                 /**
                  * List HA resources.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param type Only list resources of specific type Enum: ct,vm
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result index(String type) throws JSONException {
+                    return getRest(type);
+                }
+
+                /**
+                 * List HA resources.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/ha/resources", null);
+                }
+
+                /**
+                 * List HA resources.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result index() throws JSONException {
-                    return _client.get("/cluster/ha/resources", null);
+                    return getRest();
                 }
 
                 /**
@@ -2181,12 +3275,12 @@ public class Client {
                  * @param max_restart Maximal number of tries to restart the
                  * service on a node after its start failed.
                  * @param state Requested resource state. Enum:
-                 * started,stopped,enabled,disabled
+                 * started,stopped,enabled,disabled,ignored
                  * @param type Resource type. Enum: ct,vm
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result create(String sid, String comment, String group, Integer max_relocate, Integer max_restart, String state, String type) throws JSONException {
+                public Result createRest(String sid, String comment, String group, Integer max_relocate, Integer max_restart, String state, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("sid", sid);
                     parameters.put("comment", comment);
@@ -2195,7 +3289,7 @@ public class Client {
                     parameters.put("max_restart", max_restart);
                     parameters.put("state", state);
                     parameters.put("type", type);
-                    return _client.post("/cluster/ha/resources", parameters);
+                    return _client.create("/cluster/ha/resources", parameters);
                 }
 
                 /**
@@ -2206,13 +3300,52 @@ public class Client {
                  * (example: vm:100 / ct:100). For virtual machines and
                  * containers, you can simply use the VM or CT id as a shortcut
                  * (example: 100).
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param comment Description.
+                 * @param group The HA group identifier.
+                 * @param max_relocate Maximal number of service relocate tries
+                 * when a service failes to start.
+                 * @param max_restart Maximal number of tries to restart the
+                 * service on a node after its start failed.
+                 * @param state Requested resource state. Enum:
+                 * started,stopped,enabled,disabled,ignored
+                 * @param type Resource type. Enum: ct,vm
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result create(String sid) throws JSONException {
+                public Result create(String sid, String comment, String group, Integer max_relocate, Integer max_restart, String state, String type) throws JSONException {
+                    return createRest(sid, comment, group, max_relocate, max_restart, state, type);
+                }
+
+                /**
+                 * Create a new HA resource.
+                 *
+                 * @param sid HA resource ID. This consists of a resource type
+                 * followed by a resource specific name, separated with colon
+                 * (example: vm:100 / ct:100). For virtual machines and
+                 * containers, you can simply use the VM or CT id as a shortcut
+                 * (example: 100).
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest(String sid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("sid", sid);
-                    return _client.post("/cluster/ha/resources", parameters);
+                    return _client.create("/cluster/ha/resources", parameters);
+                }
+
+                /**
+                 * Create a new HA resource.
+                 *
+                 * @param sid HA resource ID. This consists of a resource type
+                 * followed by a resource specific name, separated with colon
+                 * (example: vm:100 / ct:100). For virtual machines and
+                 * containers, you can simply use the VM or CT id as a shortcut
+                 * (example: 100).
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result create(String sid) throws JSONException {
+                    return createRest(sid);
                 }
             }
 
@@ -2238,21 +3371,41 @@ public class Client {
                     /**
                      * Delete ha group configuration.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result deleteRest() throws JSONException {
+                        return _client.delete("/cluster/ha/groups/" + _group + "", null);
+                    }
+
+                    /**
+                     * Delete ha group configuration.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result delete() throws JSONException {
-                        return _client.delete("/cluster/ha/groups/" + _group + "", null);
+                        return deleteRest();
                     }
 
                     /**
                      * Read ha group configuration.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/cluster/ha/groups/" + _group + "", null);
+                    }
+
+                    /**
+                     * Read ha group configuration.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result read() throws JSONException {
-                        return _client.get("/cluster/ha/groups/" + _group + "", null);
+                        return getRest();
                     }
 
                     /**
@@ -2271,10 +3424,10 @@ public class Client {
                      * that node. Enabling nofailback prevents that behavior.
                      * @param restricted Resources bound to restricted groups
                      * may only run on nodes defined by the group.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result update(String comment, String delete, String digest, String nodes, Boolean nofailback, Boolean restricted) throws JSONException {
+                    public Result setRest(String comment, String delete, String digest, String nodes, Boolean nofailback, Boolean restricted) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("comment", comment);
                         parameters.put("delete", delete);
@@ -2282,28 +3435,71 @@ public class Client {
                         parameters.put("nodes", nodes);
                         parameters.put("nofailback", nofailback);
                         parameters.put("restricted", restricted);
-                        return _client.put("/cluster/ha/groups/" + _group + "", parameters);
+                        return _client.set("/cluster/ha/groups/" + _group + "", parameters);
                     }
 
                     /**
                      * Update ha group configuration.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param comment Description.
+                     * @param delete A list of settings you want to delete.
+                     * @param digest Prevent changes if current configuration
+                     * file has different SHA1 digest. This can be used to
+                     * prevent concurrent modifications.
+                     * @param nodes List of cluster node names with optional
+                     * priority.
+                     * @param nofailback The CRM tries to run services on the
+                     * node with the highest priority. If a node with higher
+                     * priority comes online, the CRM migrates the service to
+                     * that node. Enabling nofailback prevents that behavior.
+                     * @param restricted Resources bound to restricted groups
+                     * may only run on nodes defined by the group.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result update(String comment, String delete, String digest, String nodes, Boolean nofailback, Boolean restricted) throws JSONException {
+                        return setRest(comment, delete, digest, nodes, nofailback, restricted);
+                    }
+
+                    /**
+                     * Update ha group configuration.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result setRest() throws JSONException {
+                        return _client.set("/cluster/ha/groups/" + _group + "", null);
+                    }
+
+                    /**
+                     * Update ha group configuration.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result update() throws JSONException {
-                        return _client.put("/cluster/ha/groups/" + _group + "", null);
+                        return setRest();
                     }
                 }
 
                 /**
                  * Get HA groups.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/ha/groups", null);
+                }
+
+                /**
+                 * Get HA groups.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result index() throws JSONException {
-                    return _client.get("/cluster/ha/groups", null);
+                    return getRest();
                 }
 
                 /**
@@ -2320,10 +3516,10 @@ public class Client {
                  * @param restricted Resources bound to restricted groups may
                  * only run on nodes defined by the group.
                  * @param type Group type. Enum: group
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result create(String group, String nodes, String comment, Boolean nofailback, Boolean restricted, String type) throws JSONException {
+                public Result createRest(String group, String nodes, String comment, Boolean nofailback, Boolean restricted, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
                     parameters.put("nodes", nodes);
@@ -2331,7 +3527,7 @@ public class Client {
                     parameters.put("nofailback", nofailback);
                     parameters.put("restricted", restricted);
                     parameters.put("type", type);
-                    return _client.post("/cluster/ha/groups", parameters);
+                    return _client.create("/cluster/ha/groups", parameters);
                 }
 
                 /**
@@ -2340,14 +3536,48 @@ public class Client {
                  * @param group The HA group identifier.
                  * @param nodes List of cluster node names with optional
                  * priority.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param comment Description.
+                 * @param nofailback The CRM tries to run services on the node
+                 * with the highest priority. If a node with higher priority
+                 * comes online, the CRM migrates the service to that node.
+                 * Enabling nofailback prevents that behavior.
+                 * @param restricted Resources bound to restricted groups may
+                 * only run on nodes defined by the group.
+                 * @param type Group type. Enum: group
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result create(String group, String nodes) throws JSONException {
+                public Result create(String group, String nodes, String comment, Boolean nofailback, Boolean restricted, String type) throws JSONException {
+                    return createRest(group, nodes, comment, nofailback, restricted, type);
+                }
+
+                /**
+                 * Create a new HA group.
+                 *
+                 * @param group The HA group identifier.
+                 * @param nodes List of cluster node names with optional
+                 * priority.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest(String group, String nodes) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
                     parameters.put("nodes", nodes);
-                    return _client.post("/cluster/ha/groups", parameters);
+                    return _client.create("/cluster/ha/groups", parameters);
+                }
+
+                /**
+                 * Create a new HA group.
+                 *
+                 * @param group The HA group identifier.
+                 * @param nodes List of cluster node names with optional
+                 * priority.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result create(String group, String nodes) throws JSONException {
+                    return createRest(group, nodes);
                 }
             }
 
@@ -2382,11 +3612,21 @@ public class Client {
                     /**
                      * Get HA manger status.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/cluster/ha/status/current", null);
+                    }
+
+                    /**
+                     * Get HA manger status.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result status() throws JSONException {
-                        return _client.get("/cluster/ha/status/current", null);
+                        return getRest();
                     }
                 }
 
@@ -2399,33 +3639,63 @@ public class Client {
                     /**
                      * Get full HA manger status, including LRM status.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/cluster/ha/status/manager_status", null);
+                    }
+
+                    /**
+                     * Get full HA manger status, including LRM status.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result managerStatus() throws JSONException {
-                        return _client.get("/cluster/ha/status/manager_status", null);
+                        return getRest();
                     }
                 }
 
                 /**
                  * Directory index.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/ha/status", null);
+                }
+
+                /**
+                 * Directory index.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result index() throws JSONException {
-                    return _client.get("/cluster/ha/status", null);
+                    return getRest();
                 }
             }
 
             /**
              * Directory index.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/cluster/ha", null);
+            }
+
+            /**
+             * Directory index.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result index() throws JSONException {
-                return _client.get("/cluster/ha", null);
+                return getRest();
             }
         }
 
@@ -2439,10 +3709,10 @@ public class Client {
              * Read cluster log
              *
              * @param max Maximum number of entries.
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result log(Integer max) throws JSONException {
+            public Result getRest(Integer max) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("max", max);
                 return _client.get("/cluster/log", parameters);
@@ -2451,11 +3721,32 @@ public class Client {
             /**
              * Read cluster log
              *
-             * @return
-             * @throws org.json.JSONException
+             * @param max Maximum number of entries.
+             * @return Result
+             * @throws JSONException
+             */
+            public Result log(Integer max) throws JSONException {
+                return getRest(max);
+            }
+
+            /**
+             * Read cluster log
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/cluster/log", null);
+            }
+
+            /**
+             * Read cluster log
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result log() throws JSONException {
-                return _client.get("/cluster/log", null);
+                return getRest();
             }
         }
 
@@ -2469,10 +3760,10 @@ public class Client {
              * Resources index (cluster wide).
              *
              * @param type Enum: vm,storage,node
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result resources(String type) throws JSONException {
+            public Result getRest(String type) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("type", type);
                 return _client.get("/cluster/resources", parameters);
@@ -2481,11 +3772,32 @@ public class Client {
             /**
              * Resources index (cluster wide).
              *
-             * @return
-             * @throws org.json.JSONException
+             * @param type Enum: vm,storage,node
+             * @return Result
+             * @throws JSONException
+             */
+            public Result resources(String type) throws JSONException {
+                return getRest(type);
+            }
+
+            /**
+             * Resources index (cluster wide).
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/cluster/resources", null);
+            }
+
+            /**
+             * Resources index (cluster wide).
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result resources() throws JSONException {
-                return _client.get("/cluster/resources", null);
+                return getRest();
             }
         }
 
@@ -2498,11 +3810,21 @@ public class Client {
             /**
              * List recent tasks (cluster wide).
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/cluster/tasks", null);
+            }
+
+            /**
+             * List recent tasks (cluster wide).
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result tasks() throws JSONException {
-                return _client.get("/cluster/tasks", null);
+                return getRest();
             }
         }
 
@@ -2515,11 +3837,21 @@ public class Client {
             /**
              * Get datacenter options.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/cluster/options", null);
+            }
+
+            /**
+             * Get datacenter options.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result getOptions() throws JSONException {
-                return _client.get("/cluster/options", null);
+                return getRest();
             }
 
             /**
@@ -2550,10 +3882,10 @@ public class Client {
              * @param migration_unsecure Migration is secure using SSH tunnel by
              * default. For secure private networks you can disable it to speed
              * up migration. Deprecated, use the 'migration' property instead!
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result setOptions(String console, String delete, String email_from, String fencing, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure) throws JSONException {
+            public Result setRest(String console, String delete, String email_from, String fencing, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("console", console);
                 parameters.put("delete", delete);
@@ -2566,17 +3898,62 @@ public class Client {
                 parameters.put("max_workers", max_workers);
                 parameters.put("migration", migration);
                 parameters.put("migration_unsecure", migration_unsecure);
-                return _client.put("/cluster/options", parameters);
+                return _client.set("/cluster/options", parameters);
             }
 
             /**
              * Set datacenter options.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @param console Select the default Console viewer. You can either
+             * use the builtin java applet (VNC), an external virt-viewer
+             * comtatible application (SPICE), or an HTML5 based viewer (noVNC).
+             * Enum: applet,vv,html5
+             * @param delete A list of settings you want to delete.
+             * @param email_from Specify email address to send notification from
+             * (default is root@$hostname)
+             * @param fencing Set the fencing mode of the HA cluster. Hardware
+             * mode needs a valid configuration of fence devices in
+             * /etc/pve/ha/fence.cfg. With both all two modes are used. WARNING:
+             * 'hardware' and 'both' are EXPERIMENTAL &amp; WIP Enum:
+             * watchdog,hardware,both
+             * @param http_proxy Specify external http proxy which is used for
+             * downloads (example: 'http://username:password@host:port/')
+             * @param keyboard Default keybord layout for vnc server. Enum:
+             * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
+             * @param language Default GUI language. Enum: en,de
+             * @param mac_prefix Prefix for autogenerated MAC addresses.
+             * @param max_workers Defines how many workers (per node) are
+             * maximal started on actions like 'stopall VMs' or task from the
+             * ha-manager.
+             * @param migration For cluster wide migration settings.
+             * @param migration_unsecure Migration is secure using SSH tunnel by
+             * default. For secure private networks you can disable it to speed
+             * up migration. Deprecated, use the 'migration' property instead!
+             * @return Result
+             * @throws JSONException
+             */
+            public Result setOptions(String console, String delete, String email_from, String fencing, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure) throws JSONException {
+                return setRest(console, delete, email_from, fencing, http_proxy, keyboard, language, mac_prefix, max_workers, migration, migration_unsecure);
+            }
+
+            /**
+             * Set datacenter options.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result setRest() throws JSONException {
+                return _client.set("/cluster/options", null);
+            }
+
+            /**
+             * Set datacenter options.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result setOptions() throws JSONException {
-                return _client.put("/cluster/options", null);
+                return setRest();
             }
         }
 
@@ -2589,11 +3966,21 @@ public class Client {
             /**
              * Get cluster status informations.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/cluster/status", null);
+            }
+
+            /**
+             * Get cluster status informations.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result getStatus() throws JSONException {
-                return _client.get("/cluster/status", null);
+                return getRest();
             }
         }
 
@@ -2608,10 +3995,10 @@ public class Client {
              * the ID is already used.
              *
              * @param vmid The (unique) ID of the VM.
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result nextid(Integer vmid) throws JSONException {
+            public Result getRest(Integer vmid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("vmid", vmid);
                 return _client.get("/cluster/nextid", parameters);
@@ -2621,22 +4008,55 @@ public class Client {
              * Get next free VMID. If you pass an VMID it will raise an error if
              * the ID is already used.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @param vmid The (unique) ID of the VM.
+             * @return Result
+             * @throws JSONException
+             */
+            public Result nextid(Integer vmid) throws JSONException {
+                return getRest(vmid);
+            }
+
+            /**
+             * Get next free VMID. If you pass an VMID it will raise an error if
+             * the ID is already used.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/cluster/nextid", null);
+            }
+
+            /**
+             * Get next free VMID. If you pass an VMID it will raise an error if
+             * the ID is already used.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result nextid() throws JSONException {
-                return _client.get("/cluster/nextid", null);
+                return getRest();
             }
         }
 
         /**
          * Cluster index.
          *
-         * @return
-         * @throws org.json.JSONException
+         * @return Result
+         * @throws JSONException
+         */
+        public Result getRest() throws JSONException {
+            return _client.get("/cluster", null);
+        }
+
+        /**
+         * Cluster index.
+         *
+         * @return Result
+         * @throws JSONException
          */
         public Result index() throws JSONException {
-            return _client.get("/cluster", null);
+            return getRest();
         }
     }
 
@@ -3185,10 +4605,10 @@ public class Client {
                                  * configuration file has different SHA1 digest.
                                  * This can be used to prevent concurrent
                                  * modifications.
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result deleteRule(String digest) throws JSONException {
+                                public Result deleteRest(String digest) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("digest", digest);
                                     return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", parameters);
@@ -3197,21 +4617,55 @@ public class Client {
                                 /**
                                  * Delete rule.
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @param digest Prevent changes if current
+                                 * configuration file has different SHA1 digest.
+                                 * This can be used to prevent concurrent
+                                 * modifications.
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result deleteRule(String digest) throws JSONException {
+                                    return deleteRest(digest);
+                                }
+
+                                /**
+                                 * Delete rule.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result deleteRest() throws JSONException {
+                                    return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
+                                }
+
+                                /**
+                                 * Delete rule.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result deleteRule() throws JSONException {
-                                    return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
+                                    return deleteRest();
                                 }
 
                                 /**
                                  * Get single rule data.
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result getRest() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
+                                }
+
+                                /**
+                                 * Get single rule data.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result getRule() throws JSONException {
-                                    return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
+                                    return getRest();
                                 }
 
                                 /**
@@ -3270,10 +4724,10 @@ public class Client {
                                  * separated list to match several ports or
                                  * ranges.
                                  * @param type Rule type. Enum: in,out,group
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                                public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("action", action);
                                     parameters.put("comment", comment);
@@ -3289,28 +4743,111 @@ public class Client {
                                     parameters.put("source", source);
                                     parameters.put("sport", sport);
                                     parameters.put("type", type);
-                                    return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", parameters);
+                                    return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", parameters);
                                 }
 
                                 /**
                                  * Modify rule data.
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @param action Rule action ('ACCEPT', 'DROP',
+                                 * 'REJECT') or security group name.
+                                 * @param comment Descriptive comment.
+                                 * @param delete A list of settings you want to
+                                 * delete.
+                                 * @param dest Restrict packet destination
+                                 * address. This can refer to a single IP
+                                 * address, an IP set ('+ipsetname') or an IP
+                                 * alias definition. You can also specify an
+                                 * address range like
+                                 * '20.34.101.207-201.3.9.99', or a list of IP
+                                 * addresses and networks (entries are separated
+                                 * by comma). Please do not mix IPv4 and IPv6
+                                 * addresses inside such lists.
+                                 * @param digest Prevent changes if current
+                                 * configuration file has different SHA1 digest.
+                                 * This can be used to prevent concurrent
+                                 * modifications.
+                                 * @param dport Restrict TCP/UDP destination
+                                 * port. You can use service names or simple
+                                 * numbers (0-65535), as defined in
+                                 * '/etc/services'. Port ranges can be specified
+                                 * with '\d+:\d+', for example '80:85', and you
+                                 * can use comma separated list to match several
+                                 * ports or ranges.
+                                 * @param enable Flag to enable/disable a rule.
+                                 * @param iface Network interface name. You have
+                                 * to use network configuration key names for
+                                 * VMs and containers ('net\d+'). Host related
+                                 * rules can use arbitrary strings.
+                                 * @param macro Use predefined standard macro.
+                                 * @param moveto Move rule to new position
+                                 * &amp;lt;moveto&amp;gt;. Other arguments are
+                                 * ignored.
+                                 * @param proto IP protocol. You can use
+                                 * protocol names ('tcp'/'udp') or simple
+                                 * numbers, as defined in '/etc/protocols'.
+                                 * @param source Restrict packet source address.
+                                 * This can refer to a single IP address, an IP
+                                 * set ('+ipsetname') or an IP alias definition.
+                                 * You can also specify an address range like
+                                 * '20.34.101.207-201.3.9.99', or a list of IP
+                                 * addresses and networks (entries are separated
+                                 * by comma). Please do not mix IPv4 and IPv6
+                                 * addresses inside such lists.
+                                 * @param sport Restrict TCP/UDP source port.
+                                 * You can use service names or simple numbers
+                                 * (0-65535), as defined in '/etc/services'.
+                                 * Port ranges can be specified with '\d+:\d+',
+                                 * for example '80:85', and you can use comma
+                                 * separated list to match several ports or
+                                 * ranges.
+                                 * @param type Rule type. Enum: in,out,group
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                                    return setRest(action, comment, delete, dest, digest, dport, enable, iface, macro, moveto, proto, source, sport, type);
+                                }
+
+                                /**
+                                 * Modify rule data.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result setRest() throws JSONException {
+                                    return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
+                                }
+
+                                /**
+                                 * Modify rule data.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result updateRule() throws JSONException {
-                                    return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
+                                    return setRest();
                                 }
                             }
 
                             /**
                              * List rules.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules", null);
+                            }
+
+                            /**
+                             * List rules.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result getRules() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules", null);
+                                return getRest();
                             }
 
                             /**
@@ -3363,10 +4900,10 @@ public class Client {
                              * ranges can be specified with '\d+:\d+', for
                              * example '80:85', and you can use comma separated
                              * list to match several ports or ranges.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                            public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
@@ -3381,7 +4918,7 @@ public class Client {
                                 parameters.put("proto", proto);
                                 parameters.put("source", source);
                                 parameters.put("sport", sport);
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules", parameters);
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules", parameters);
                             }
 
                             /**
@@ -3390,14 +4927,84 @@ public class Client {
                              * @param action Rule action ('ACCEPT', 'DROP',
                              * 'REJECT') or security group name.
                              * @param type Rule type. Enum: in,out,group
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param comment Descriptive comment.
+                             * @param dest Restrict packet destination address.
+                             * This can refer to a single IP address, an IP set
+                             * ('+ipsetname') or an IP alias definition. You can
+                             * also specify an address range like
+                             * '20.34.101.207-201.3.9.99', or a list of IP
+                             * addresses and networks (entries are separated by
+                             * comma). Please do not mix IPv4 and IPv6 addresses
+                             * inside such lists.
+                             * @param digest Prevent changes if current
+                             * configuration file has different SHA1 digest.
+                             * This can be used to prevent concurrent
+                             * modifications.
+                             * @param dport Restrict TCP/UDP destination port.
+                             * You can use service names or simple numbers
+                             * (0-65535), as defined in '/etc/services'. Port
+                             * ranges can be specified with '\d+:\d+', for
+                             * example '80:85', and you can use comma separated
+                             * list to match several ports or ranges.
+                             * @param enable Flag to enable/disable a rule.
+                             * @param iface Network interface name. You have to
+                             * use network configuration key names for VMs and
+                             * containers ('net\d+'). Host related rules can use
+                             * arbitrary strings.
+                             * @param macro Use predefined standard macro.
+                             * @param pos Update rule at position
+                             * &amp;lt;pos&amp;gt;.
+                             * @param proto IP protocol. You can use protocol
+                             * names ('tcp'/'udp') or simple numbers, as defined
+                             * in '/etc/protocols'.
+                             * @param source Restrict packet source address.
+                             * This can refer to a single IP address, an IP set
+                             * ('+ipsetname') or an IP alias definition. You can
+                             * also specify an address range like
+                             * '20.34.101.207-201.3.9.99', or a list of IP
+                             * addresses and networks (entries are separated by
+                             * comma). Please do not mix IPv4 and IPv6 addresses
+                             * inside such lists.
+                             * @param sport Restrict TCP/UDP source port. You
+                             * can use service names or simple numbers
+                             * (0-65535), as defined in '/etc/services'. Port
+                             * ranges can be specified with '\d+:\d+', for
+                             * example '80:85', and you can use comma separated
+                             * list to match several ports or ranges.
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result createRule(String action, String type) throws JSONException {
+                            public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                                return createRest(action, type, comment, dest, digest, dport, enable, iface, macro, pos, proto, source, sport);
+                            }
+
+                            /**
+                             * Create new rule.
+                             *
+                             * @param action Rule action ('ACCEPT', 'DROP',
+                             * 'REJECT') or security group name.
+                             * @param type Rule type. Enum: in,out,group
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest(String action, String type) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules", parameters);
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules", parameters);
+                            }
+
+                            /**
+                             * Create new rule.
+                             *
+                             * @param action Rule action ('ACCEPT', 'DROP',
+                             * 'REJECT') or security group name.
+                             * @param type Rule type. Enum: in,out,group
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRule(String action, String type) throws JSONException {
+                                return createRest(action, type);
                             }
                         }
 
@@ -3436,10 +5043,10 @@ public class Client {
                                  * configuration file has different SHA1 digest.
                                  * This can be used to prevent concurrent
                                  * modifications.
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result removeAlias(String digest) throws JSONException {
+                                public Result deleteRest(String digest) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("digest", digest);
                                     return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
@@ -3448,21 +5055,55 @@ public class Client {
                                 /**
                                  * Remove IP or Network alias.
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @param digest Prevent changes if current
+                                 * configuration file has different SHA1 digest.
+                                 * This can be used to prevent concurrent
+                                 * modifications.
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result removeAlias(String digest) throws JSONException {
+                                    return deleteRest(digest);
+                                }
+
+                                /**
+                                 * Remove IP or Network alias.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result deleteRest() throws JSONException {
+                                    return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", null);
+                                }
+
+                                /**
+                                 * Remove IP or Network alias.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result removeAlias() throws JSONException {
-                                    return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", null);
+                                    return deleteRest();
                                 }
 
                                 /**
                                  * Read alias.
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result getRest() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", null);
+                                }
+
+                                /**
+                                 * Read alias.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result readAlias() throws JSONException {
-                                    return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", null);
+                                    return getRest();
                                 }
 
                                 /**
@@ -3476,16 +5117,16 @@ public class Client {
                                  * This can be used to prevent concurrent
                                  * modifications.
                                  * @param rename Rename an existing alias.
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result updateAlias(String cidr, String comment, String digest, String rename) throws JSONException {
+                                public Result setRest(String cidr, String comment, String digest, String rename) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
                                     parameters.put("comment", comment);
                                     parameters.put("digest", digest);
                                     parameters.put("rename", rename);
-                                    return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
+                                    return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
                                 }
 
                                 /**
@@ -3493,24 +5134,64 @@ public class Client {
                                  *
                                  * @param cidr Network/IP specification in CIDR
                                  * format.
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @param comment
+                                 * @param digest Prevent changes if current
+                                 * configuration file has different SHA1 digest.
+                                 * This can be used to prevent concurrent
+                                 * modifications.
+                                 * @param rename Rename an existing alias.
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result updateAlias(String cidr) throws JSONException {
+                                public Result updateAlias(String cidr, String comment, String digest, String rename) throws JSONException {
+                                    return setRest(cidr, comment, digest, rename);
+                                }
+
+                                /**
+                                 * Update IP or Network alias.
+                                 *
+                                 * @param cidr Network/IP specification in CIDR
+                                 * format.
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result setRest(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
-                                    return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
+                                    return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
+                                }
+
+                                /**
+                                 * Update IP or Network alias.
+                                 *
+                                 * @param cidr Network/IP specification in CIDR
+                                 * format.
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result updateAlias(String cidr) throws JSONException {
+                                    return setRest(cidr);
                                 }
                             }
 
                             /**
                              * List aliases
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases", null);
+                            }
+
+                            /**
+                             * List aliases
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result getAliases() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases", null);
+                                return getRest();
                             }
 
                             /**
@@ -3520,15 +5201,15 @@ public class Client {
                              * format.
                              * @param name Alias name.
                              * @param comment
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result createAlias(String cidr, String name, String comment) throws JSONException {
+                            public Result createRest(String cidr, String name, String comment) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
                                 parameters.put("name", name);
                                 parameters.put("comment", comment);
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases", parameters);
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases", parameters);
                             }
 
                             /**
@@ -3537,14 +5218,41 @@ public class Client {
                              * @param cidr Network/IP specification in CIDR
                              * format.
                              * @param name Alias name.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param comment
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result createAlias(String cidr, String name) throws JSONException {
+                            public Result createAlias(String cidr, String name, String comment) throws JSONException {
+                                return createRest(cidr, name, comment);
+                            }
+
+                            /**
+                             * Create IP or Network Alias.
+                             *
+                             * @param cidr Network/IP specification in CIDR
+                             * format.
+                             * @param name Alias name.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest(String cidr, String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
                                 parameters.put("name", name);
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases", parameters);
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases", parameters);
+                            }
+
+                            /**
+                             * Create IP or Network Alias.
+                             *
+                             * @param cidr Network/IP specification in CIDR
+                             * format.
+                             * @param name Alias name.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createAlias(String cidr, String name) throws JSONException {
+                                return createRest(cidr, name);
                             }
                         }
 
@@ -3602,10 +5310,10 @@ public class Client {
                                      * configuration file has different SHA1
                                      * digest. This can be used to prevent
                                      * concurrent modifications.
-                                     * @return
-                                     * @throws org.json.JSONException
+                                     * @return Result
+                                     * @throws JSONException
                                      */
-                                    public Result removeIp(String digest) throws JSONException {
+                                    public Result deleteRest(String digest) throws JSONException {
                                         Map<String, Object> parameters = new HashMap<>();
                                         parameters.put("digest", digest);
                                         return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
@@ -3614,21 +5322,55 @@ public class Client {
                                     /**
                                      * Remove IP or Network from IPSet.
                                      *
-                                     * @return
-                                     * @throws org.json.JSONException
+                                     * @param digest Prevent changes if current
+                                     * configuration file has different SHA1
+                                     * digest. This can be used to prevent
+                                     * concurrent modifications.
+                                     * @return Result
+                                     * @throws JSONException
+                                     */
+                                    public Result removeIp(String digest) throws JSONException {
+                                        return deleteRest(digest);
+                                    }
+
+                                    /**
+                                     * Remove IP or Network from IPSet.
+                                     *
+                                     * @return Result
+                                     * @throws JSONException
+                                     */
+                                    public Result deleteRest() throws JSONException {
+                                        return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                                    }
+
+                                    /**
+                                     * Remove IP or Network from IPSet.
+                                     *
+                                     * @return Result
+                                     * @throws JSONException
                                      */
                                     public Result removeIp() throws JSONException {
-                                        return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                                        return deleteRest();
                                     }
 
                                     /**
                                      * Read IP or Network settings from IPSet.
                                      *
-                                     * @return
-                                     * @throws org.json.JSONException
+                                     * @return Result
+                                     * @throws JSONException
+                                     */
+                                    public Result getRest() throws JSONException {
+                                        return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                                    }
+
+                                    /**
+                                     * Read IP or Network settings from IPSet.
+                                     *
+                                     * @return Result
+                                     * @throws JSONException
                                      */
                                     public Result readIp() throws JSONException {
-                                        return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                                        return getRest();
                                     }
 
                                     /**
@@ -3640,46 +5382,92 @@ public class Client {
                                      * digest. This can be used to prevent
                                      * concurrent modifications.
                                      * @param nomatch
-                                     * @return
-                                     * @throws org.json.JSONException
+                                     * @return Result
+                                     * @throws JSONException
                                      */
-                                    public Result updateIp(String comment, String digest, Boolean nomatch) throws JSONException {
+                                    public Result setRest(String comment, String digest, Boolean nomatch) throws JSONException {
                                         Map<String, Object> parameters = new HashMap<>();
                                         parameters.put("comment", comment);
                                         parameters.put("digest", digest);
                                         parameters.put("nomatch", nomatch);
-                                        return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
+                                        return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
                                     }
 
                                     /**
                                      * Update IP or Network settings
                                      *
-                                     * @return
-                                     * @throws org.json.JSONException
+                                     * @param comment
+                                     * @param digest Prevent changes if current
+                                     * configuration file has different SHA1
+                                     * digest. This can be used to prevent
+                                     * concurrent modifications.
+                                     * @param nomatch
+                                     * @return Result
+                                     * @throws JSONException
+                                     */
+                                    public Result updateIp(String comment, String digest, Boolean nomatch) throws JSONException {
+                                        return setRest(comment, digest, nomatch);
+                                    }
+
+                                    /**
+                                     * Update IP or Network settings
+                                     *
+                                     * @return Result
+                                     * @throws JSONException
+                                     */
+                                    public Result setRest() throws JSONException {
+                                        return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                                    }
+
+                                    /**
+                                     * Update IP or Network settings
+                                     *
+                                     * @return Result
+                                     * @throws JSONException
                                      */
                                     public Result updateIp() throws JSONException {
-                                        return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                                        return setRest();
                                     }
                                 }
 
                                 /**
                                  * Delete IPSet
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result deleteRest() throws JSONException {
+                                    return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", null);
+                                }
+
+                                /**
+                                 * Delete IPSet
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result deleteIpset() throws JSONException {
-                                    return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", null);
+                                    return deleteRest();
                                 }
 
                                 /**
                                  * List IPSet content
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result getRest() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", null);
+                                }
+
+                                /**
+                                 * List IPSet content
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result getIpset() throws JSONException {
-                                    return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", null);
+                                    return getRest();
                                 }
 
                                 /**
@@ -3689,15 +5477,15 @@ public class Client {
                                  * format.
                                  * @param comment
                                  * @param nomatch
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result createIp(String cidr, String comment, Boolean nomatch) throws JSONException {
+                                public Result createRest(String cidr, String comment, Boolean nomatch) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
                                     parameters.put("comment", comment);
                                     parameters.put("nomatch", nomatch);
-                                    return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", parameters);
+                                    return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", parameters);
                                 }
 
                                 /**
@@ -3705,24 +5493,60 @@ public class Client {
                                  *
                                  * @param cidr Network/IP specification in CIDR
                                  * format.
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @param comment
+                                 * @param nomatch
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result createIp(String cidr) throws JSONException {
+                                public Result createIp(String cidr, String comment, Boolean nomatch) throws JSONException {
+                                    return createRest(cidr, comment, nomatch);
+                                }
+
+                                /**
+                                 * Add IP or Network to IPSet.
+                                 *
+                                 * @param cidr Network/IP specification in CIDR
+                                 * format.
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result createRest(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
-                                    return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", parameters);
+                                    return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", parameters);
+                                }
+
+                                /**
+                                 * Add IP or Network to IPSet.
+                                 *
+                                 * @param cidr Network/IP specification in CIDR
+                                 * format.
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result createIp(String cidr) throws JSONException {
+                                    return createRest(cidr);
                                 }
                             }
 
                             /**
                              * List IPSets
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset", null);
+                            }
+
+                            /**
+                             * List IPSets
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result ipsetIndex() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset", null);
+                                return getRest();
                             }
 
                             /**
@@ -3737,29 +5561,59 @@ public class Client {
                              * @param rename Rename an existing IPSet. You can
                              * set 'rename' to the same value as 'name' to
                              * update the 'comment' of an existing IPSet.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result createIpset(String name, String comment, String digest, String rename) throws JSONException {
+                            public Result createRest(String name, String comment, String digest, String rename) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
                                 parameters.put("comment", comment);
                                 parameters.put("digest", digest);
                                 parameters.put("rename", rename);
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset", parameters);
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset", parameters);
                             }
 
                             /**
                              * Create new IPSet
                              *
                              * @param name IP set name.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param comment
+                             * @param digest Prevent changes if current
+                             * configuration file has different SHA1 digest.
+                             * This can be used to prevent concurrent
+                             * modifications.
+                             * @param rename Rename an existing IPSet. You can
+                             * set 'rename' to the same value as 'name' to
+                             * update the 'comment' of an existing IPSet.
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result createIpset(String name) throws JSONException {
+                            public Result createIpset(String name, String comment, String digest, String rename) throws JSONException {
+                                return createRest(name, comment, digest, rename);
+                            }
+
+                            /**
+                             * Create new IPSet
+                             *
+                             * @param name IP set name.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest(String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset", parameters);
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset", parameters);
+                            }
+
+                            /**
+                             * Create new IPSet
+                             *
+                             * @param name IP set name.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createIpset(String name) throws JSONException {
+                                return createRest(name);
                             }
                         }
 
@@ -3777,11 +5631,21 @@ public class Client {
                             /**
                              * Get VM firewall options.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/options", null);
+                            }
+
+                            /**
+                             * Get VM firewall options.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result getOptions() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/options", null);
+                                return getRest();
                             }
 
                             /**
@@ -3817,10 +5681,10 @@ public class Client {
                              * @param policy_out Output policy. Enum:
                              * ACCEPT,REJECT,DROP
                              * @param radv Allow sending Router Advertisement.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result setOptions(String delete, Boolean dhcp, String digest, Boolean enable, Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter, Boolean ndp, String policy_in, String policy_out, Boolean radv) throws JSONException {
+                            public Result setRest(String delete, Boolean dhcp, String digest, Boolean enable, Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter, Boolean ndp, String policy_in, String policy_out, Boolean radv) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("delete", delete);
                                 parameters.put("dhcp", dhcp);
@@ -3834,17 +5698,67 @@ public class Client {
                                 parameters.put("policy_in", policy_in);
                                 parameters.put("policy_out", policy_out);
                                 parameters.put("radv", radv);
-                                return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/options", parameters);
+                                return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/options", parameters);
                             }
 
                             /**
                              * Set Firewall options.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param delete A list of settings you want to
+                             * delete.
+                             * @param dhcp Enable DHCP.
+                             * @param digest Prevent changes if current
+                             * configuration file has different SHA1 digest.
+                             * This can be used to prevent concurrent
+                             * modifications.
+                             * @param enable Enable/disable firewall rules.
+                             * @param ipfilter Enable default IP filters. This
+                             * is equivalent to adding an empty
+                             * ipfilter-net&amp;lt;id&amp;gt; ipset for every
+                             * interface. Such ipsets implicitly contain sane
+                             * default restrictions such as restricting IPv6
+                             * link local addresses to the one derived from the
+                             * interface's MAC address. For containers the
+                             * configured IP addresses will be implicitly added.
+                             * @param log_level_in Log level for incoming
+                             * traffic. Enum:
+                             * emerg,alert,crit,err,warning,notice,info,debug,nolog
+                             * @param log_level_out Log level for outgoing
+                             * traffic. Enum:
+                             * emerg,alert,crit,err,warning,notice,info,debug,nolog
+                             * @param macfilter Enable/disable MAC address
+                             * filter.
+                             * @param ndp Enable NDP.
+                             * @param policy_in Input policy. Enum:
+                             * ACCEPT,REJECT,DROP
+                             * @param policy_out Output policy. Enum:
+                             * ACCEPT,REJECT,DROP
+                             * @param radv Allow sending Router Advertisement.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result setOptions(String delete, Boolean dhcp, String digest, Boolean enable, Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter, Boolean ndp, String policy_in, String policy_out, Boolean radv) throws JSONException {
+                                return setRest(delete, dhcp, digest, enable, ipfilter, log_level_in, log_level_out, macfilter, ndp, policy_in, policy_out, radv);
+                            }
+
+                            /**
+                             * Set Firewall options.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result setRest() throws JSONException {
+                                return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/options", null);
+                            }
+
+                            /**
+                             * Set Firewall options.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result setOptions() throws JSONException {
-                                return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/options", null);
+                                return setRest();
                             }
                         }
 
@@ -3864,10 +5778,10 @@ public class Client {
                              *
                              * @param limit
                              * @param start
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result log(Integer limit, Integer start) throws JSONException {
+                            public Result getRest(Integer limit, Integer start) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("limit", limit);
                                 parameters.put("start", start);
@@ -3877,11 +5791,33 @@ public class Client {
                             /**
                              * Read firewall log
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param limit
+                             * @param start
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result log(Integer limit, Integer start) throws JSONException {
+                                return getRest(limit, start);
+                            }
+
+                            /**
+                             * Read firewall log
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/log", null);
+                            }
+
+                            /**
+                             * Read firewall log
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result log() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/log", null);
+                                return getRest();
                             }
                         }
 
@@ -3902,10 +5838,10 @@ public class Client {
                              *
                              * @param type Only list references of specified
                              * type. Enum: alias,ipset
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result refs(String type) throws JSONException {
+                            public Result getRest(String type) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("type", type);
                                 return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/refs", parameters);
@@ -3915,22 +5851,56 @@ public class Client {
                              * Lists possible IPSet/Alias reference which are
                              * allowed in source/dest properties.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param type Only list references of specified
+                             * type. Enum: alias,ipset
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result refs(String type) throws JSONException {
+                                return getRest(type);
+                            }
+
+                            /**
+                             * Lists possible IPSet/Alias reference which are
+                             * allowed in source/dest properties.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/refs", null);
+                            }
+
+                            /**
+                             * Lists possible IPSet/Alias reference which are
+                             * allowed in source/dest properties.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result refs() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/refs", null);
+                                return getRest();
                             }
                         }
 
                         /**
                          * Directory index.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall", null);
+                        }
+
+                        /**
+                         * Directory index.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result index() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall", null);
+                            return getRest();
                         }
                     }
 
@@ -3954,10 +5924,10 @@ public class Client {
                          * interested in. Enum: hour,day,week,month,year
                          * @param cf The RRD consolidation function Enum:
                          * AVERAGE,MAX
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result rrd(String ds, String timeframe, String cf) throws JSONException {
+                        public Result getRest(String ds, String timeframe, String cf) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
@@ -3972,14 +5942,44 @@ public class Client {
                          * display.
                          * @param timeframe Specify the time frame you are
                          * interested in. Enum: hour,day,week,month,year
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param cf The RRD consolidation function Enum:
+                         * AVERAGE,MAX
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result rrd(String ds, String timeframe) throws JSONException {
+                        public Result rrd(String ds, String timeframe, String cf) throws JSONException {
+                            return getRest(ds, timeframe, cf);
+                        }
+
+                        /**
+                         * Read VM RRD statistics (returns PNG)
+                         *
+                         * @param ds The list of datasources you want to
+                         * display.
+                         * @param timeframe Specify the time frame you are
+                         * interested in. Enum: hour,day,week,month,year
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest(String ds, String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
                             return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/rrd", parameters);
+                        }
+
+                        /**
+                         * Read VM RRD statistics (returns PNG)
+                         *
+                         * @param ds The list of datasources you want to
+                         * display.
+                         * @param timeframe Specify the time frame you are
+                         * interested in. Enum: hour,day,week,month,year
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result rrd(String ds, String timeframe) throws JSONException {
+                            return getRest(ds, timeframe);
                         }
                     }
 
@@ -4001,10 +6001,10 @@ public class Client {
                          * interested in. Enum: hour,day,week,month,year
                          * @param cf The RRD consolidation function Enum:
                          * AVERAGE,MAX
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result rrddata(String timeframe, String cf) throws JSONException {
+                        public Result getRest(String timeframe, String cf) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
                             parameters.put("cf", cf);
@@ -4016,13 +6016,39 @@ public class Client {
                          *
                          * @param timeframe Specify the time frame you are
                          * interested in. Enum: hour,day,week,month,year
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param cf The RRD consolidation function Enum:
+                         * AVERAGE,MAX
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result rrddata(String timeframe) throws JSONException {
+                        public Result rrddata(String timeframe, String cf) throws JSONException {
+                            return getRest(timeframe, cf);
+                        }
+
+                        /**
+                         * Read VM RRD statistics
+                         *
+                         * @param timeframe Specify the time frame you are
+                         * interested in. Enum: hour,day,week,month,year
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest(String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
                             return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/rrddata", parameters);
+                        }
+
+                        /**
+                         * Read VM RRD statistics
+                         *
+                         * @param timeframe Specify the time frame you are
+                         * interested in. Enum: hour,day,week,month,year
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result rrddata(String timeframe) throws JSONException {
+                            return getRest(timeframe);
                         }
                     }
 
@@ -4044,10 +6070,10 @@ public class Client {
                          *
                          * @param current Get current values (instead of pending
                          * values).
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result vmConfig(Boolean current) throws JSONException {
+                        public Result getRest(Boolean current) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("current", current);
                             return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/config", parameters);
@@ -4058,11 +6084,37 @@ public class Client {
                          * not include pending configuration changes (see
                          * 'pending' API).
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param current Get current values (instead of pending
+                         * values).
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result vmConfig(Boolean current) throws JSONException {
+                            return getRest(current);
+                        }
+
+                        /**
+                         * Get current virtual machine configuration. This does
+                         * not include pending configuration changes (see
+                         * 'pending' API).
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
+                        }
+
+                        /**
+                         * Get current virtual machine configuration. This does
+                         * not include pending configuration changes (see
+                         * 'pending' API).
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result vmConfig() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
+                            return getRest();
                         }
 
                         /**
@@ -4187,12 +6239,14 @@ public class Client {
                          * std,cirrus,vmware,qxl,serial0,serial1,serial2,serial3,qxl2,qxl3,qxl4
                          * @param virtioN Use volume as VIRTIO hard disk (n is 0
                          * to 15).
+                         * @param vmstatestorage Default storage for VM state
+                         * volumes/files.
                          * @param watchdog Create a virtual hardware watchdog
                          * device.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result updateVmAsync(Boolean acpi, Boolean agent, String args, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String watchdog) throws JSONException {
+                        public Result createRest(Boolean acpi, Boolean agent, String args, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmstatestorage, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
                             parameters.put("agent", agent);
@@ -4243,29 +6297,173 @@ public class Client {
                             parameters.put("template", template);
                             parameters.put("vcpus", vcpus);
                             parameters.put("vga", vga);
+                            parameters.put("vmstatestorage", vmstatestorage);
                             parameters.put("watchdog", watchdog);
-                            addIndexedParmeter(parameters, "hostpci", hostpciN);
-                            addIndexedParmeter(parameters, "ide", ideN);
-                            addIndexedParmeter(parameters, "net", netN);
-                            addIndexedParmeter(parameters, "numa", numaN);
-                            addIndexedParmeter(parameters, "parallel", parallelN);
-                            addIndexedParmeter(parameters, "sata", sataN);
-                            addIndexedParmeter(parameters, "scsi", scsiN);
-                            addIndexedParmeter(parameters, "serial", serialN);
-                            addIndexedParmeter(parameters, "unused", unusedN);
-                            addIndexedParmeter(parameters, "usb", usbN);
-                            addIndexedParmeter(parameters, "virtio", virtioN);
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/config", parameters);
+                            addIndexedParameter(parameters, "hostpci", hostpciN);
+                            addIndexedParameter(parameters, "ide", ideN);
+                            addIndexedParameter(parameters, "net", netN);
+                            addIndexedParameter(parameters, "numa", numaN);
+                            addIndexedParameter(parameters, "parallel", parallelN);
+                            addIndexedParameter(parameters, "sata", sataN);
+                            addIndexedParameter(parameters, "scsi", scsiN);
+                            addIndexedParameter(parameters, "serial", serialN);
+                            addIndexedParameter(parameters, "unused", unusedN);
+                            addIndexedParameter(parameters, "usb", usbN);
+                            addIndexedParameter(parameters, "virtio", virtioN);
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/config", parameters);
                         }
 
                         /**
                          * Set virtual machine options (asynchrounous API).
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param acpi Enable/disable ACPI.
+                         * @param agent Enable/disable Qemu GuestAgent.
+                         * @param args Arbitrary arguments passed to kvm.
+                         * @param autostart Automatic restart after crash
+                         * (currently ignored).
+                         * @param background_delay Time to wait for the task to
+                         * finish. We return 'null' if the task finish within
+                         * that time.
+                         * @param balloon Amount of target RAM for the VM in MB.
+                         * Using zero disables the ballon driver.
+                         * @param bios Select BIOS implementation. Enum:
+                         * seabios,ovmf
+                         * @param boot Boot on floppy (a), hard disk (c), CD-ROM
+                         * (d), or network (n).
+                         * @param bootdisk Enable booting from specified disk.
+                         * @param cdrom This is an alias for option -ide2
+                         * @param cores The number of cores per socket.
+                         * @param cpu Emulated CPU type.
+                         * @param cpulimit Limit of CPU usage.
+                         * @param cpuunits CPU weight for a VM.
+                         * @param delete A list of settings you want to delete.
+                         * @param description Description for the VM. Only used
+                         * on the configuration web interface. This is saved as
+                         * comment inside the configuration file.
+                         * @param digest Prevent changes if current
+                         * configuration file has different SHA1 digest. This
+                         * can be used to prevent concurrent modifications.
+                         * @param force Force physical removal. Without this, we
+                         * simple remove the disk from the config file and
+                         * create an additional configuration entry called
+                         * 'unused[n]', which contains the volume ID. Unlink of
+                         * unused[n] always cause physical removal.
+                         * @param freeze Freeze CPU at startup (use 'c' monitor
+                         * command to start execution).
+                         * @param hostpciN Map host PCI devices into guest.
+                         * @param hotplug Selectively enable hotplug features.
+                         * This is a comma separated list of hotplug features:
+                         * 'network', 'disk', 'cpu', 'memory' and 'usb'. Use '0'
+                         * to disable hotplug completely. Value '1' is an alias
+                         * for the default 'network,disk,usb'.
+                         * @param hugepages Enable/disable hugepages memory.
+                         * Enum: any,2,1024
+                         * @param ideN Use volume as IDE hard disk or CD-ROM (n
+                         * is 0 to 3).
+                         * @param keyboard Keybord layout for vnc server.
+                         * Default is read from the '/etc/pve/datacenter.conf'
+                         * configuration file. Enum:
+                         * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
+                         * @param kvm Enable/disable KVM hardware
+                         * virtualization.
+                         * @param localtime Set the real time clock to local
+                         * time. This is enabled by default if ostype indicates
+                         * a Microsoft OS.
+                         * @param lock_ Lock/unlock the VM. Enum:
+                         * migrate,backup,snapshot,rollback
+                         * @param machine Specific the Qemu machine type.
+                         * @param memory Amount of RAM for the VM in MB. This is
+                         * the maximum available memory when you use the balloon
+                         * device.
+                         * @param migrate_downtime Set maximum tolerated
+                         * downtime (in seconds) for migrations.
+                         * @param migrate_speed Set maximum speed (in MB/s) for
+                         * migrations. Value 0 is no limit.
+                         * @param name Set a name for the VM. Only used on the
+                         * configuration web interface.
+                         * @param netN Specify network devices.
+                         * @param numa Enable/disable NUMA.
+                         * @param numaN NUMA topology.
+                         * @param onboot Specifies whether a VM will be started
+                         * during system bootup.
+                         * @param ostype Specify guest operating system. Enum:
+                         * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,l24,l26,solaris
+                         * @param parallelN Map host parallel devices (n is 0 to
+                         * 2).
+                         * @param protection Sets the protection flag of the VM.
+                         * This will disable the remove VM and remove disk
+                         * operations.
+                         * @param reboot Allow reboot. If set to '0' the VM exit
+                         * on reboot.
+                         * @param revert Revert a pending change.
+                         * @param sataN Use volume as SATA hard disk or CD-ROM
+                         * (n is 0 to 5).
+                         * @param scsiN Use volume as SCSI hard disk or CD-ROM
+                         * (n is 0 to 13).
+                         * @param scsihw SCSI controller model Enum:
+                         * lsi,lsi53c810,virtio-scsi-pci,virtio-scsi-single,megasas,pvscsi
+                         * @param serialN Create a serial device inside the VM
+                         * (n is 0 to 3)
+                         * @param shares Amount of memory shares for
+                         * auto-ballooning. The larger the number is, the more
+                         * memory this VM gets. Number is relative to weights of
+                         * all other running VMs. Using zero disables
+                         * auto-ballooning
+                         * @param skiplock Ignore locks - only root is allowed
+                         * to use this option.
+                         * @param smbios1 Specify SMBIOS type 1 fields.
+                         * @param smp The number of CPUs. Please use option
+                         * -sockets instead.
+                         * @param sockets The number of CPU sockets.
+                         * @param startdate Set the initial date of the real
+                         * time clock. Valid format for date are: 'now' or
+                         * '2006-06-17T16:01:21' or '2006-06-17'.
+                         * @param startup Startup and shutdown behavior. Order
+                         * is a non-negative number defining the general startup
+                         * order. Shutdown in done with reverse ordering.
+                         * Additionally you can set the 'up' or 'down' delay in
+                         * seconds, which specifies a delay to wait before the
+                         * next VM is started or stopped.
+                         * @param tablet Enable/disable the USB tablet device.
+                         * @param tdf Enable/disable time drift fix.
+                         * @param template Enable/disable Template.
+                         * @param unusedN Reference to unused volumes. This is
+                         * used internally, and should not be modified manually.
+                         * @param usbN Configure an USB device (n is 0 to 4).
+                         * @param vcpus Number of hotplugged vcpus.
+                         * @param vga Select the VGA type. Enum:
+                         * std,cirrus,vmware,qxl,serial0,serial1,serial2,serial3,qxl2,qxl3,qxl4
+                         * @param virtioN Use volume as VIRTIO hard disk (n is 0
+                         * to 15).
+                         * @param vmstatestorage Default storage for VM state
+                         * volumes/files.
+                         * @param watchdog Create a virtual hardware watchdog
+                         * device.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result updateVmAsync(Boolean acpi, Boolean agent, String args, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmstatestorage, String watchdog) throws JSONException {
+                            return createRest(acpi, agent, args, autostart, background_delay, balloon, bios, boot, bootdisk, cdrom, cores, cpu, cpulimit, cpuunits, delete, description, digest, force, freeze, hostpciN, hotplug, hugepages, ideN, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, netN, numa, numaN, onboot, ostype, parallelN, protection, reboot, revert, sataN, scsiN, scsihw, serialN, shares, skiplock, smbios1, smp, sockets, startdate, startup, tablet, tdf, template, unusedN, usbN, vcpus, vga, virtioN, vmstatestorage, watchdog);
+                        }
+
+                        /**
+                         * Set virtual machine options (asynchrounous API).
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
+                        }
+
+                        /**
+                         * Set virtual machine options (asynchrounous API).
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result updateVmAsync() throws JSONException {
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
+                            return createRest();
                         }
 
                         /**
@@ -4389,12 +6587,14 @@ public class Client {
                          * std,cirrus,vmware,qxl,serial0,serial1,serial2,serial3,qxl2,qxl3,qxl4
                          * @param virtioN Use volume as VIRTIO hard disk (n is 0
                          * to 15).
+                         * @param vmstatestorage Default storage for VM state
+                         * volumes/files.
                          * @param watchdog Create a virtual hardware watchdog
                          * device.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result updateVm(Boolean acpi, Boolean agent, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String watchdog) throws JSONException {
+                        public Result setRest(Boolean acpi, Boolean agent, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmstatestorage, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
                             parameters.put("agent", agent);
@@ -4444,19 +6644,20 @@ public class Client {
                             parameters.put("template", template);
                             parameters.put("vcpus", vcpus);
                             parameters.put("vga", vga);
+                            parameters.put("vmstatestorage", vmstatestorage);
                             parameters.put("watchdog", watchdog);
-                            addIndexedParmeter(parameters, "hostpci", hostpciN);
-                            addIndexedParmeter(parameters, "ide", ideN);
-                            addIndexedParmeter(parameters, "net", netN);
-                            addIndexedParmeter(parameters, "numa", numaN);
-                            addIndexedParmeter(parameters, "parallel", parallelN);
-                            addIndexedParmeter(parameters, "sata", sataN);
-                            addIndexedParmeter(parameters, "scsi", scsiN);
-                            addIndexedParmeter(parameters, "serial", serialN);
-                            addIndexedParmeter(parameters, "unused", unusedN);
-                            addIndexedParmeter(parameters, "usb", usbN);
-                            addIndexedParmeter(parameters, "virtio", virtioN);
-                            return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/config", parameters);
+                            addIndexedParameter(parameters, "hostpci", hostpciN);
+                            addIndexedParameter(parameters, "ide", ideN);
+                            addIndexedParameter(parameters, "net", netN);
+                            addIndexedParameter(parameters, "numa", numaN);
+                            addIndexedParameter(parameters, "parallel", parallelN);
+                            addIndexedParameter(parameters, "sata", sataN);
+                            addIndexedParameter(parameters, "scsi", scsiN);
+                            addIndexedParameter(parameters, "serial", serialN);
+                            addIndexedParameter(parameters, "unused", unusedN);
+                            addIndexedParameter(parameters, "usb", usbN);
+                            addIndexedParameter(parameters, "virtio", virtioN);
+                            return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/config", parameters);
                         }
 
                         /**
@@ -4464,11 +6665,155 @@ public class Client {
                          * should consider using the POST method instead for any
                          * actions involving hotplug or storage allocation.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param acpi Enable/disable ACPI.
+                         * @param agent Enable/disable Qemu GuestAgent.
+                         * @param args Arbitrary arguments passed to kvm.
+                         * @param autostart Automatic restart after crash
+                         * (currently ignored).
+                         * @param balloon Amount of target RAM for the VM in MB.
+                         * Using zero disables the ballon driver.
+                         * @param bios Select BIOS implementation. Enum:
+                         * seabios,ovmf
+                         * @param boot Boot on floppy (a), hard disk (c), CD-ROM
+                         * (d), or network (n).
+                         * @param bootdisk Enable booting from specified disk.
+                         * @param cdrom This is an alias for option -ide2
+                         * @param cores The number of cores per socket.
+                         * @param cpu Emulated CPU type.
+                         * @param cpulimit Limit of CPU usage.
+                         * @param cpuunits CPU weight for a VM.
+                         * @param delete A list of settings you want to delete.
+                         * @param description Description for the VM. Only used
+                         * on the configuration web interface. This is saved as
+                         * comment inside the configuration file.
+                         * @param digest Prevent changes if current
+                         * configuration file has different SHA1 digest. This
+                         * can be used to prevent concurrent modifications.
+                         * @param force Force physical removal. Without this, we
+                         * simple remove the disk from the config file and
+                         * create an additional configuration entry called
+                         * 'unused[n]', which contains the volume ID. Unlink of
+                         * unused[n] always cause physical removal.
+                         * @param freeze Freeze CPU at startup (use 'c' monitor
+                         * command to start execution).
+                         * @param hostpciN Map host PCI devices into guest.
+                         * @param hotplug Selectively enable hotplug features.
+                         * This is a comma separated list of hotplug features:
+                         * 'network', 'disk', 'cpu', 'memory' and 'usb'. Use '0'
+                         * to disable hotplug completely. Value '1' is an alias
+                         * for the default 'network,disk,usb'.
+                         * @param hugepages Enable/disable hugepages memory.
+                         * Enum: any,2,1024
+                         * @param ideN Use volume as IDE hard disk or CD-ROM (n
+                         * is 0 to 3).
+                         * @param keyboard Keybord layout for vnc server.
+                         * Default is read from the '/etc/pve/datacenter.conf'
+                         * configuration file. Enum:
+                         * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
+                         * @param kvm Enable/disable KVM hardware
+                         * virtualization.
+                         * @param localtime Set the real time clock to local
+                         * time. This is enabled by default if ostype indicates
+                         * a Microsoft OS.
+                         * @param lock_ Lock/unlock the VM. Enum:
+                         * migrate,backup,snapshot,rollback
+                         * @param machine Specific the Qemu machine type.
+                         * @param memory Amount of RAM for the VM in MB. This is
+                         * the maximum available memory when you use the balloon
+                         * device.
+                         * @param migrate_downtime Set maximum tolerated
+                         * downtime (in seconds) for migrations.
+                         * @param migrate_speed Set maximum speed (in MB/s) for
+                         * migrations. Value 0 is no limit.
+                         * @param name Set a name for the VM. Only used on the
+                         * configuration web interface.
+                         * @param netN Specify network devices.
+                         * @param numa Enable/disable NUMA.
+                         * @param numaN NUMA topology.
+                         * @param onboot Specifies whether a VM will be started
+                         * during system bootup.
+                         * @param ostype Specify guest operating system. Enum:
+                         * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,l24,l26,solaris
+                         * @param parallelN Map host parallel devices (n is 0 to
+                         * 2).
+                         * @param protection Sets the protection flag of the VM.
+                         * This will disable the remove VM and remove disk
+                         * operations.
+                         * @param reboot Allow reboot. If set to '0' the VM exit
+                         * on reboot.
+                         * @param revert Revert a pending change.
+                         * @param sataN Use volume as SATA hard disk or CD-ROM
+                         * (n is 0 to 5).
+                         * @param scsiN Use volume as SCSI hard disk or CD-ROM
+                         * (n is 0 to 13).
+                         * @param scsihw SCSI controller model Enum:
+                         * lsi,lsi53c810,virtio-scsi-pci,virtio-scsi-single,megasas,pvscsi
+                         * @param serialN Create a serial device inside the VM
+                         * (n is 0 to 3)
+                         * @param shares Amount of memory shares for
+                         * auto-ballooning. The larger the number is, the more
+                         * memory this VM gets. Number is relative to weights of
+                         * all other running VMs. Using zero disables
+                         * auto-ballooning
+                         * @param skiplock Ignore locks - only root is allowed
+                         * to use this option.
+                         * @param smbios1 Specify SMBIOS type 1 fields.
+                         * @param smp The number of CPUs. Please use option
+                         * -sockets instead.
+                         * @param sockets The number of CPU sockets.
+                         * @param startdate Set the initial date of the real
+                         * time clock. Valid format for date are: 'now' or
+                         * '2006-06-17T16:01:21' or '2006-06-17'.
+                         * @param startup Startup and shutdown behavior. Order
+                         * is a non-negative number defining the general startup
+                         * order. Shutdown in done with reverse ordering.
+                         * Additionally you can set the 'up' or 'down' delay in
+                         * seconds, which specifies a delay to wait before the
+                         * next VM is started or stopped.
+                         * @param tablet Enable/disable the USB tablet device.
+                         * @param tdf Enable/disable time drift fix.
+                         * @param template Enable/disable Template.
+                         * @param unusedN Reference to unused volumes. This is
+                         * used internally, and should not be modified manually.
+                         * @param usbN Configure an USB device (n is 0 to 4).
+                         * @param vcpus Number of hotplugged vcpus.
+                         * @param vga Select the VGA type. Enum:
+                         * std,cirrus,vmware,qxl,serial0,serial1,serial2,serial3,qxl2,qxl3,qxl4
+                         * @param virtioN Use volume as VIRTIO hard disk (n is 0
+                         * to 15).
+                         * @param vmstatestorage Default storage for VM state
+                         * volumes/files.
+                         * @param watchdog Create a virtual hardware watchdog
+                         * device.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result updateVm(Boolean acpi, Boolean agent, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmstatestorage, String watchdog) throws JSONException {
+                            return setRest(acpi, agent, args, autostart, balloon, bios, boot, bootdisk, cdrom, cores, cpu, cpulimit, cpuunits, delete, description, digest, force, freeze, hostpciN, hotplug, hugepages, ideN, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, netN, numa, numaN, onboot, ostype, parallelN, protection, reboot, revert, sataN, scsiN, scsihw, serialN, shares, skiplock, smbios1, smp, sockets, startdate, startup, tablet, tdf, template, unusedN, usbN, vcpus, vga, virtioN, vmstatestorage, watchdog);
+                        }
+
+                        /**
+                         * Set virtual machine options (synchrounous API) - You
+                         * should consider using the POST method instead for any
+                         * actions involving hotplug or storage allocation.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result setRest() throws JSONException {
+                            return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
+                        }
+
+                        /**
+                         * Set virtual machine options (synchrounous API) - You
+                         * should consider using the POST method instead for any
+                         * actions involving hotplug or storage allocation.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result updateVm() throws JSONException {
-                            return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
+                            return setRest();
                         }
                     }
 
@@ -4487,11 +6832,22 @@ public class Client {
                          * Get virtual machine configuration, including pending
                          * changes.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/pending", null);
+                        }
+
+                        /**
+                         * Get virtual machine configuration, including pending
+                         * changes.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result vmPending() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/pending", null);
+                            return getRest();
                         }
                     }
 
@@ -4515,27 +6871,54 @@ public class Client {
                          * create an additional configuration entry called
                          * 'unused[n]', which contains the volume ID. Unlink of
                          * unused[n] always cause physical removal.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result unlink(String idlist, Boolean force) throws JSONException {
+                        public Result setRest(String idlist, Boolean force) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("idlist", idlist);
                             parameters.put("force", force);
-                            return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/unlink", parameters);
+                            return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/unlink", parameters);
                         }
 
                         /**
                          * Unlink/delete disk images.
                          *
                          * @param idlist A list of disk IDs you want to delete.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param force Force physical removal. Without this, we
+                         * simple remove the disk from the config file and
+                         * create an additional configuration entry called
+                         * 'unused[n]', which contains the volume ID. Unlink of
+                         * unused[n] always cause physical removal.
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result unlink(String idlist) throws JSONException {
+                        public Result unlink(String idlist, Boolean force) throws JSONException {
+                            return setRest(idlist, force);
+                        }
+
+                        /**
+                         * Unlink/delete disk images.
+                         *
+                         * @param idlist A list of disk IDs you want to delete.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result setRest(String idlist) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("idlist", idlist);
-                            return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/unlink", parameters);
+                            return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/unlink", parameters);
+                        }
+
+                        /**
+                         * Unlink/delete disk images.
+                         *
+                         * @param idlist A list of disk IDs you want to delete.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result unlink(String idlist) throws JSONException {
+                            return setRest(idlist);
                         }
                     }
 
@@ -4555,23 +6938,45 @@ public class Client {
                          *
                          * @param websocket starts websockify instead of
                          * vncproxy
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result vncproxy(Boolean websocket) throws JSONException {
+                        public Result createRest(Boolean websocket) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("websocket", websocket);
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/vncproxy", parameters);
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/vncproxy", parameters);
                         }
 
                         /**
                          * Creates a TCP VNC proxy connections.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param websocket starts websockify instead of
+                         * vncproxy
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result vncproxy(Boolean websocket) throws JSONException {
+                            return createRest(websocket);
+                        }
+
+                        /**
+                         * Creates a TCP VNC proxy connections.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/vncproxy", null);
+                        }
+
+                        /**
+                         * Creates a TCP VNC proxy connections.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result vncproxy() throws JSONException {
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/vncproxy", null);
+                            return createRest();
                         }
                     }
 
@@ -4593,14 +6998,28 @@ public class Client {
                          * call.
                          * @param vncticket Ticket from previous call to
                          * vncproxy.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result vncwebsocket(int port, String vncticket) throws JSONException {
+                        public Result getRest(int port, String vncticket) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("port", port);
                             parameters.put("vncticket", vncticket);
                             return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/vncwebsocket", parameters);
+                        }
+
+                        /**
+                         * Opens a weksocket for VNC traffic.
+                         *
+                         * @param port Port number returned by previous vncproxy
+                         * call.
+                         * @param vncticket Ticket from previous call to
+                         * vncproxy.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result vncwebsocket(int port, String vncticket) throws JSONException {
+                            return getRest(port, vncticket);
                         }
                     }
 
@@ -4626,23 +7045,51 @@ public class Client {
                          * setting is to use same node you use to connect to the
                          * API (This is window.location.hostname for the JS
                          * GUI).
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result spiceproxy(String proxy) throws JSONException {
+                        public Result createRest(String proxy) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("proxy", proxy);
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/spiceproxy", parameters);
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/spiceproxy", parameters);
                         }
 
                         /**
                          * Returns a SPICE configuration to connect to the VM.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param proxy SPICE proxy server. This can be used by
+                         * the client to specify the proxy server. All nodes in
+                         * a cluster runs 'spiceproxy', so it is up to the
+                         * client to choose one. By default, we return the node
+                         * where the VM is currently running. As resonable
+                         * setting is to use same node you use to connect to the
+                         * API (This is window.location.hostname for the JS
+                         * GUI).
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result spiceproxy(String proxy) throws JSONException {
+                            return createRest(proxy);
+                        }
+
+                        /**
+                         * Returns a SPICE configuration to connect to the VM.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/spiceproxy", null);
+                        }
+
+                        /**
+                         * Returns a SPICE configuration to connect to the VM.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result spiceproxy() throws JSONException {
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/spiceproxy", null);
+                            return createRest();
                         }
                     }
 
@@ -4727,11 +7174,21 @@ public class Client {
                             /**
                              * Get virtual machine status.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/status/current", null);
+                            }
+
+                            /**
+                             * Get virtual machine status.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result vmStatus() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/status/current", null);
+                                return getRest();
                             }
                         }
 
@@ -4765,10 +7222,10 @@ public class Client {
                              * @param targetstorage Target storage for the
                              * migration. (Can be '1' to use the same storage id
                              * as on the source node.)
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result vmStart(String machine, String migratedfrom, String migration_network, String migration_type, Boolean skiplock, String stateuri, String targetstorage) throws JSONException {
+                            public Result createRest(String machine, String migratedfrom, String migration_network, String migration_type, Boolean skiplock, String stateuri, String targetstorage) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("machine", machine);
                                 parameters.put("migratedfrom", migratedfrom);
@@ -4777,17 +7234,53 @@ public class Client {
                                 parameters.put("skiplock", skiplock);
                                 parameters.put("stateuri", stateuri);
                                 parameters.put("targetstorage", targetstorage);
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/start", parameters);
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/start", parameters);
                             }
 
                             /**
                              * Start virtual machine.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param machine Specific the Qemu machine type.
+                             * @param migratedfrom The cluster node name.
+                             * @param migration_network CIDR of the (sub)
+                             * network that is used for migration.
+                             * @param migration_type Migration traffic is
+                             * encrypted using an SSH tunnel by default. On
+                             * secure, completely private networks this can be
+                             * disabled to increase performance. Enum:
+                             * secure,insecure
+                             * @param skiplock Ignore locks - only root is
+                             * allowed to use this option.
+                             * @param stateuri Some command save/restore state
+                             * from this location.
+                             * @param targetstorage Target storage for the
+                             * migration. (Can be '1' to use the same storage id
+                             * as on the source node.)
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result vmStart(String machine, String migratedfrom, String migration_network, String migration_type, Boolean skiplock, String stateuri, String targetstorage) throws JSONException {
+                                return createRest(machine, migratedfrom, migration_network, migration_type, skiplock, stateuri, targetstorage);
+                            }
+
+                            /**
+                             * Start virtual machine.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest() throws JSONException {
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/start", null);
+                            }
+
+                            /**
+                             * Start virtual machine.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result vmStart() throws JSONException {
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/start", null);
+                                return createRest();
                             }
                         }
 
@@ -4814,16 +7307,16 @@ public class Client {
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
                              * @param timeout Wait maximal timeout seconds.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result vmStop(Boolean keepActive, String migratedfrom, Boolean skiplock, Integer timeout) throws JSONException {
+                            public Result createRest(Boolean keepActive, String migratedfrom, Boolean skiplock, Integer timeout) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("keepActive", keepActive);
                                 parameters.put("migratedfrom", migratedfrom);
                                 parameters.put("skiplock", skiplock);
                                 parameters.put("timeout", timeout);
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/stop", parameters);
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/stop", parameters);
                             }
 
                             /**
@@ -4832,11 +7325,43 @@ public class Client {
                              * plug of a running computer and may damage the VM
                              * data
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param keepActive Do not deactivate storage
+                             * volumes.
+                             * @param migratedfrom The cluster node name.
+                             * @param skiplock Ignore locks - only root is
+                             * allowed to use this option.
+                             * @param timeout Wait maximal timeout seconds.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result vmStop(Boolean keepActive, String migratedfrom, Boolean skiplock, Integer timeout) throws JSONException {
+                                return createRest(keepActive, migratedfrom, skiplock, timeout);
+                            }
+
+                            /**
+                             * Stop virtual machine. The qemu process will exit
+                             * immediately. Thisis akin to pulling the power
+                             * plug of a running computer and may damage the VM
+                             * data
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest() throws JSONException {
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/stop", null);
+                            }
+
+                            /**
+                             * Stop virtual machine. The qemu process will exit
+                             * immediately. Thisis akin to pulling the power
+                             * plug of a running computer and may damage the VM
+                             * data
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result vmStop() throws JSONException {
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/stop", null);
+                                return createRest();
                             }
                         }
 
@@ -4856,23 +7381,45 @@ public class Client {
                              *
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result vmReset(Boolean skiplock) throws JSONException {
+                            public Result createRest(Boolean skiplock) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("skiplock", skiplock);
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/reset", parameters);
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/reset", parameters);
                             }
 
                             /**
                              * Reset virtual machine.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param skiplock Ignore locks - only root is
+                             * allowed to use this option.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result vmReset(Boolean skiplock) throws JSONException {
+                                return createRest(skiplock);
+                            }
+
+                            /**
+                             * Reset virtual machine.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest() throws JSONException {
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/reset", null);
+                            }
+
+                            /**
+                             * Reset virtual machine.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result vmReset() throws JSONException {
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/reset", null);
+                                return createRest();
                             }
                         }
 
@@ -4900,16 +7447,16 @@ public class Client {
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
                              * @param timeout Wait maximal timeout seconds.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result vmShutdown(Boolean forceStop, Boolean keepActive, Boolean skiplock, Integer timeout) throws JSONException {
+                            public Result createRest(Boolean forceStop, Boolean keepActive, Boolean skiplock, Integer timeout) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("forceStop", forceStop);
                                 parameters.put("keepActive", keepActive);
                                 parameters.put("skiplock", skiplock);
                                 parameters.put("timeout", timeout);
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/shutdown", parameters);
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/shutdown", parameters);
                             }
 
                             /**
@@ -4919,11 +7466,45 @@ public class Client {
                              * guest OS, which should then proceed to a clean
                              * shutdown.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param forceStop Make sure the VM stops.
+                             * @param keepActive Do not deactivate storage
+                             * volumes.
+                             * @param skiplock Ignore locks - only root is
+                             * allowed to use this option.
+                             * @param timeout Wait maximal timeout seconds.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result vmShutdown(Boolean forceStop, Boolean keepActive, Boolean skiplock, Integer timeout) throws JSONException {
+                                return createRest(forceStop, keepActive, skiplock, timeout);
+                            }
+
+                            /**
+                             * Shutdown virtual machine. This is similar to
+                             * pressing the power button on a physical
+                             * machine.This will send an ACPI event for the
+                             * guest OS, which should then proceed to a clean
+                             * shutdown.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest() throws JSONException {
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/shutdown", null);
+                            }
+
+                            /**
+                             * Shutdown virtual machine. This is similar to
+                             * pressing the power button on a physical
+                             * machine.This will send an ACPI event for the
+                             * guest OS, which should then proceed to a clean
+                             * shutdown.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result vmShutdown() throws JSONException {
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/shutdown", null);
+                                return createRest();
                             }
                         }
 
@@ -4943,23 +7524,45 @@ public class Client {
                              *
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result vmSuspend(Boolean skiplock) throws JSONException {
+                            public Result createRest(Boolean skiplock) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("skiplock", skiplock);
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/suspend", parameters);
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/suspend", parameters);
                             }
 
                             /**
                              * Suspend virtual machine.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param skiplock Ignore locks - only root is
+                             * allowed to use this option.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result vmSuspend(Boolean skiplock) throws JSONException {
+                                return createRest(skiplock);
+                            }
+
+                            /**
+                             * Suspend virtual machine.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest() throws JSONException {
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/suspend", null);
+                            }
+
+                            /**
+                             * Suspend virtual machine.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result vmSuspend() throws JSONException {
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/suspend", null);
+                                return createRest();
                             }
                         }
 
@@ -4980,35 +7583,68 @@ public class Client {
                              * @param nocheck
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result vmResume(Boolean nocheck, Boolean skiplock) throws JSONException {
+                            public Result createRest(Boolean nocheck, Boolean skiplock) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("nocheck", nocheck);
                                 parameters.put("skiplock", skiplock);
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/resume", parameters);
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/resume", parameters);
                             }
 
                             /**
                              * Resume virtual machine.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param nocheck
+                             * @param skiplock Ignore locks - only root is
+                             * allowed to use this option.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result vmResume(Boolean nocheck, Boolean skiplock) throws JSONException {
+                                return createRest(nocheck, skiplock);
+                            }
+
+                            /**
+                             * Resume virtual machine.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest() throws JSONException {
+                                return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/resume", null);
+                            }
+
+                            /**
+                             * Resume virtual machine.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result vmResume() throws JSONException {
-                                return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/status/resume", null);
+                                return createRest();
                             }
                         }
 
                         /**
                          * Directory index
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/status", null);
+                        }
+
+                        /**
+                         * Directory index
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result vmcmdidx() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/status", null);
+                            return getRest();
                         }
                     }
 
@@ -5029,27 +7665,51 @@ public class Client {
                          * @param key The key (qemu monitor encoding).
                          * @param skiplock Ignore locks - only root is allowed
                          * to use this option.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result vmSendkey(String key, Boolean skiplock) throws JSONException {
+                        public Result setRest(String key, Boolean skiplock) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("key", key);
                             parameters.put("skiplock", skiplock);
-                            return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/sendkey", parameters);
+                            return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/sendkey", parameters);
                         }
 
                         /**
                          * Send key event to virtual machine.
                          *
                          * @param key The key (qemu monitor encoding).
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param skiplock Ignore locks - only root is allowed
+                         * to use this option.
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result vmSendkey(String key) throws JSONException {
+                        public Result vmSendkey(String key, Boolean skiplock) throws JSONException {
+                            return setRest(key, skiplock);
+                        }
+
+                        /**
+                         * Send key event to virtual machine.
+                         *
+                         * @param key The key (qemu monitor encoding).
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result setRest(String key) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("key", key);
-                            return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/sendkey", parameters);
+                            return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/sendkey", parameters);
+                        }
+
+                        /**
+                         * Send key event to virtual machine.
+                         *
+                         * @param key The key (qemu monitor encoding).
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result vmSendkey(String key) throws JSONException {
+                            return setRest(key);
                         }
                     }
 
@@ -5070,10 +7730,10 @@ public class Client {
                          * @param feature Feature to check. Enum:
                          * snapshot,clone,copy
                          * @param snapname The name of the snapshot.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result vmFeature(String feature, String snapname) throws JSONException {
+                        public Result getRest(String feature, String snapname) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("feature", feature);
                             parameters.put("snapname", snapname);
@@ -5085,13 +7745,38 @@ public class Client {
                          *
                          * @param feature Feature to check. Enum:
                          * snapshot,clone,copy
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param snapname The name of the snapshot.
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result vmFeature(String feature) throws JSONException {
+                        public Result vmFeature(String feature, String snapname) throws JSONException {
+                            return getRest(feature, snapname);
+                        }
+
+                        /**
+                         * Check if feature for virtual machine is available.
+                         *
+                         * @param feature Feature to check. Enum:
+                         * snapshot,clone,copy
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest(String feature) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("feature", feature);
                             return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/feature", parameters);
+                        }
+
+                        /**
+                         * Check if feature for virtual machine is available.
+                         *
+                         * @param feature Feature to check. Enum:
+                         * snapshot,clone,copy
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result vmFeature(String feature) throws JSONException {
+                            return getRest(feature);
                         }
                     }
 
@@ -5123,10 +7808,10 @@ public class Client {
                          * @param storage Target storage for full clone.
                          * @param target Target node. Only allowed if the
                          * original VM is on shared storage.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result cloneVm(int newid, String description, String format, Boolean full, String name, String pool, String snapname, String storage, String target) throws JSONException {
+                        public Result createRest(int newid, String description, String format, Boolean full, String name, String pool, String snapname, String storage, String target) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("newid", newid);
                             parameters.put("description", description);
@@ -5137,20 +7822,55 @@ public class Client {
                             parameters.put("snapname", snapname);
                             parameters.put("storage", storage);
                             parameters.put("target", target);
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/clone", parameters);
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/clone", parameters);
                         }
 
                         /**
                          * Create a copy of virtual machine/template.
                          *
                          * @param newid VMID for the clone.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param description Description for the new VM.
+                         * @param format Target format for file storage. Enum:
+                         * raw,qcow2,vmdk
+                         * @param full Create a full copy of all disk. This is
+                         * always done when you clone a normal VM. For VM
+                         * templates, we try to create a linked clone by
+                         * default.
+                         * @param name Set a name for the new VM.
+                         * @param pool Add the new VM to the specified pool.
+                         * @param snapname The name of the snapshot.
+                         * @param storage Target storage for full clone.
+                         * @param target Target node. Only allowed if the
+                         * original VM is on shared storage.
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result cloneVm(int newid) throws JSONException {
+                        public Result cloneVm(int newid, String description, String format, Boolean full, String name, String pool, String snapname, String storage, String target) throws JSONException {
+                            return createRest(newid, description, format, full, name, pool, snapname, storage, target);
+                        }
+
+                        /**
+                         * Create a copy of virtual machine/template.
+                         *
+                         * @param newid VMID for the clone.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest(int newid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("newid", newid);
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/clone", parameters);
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/clone", parameters);
+                        }
+
+                        /**
+                         * Create a copy of virtual machine/template.
+                         *
+                         * @param newid VMID for the clone.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result cloneVm(int newid) throws JSONException {
+                            return createRest(newid);
                         }
                     }
 
@@ -5178,17 +7898,17 @@ public class Client {
                          * configuration file has different SHA1 digest. This
                          * can be used to prevent concurrent modifications.
                          * @param format Target Format. Enum: raw,qcow2,vmdk
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result moveVmDisk(String disk, String storage, Boolean delete, String digest, String format) throws JSONException {
+                        public Result createRest(String disk, String storage, Boolean delete, String digest, String format) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
                             parameters.put("storage", storage);
                             parameters.put("delete", delete);
                             parameters.put("digest", digest);
                             parameters.put("format", format);
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/move_disk", parameters);
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/move_disk", parameters);
                         }
 
                         /**
@@ -5197,14 +7917,47 @@ public class Client {
                          * @param disk The disk you want to move. Enum:
                          * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          * @param storage Target storage.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param delete Delete the original disk after
+                         * successful copy. By default the original disk is kept
+                         * as unused disk.
+                         * @param digest Prevent changes if current
+                         * configuration file has different SHA1 digest. This
+                         * can be used to prevent concurrent modifications.
+                         * @param format Target Format. Enum: raw,qcow2,vmdk
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result moveVmDisk(String disk, String storage) throws JSONException {
+                        public Result moveVmDisk(String disk, String storage, Boolean delete, String digest, String format) throws JSONException {
+                            return createRest(disk, storage, delete, digest, format);
+                        }
+
+                        /**
+                         * Move volume to different storage.
+                         *
+                         * @param disk The disk you want to move. Enum:
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * @param storage Target storage.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest(String disk, String storage) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
                             parameters.put("storage", storage);
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/move_disk", parameters);
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/move_disk", parameters);
+                        }
+
+                        /**
+                         * Move volume to different storage.
+                         *
+                         * @param disk The disk you want to move. Enum:
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * @param storage Target storage.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result moveVmDisk(String disk, String storage) throws JSONException {
+                            return createRest(disk, storage);
                         }
                     }
 
@@ -5236,10 +7989,10 @@ public class Client {
                          * @param targetstorage Default target storage.
                          * @param with_local_disks Enable live storage migration
                          * for local disk
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result migrateVm(String target, Boolean force, String migration_network, String migration_type, Boolean online, String targetstorage, Boolean with_local_disks) throws JSONException {
+                        public Result createRest(String target, Boolean force, String migration_network, String migration_type, Boolean online, String targetstorage, Boolean with_local_disks) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
                             parameters.put("force", force);
@@ -5248,7 +8001,7 @@ public class Client {
                             parameters.put("online", online);
                             parameters.put("targetstorage", targetstorage);
                             parameters.put("with-local-disks", with_local_disks);
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/migrate", parameters);
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/migrate", parameters);
                         }
 
                         /**
@@ -5256,13 +8009,49 @@ public class Client {
                          * task.
                          *
                          * @param target Target node.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param force Allow to migrate VMs which use local
+                         * devices. Only root may use this option.
+                         * @param migration_network CIDR of the (sub) network
+                         * that is used for migration.
+                         * @param migration_type Migration traffic is encrypted
+                         * using an SSH tunnel by default. On secure, completely
+                         * private networks this can be disabled to increase
+                         * performance. Enum: secure,insecure
+                         * @param online Use online/live migration.
+                         * @param targetstorage Default target storage.
+                         * @param with_local_disks Enable live storage migration
+                         * for local disk
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result migrateVm(String target) throws JSONException {
+                        public Result migrateVm(String target, Boolean force, String migration_network, String migration_type, Boolean online, String targetstorage, Boolean with_local_disks) throws JSONException {
+                            return createRest(target, force, migration_network, migration_type, online, targetstorage, with_local_disks);
+                        }
+
+                        /**
+                         * Migrate virtual machine. Creates a new migration
+                         * task.
+                         *
+                         * @param target Target node.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest(String target) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/migrate", parameters);
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/migrate", parameters);
+                        }
+
+                        /**
+                         * Migrate virtual machine. Creates a new migration
+                         * task.
+                         *
+                         * @param target Target node.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result migrateVm(String target) throws JSONException {
+                            return createRest(target);
                         }
                     }
 
@@ -5281,13 +8070,24 @@ public class Client {
                          * Execute Qemu monitor commands.
                          *
                          * @param command The monitor command.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result monitor(String command) throws JSONException {
+                        public Result createRest(String command) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("command", command);
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/monitor", parameters);
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/monitor", parameters);
+                        }
+
+                        /**
+                         * Execute Qemu monitor commands.
+                         *
+                         * @param command The monitor command.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result monitor(String command) throws JSONException {
+                            return createRest(command);
                         }
                     }
 
@@ -5307,13 +8107,25 @@ public class Client {
                          *
                          * @param command The QGA command. Enum:
                          * ping,get-time,info,fsfreeze-status,fsfreeze-freeze,fsfreeze-thaw,fstrim,network-get-interfaces,get-vcpus,get-fsinfo,get-memory-blocks,get-memory-block-info,suspend-hybrid,suspend-ram,suspend-disk,shutdown
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result agent(String command) throws JSONException {
+                        public Result createRest(String command) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("command", command);
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/agent", parameters);
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/agent", parameters);
+                        }
+
+                        /**
+                         * Execute Qemu Guest Agent commands.
+                         *
+                         * @param command The QGA command. Enum:
+                         * ping,get-time,info,fsfreeze-status,fsfreeze-freeze,fsfreeze-thaw,fstrim,network-get-interfaces,get-vcpus,get-fsinfo,get-memory-blocks,get-memory-block-info,suspend-hybrid,suspend-ram,suspend-disk,shutdown
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result agent(String command) throws JSONException {
+                            return createRest(command);
                         }
                     }
 
@@ -5342,16 +8154,16 @@ public class Client {
                          * can be used to prevent concurrent modifications.
                          * @param skiplock Ignore locks - only root is allowed
                          * to use this option.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result resizeVm(String disk, String size, String digest, Boolean skiplock) throws JSONException {
+                        public Result setRest(String disk, String size, String digest, Boolean skiplock) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
                             parameters.put("size", size);
                             parameters.put("digest", digest);
                             parameters.put("skiplock", skiplock);
-                            return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/resize", parameters);
+                            return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/resize", parameters);
                         }
 
                         /**
@@ -5363,14 +8175,51 @@ public class Client {
                          * is added to the actual size of the volume and without
                          * it, the value is taken as an absolute one. Shrinking
                          * disk size is not supported.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param digest Prevent changes if current
+                         * configuration file has different SHA1 digest. This
+                         * can be used to prevent concurrent modifications.
+                         * @param skiplock Ignore locks - only root is allowed
+                         * to use this option.
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result resizeVm(String disk, String size) throws JSONException {
+                        public Result resizeVm(String disk, String size, String digest, Boolean skiplock) throws JSONException {
+                            return setRest(disk, size, digest, skiplock);
+                        }
+
+                        /**
+                         * Extend volume size.
+                         *
+                         * @param disk The disk you want to resize. Enum:
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * @param size The new size. With the `+` sign the value
+                         * is added to the actual size of the volume and without
+                         * it, the value is taken as an absolute one. Shrinking
+                         * disk size is not supported.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result setRest(String disk, String size) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
                             parameters.put("size", size);
-                            return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/resize", parameters);
+                            return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/resize", parameters);
+                        }
+
+                        /**
+                         * Extend volume size.
+                         *
+                         * @param disk The disk you want to resize. Enum:
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * @param size The new size. With the `+` sign the value
+                         * is added to the actual size of the volume and without
+                         * it, the value is taken as an absolute one. Shrinking
+                         * disk size is not supported.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result resizeVm(String disk, String size) throws JSONException {
+                            return setRest(disk, size);
                         }
                     }
 
@@ -5434,11 +8283,21 @@ public class Client {
                                 /**
                                  * Get snapshot configuration
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result getRest() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/config", null);
+                                }
+
+                                /**
+                                 * Get snapshot configuration
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result getSnapshotConfig() throws JSONException {
-                                    return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/config", null);
+                                    return getRest();
                                 }
 
                                 /**
@@ -5446,23 +8305,45 @@ public class Client {
                                  *
                                  * @param description A textual description or
                                  * comment.
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result updateSnapshotConfig(String description) throws JSONException {
+                                public Result setRest(String description) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("description", description);
-                                    return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/config", parameters);
+                                    return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/config", parameters);
                                 }
 
                                 /**
                                  * Update snapshot metadata.
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @param description A textual description or
+                                 * comment.
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result updateSnapshotConfig(String description) throws JSONException {
+                                    return setRest(description);
+                                }
+
+                                /**
+                                 * Update snapshot metadata.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result setRest() throws JSONException {
+                                    return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/config", null);
+                                }
+
+                                /**
+                                 * Update snapshot metadata.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result updateSnapshotConfig() throws JSONException {
-                                    return _client.put("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/config", null);
+                                    return setRest();
                                 }
                             }
 
@@ -5482,11 +8363,21 @@ public class Client {
                                 /**
                                  * Rollback VM state to specified snapshot.
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result createRest() throws JSONException {
+                                    return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/rollback", null);
+                                }
+
+                                /**
+                                 * Rollback VM state to specified snapshot.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result rollback() throws JSONException {
-                                    return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/rollback", null);
+                                    return createRest();
                                 }
                             }
 
@@ -5495,10 +8386,10 @@ public class Client {
                              *
                              * @param force For removal from config file, even
                              * if removing disk snapshots fails.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result delsnapshot(Boolean force) throws JSONException {
+                            public Result deleteRest(Boolean force) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("force", force);
                                 return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "", parameters);
@@ -5507,30 +8398,72 @@ public class Client {
                             /**
                              * Delete a VM snapshot.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param force For removal from config file, even
+                             * if removing disk snapshots fails.
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result delsnapshot() throws JSONException {
+                            public Result delsnapshot(Boolean force) throws JSONException {
+                                return deleteRest(force);
+                            }
+
+                            /**
+                             * Delete a VM snapshot.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result deleteRest() throws JSONException {
                                 return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "", null);
                             }
 
                             /**
+                             * Delete a VM snapshot.
                              *
-                             * @return @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result delsnapshot() throws JSONException {
+                                return deleteRest();
+                            }
+
+                            /**
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "", null);
+                            }
+
+                            /**
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result snapshotCmdIdx() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "", null);
+                                return getRest();
                             }
                         }
 
                         /**
                          * List all snapshots.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot", null);
+                        }
+
+                        /**
+                         * List all snapshots.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result snapshotList() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot", null);
+                            return getRest();
                         }
 
                         /**
@@ -5539,28 +8472,52 @@ public class Client {
                          * @param snapname The name of the snapshot.
                          * @param description A textual description or comment.
                          * @param vmstate Save the vmstate
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result snapshot(String snapname, String description, Boolean vmstate) throws JSONException {
+                        public Result createRest(String snapname, String description, Boolean vmstate) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
                             parameters.put("description", description);
                             parameters.put("vmstate", vmstate);
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot", parameters);
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot", parameters);
                         }
 
                         /**
                          * Snapshot a VM.
                          *
                          * @param snapname The name of the snapshot.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param description A textual description or comment.
+                         * @param vmstate Save the vmstate
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result snapshot(String snapname) throws JSONException {
+                        public Result snapshot(String snapname, String description, Boolean vmstate) throws JSONException {
+                            return createRest(snapname, description, vmstate);
+                        }
+
+                        /**
+                         * Snapshot a VM.
+                         *
+                         * @param snapname The name of the snapshot.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest(String snapname) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot", parameters);
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot", parameters);
+                        }
+
+                        /**
+                         * Snapshot a VM.
+                         *
+                         * @param snapname The name of the snapshot.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result snapshot(String snapname) throws JSONException {
+                            return createRest(snapname);
                         }
                     }
 
@@ -5581,23 +8538,46 @@ public class Client {
                          * @param disk If you want to convert only 1 disk to
                          * base image. Enum:
                          * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result template(String disk) throws JSONException {
+                        public Result createRest(String disk) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/template", parameters);
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/template", parameters);
                         }
 
                         /**
                          * Create a Template.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param disk If you want to convert only 1 disk to
+                         * base image. Enum:
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result template(String disk) throws JSONException {
+                            return createRest(disk);
+                        }
+
+                        /**
+                         * Create a Template.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/template", null);
+                        }
+
+                        /**
+                         * Create a Template.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result template() throws JSONException {
-                            return _client.post("/nodes/" + _node + "/qemu/" + _vmid + "/template", null);
+                            return createRest();
                         }
                     }
 
@@ -5606,10 +8586,10 @@ public class Client {
                      *
                      * @param skiplock Ignore locks - only root is allowed to
                      * use this option.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result destroyVm(Boolean skiplock) throws JSONException {
+                    public Result deleteRest(Boolean skiplock) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("skiplock", skiplock);
                         return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "", parameters);
@@ -5618,21 +8598,53 @@ public class Client {
                     /**
                      * Destroy the vm (also delete all used/owned volumes).
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param skiplock Ignore locks - only root is allowed to
+                     * use this option.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result destroyVm(Boolean skiplock) throws JSONException {
+                        return deleteRest(skiplock);
+                    }
+
+                    /**
+                     * Destroy the vm (also delete all used/owned volumes).
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result deleteRest() throws JSONException {
+                        return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "", null);
+                    }
+
+                    /**
+                     * Destroy the vm (also delete all used/owned volumes).
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result destroyVm() throws JSONException {
-                        return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "", null);
+                        return deleteRest();
                     }
 
                     /**
                      * Directory index
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "", null);
+                    }
+
+                    /**
+                     * Directory index
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result vmdiridx() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "", null);
+                        return getRest();
                     }
                 }
 
@@ -5640,10 +8652,10 @@ public class Client {
                  * Virtual machine index (per node).
                  *
                  * @param full Determine the full status of active VMs.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result vmlist(Boolean full) throws JSONException {
+                public Result getRest(Boolean full) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("full", full);
                     return _client.get("/nodes/" + _node + "/qemu", parameters);
@@ -5652,11 +8664,32 @@ public class Client {
                 /**
                  * Virtual machine index (per node).
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param full Determine the full status of active VMs.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result vmlist(Boolean full) throws JSONException {
+                    return getRest(full);
+                }
+
+                /**
+                 * Virtual machine index (per node).
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/qemu", null);
+                }
+
+                /**
+                 * Virtual machine index (per node).
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result vmlist() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/qemu", null);
+                    return getRest();
                 }
 
                 /**
@@ -5763,11 +8796,13 @@ public class Client {
                  * @param vga Select the VGA type. Enum:
                  * std,cirrus,vmware,qxl,serial0,serial1,serial2,serial3,qxl2,qxl3,qxl4
                  * @param virtioN Use volume as VIRTIO hard disk (n is 0 to 15).
+                 * @param vmstatestorage Default storage for VM state
+                 * volumes/files.
                  * @param watchdog Create a virtual hardware watchdog device.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result createVm(int vmid, Boolean acpi, Boolean agent, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String watchdog) throws JSONException {
+                public Result createRest(int vmid, Boolean acpi, Boolean agent, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmstatestorage, String watchdog) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vmid", vmid);
                     parameters.put("acpi", acpi);
@@ -5818,32 +8853,158 @@ public class Client {
                     parameters.put("unique", unique);
                     parameters.put("vcpus", vcpus);
                     parameters.put("vga", vga);
+                    parameters.put("vmstatestorage", vmstatestorage);
                     parameters.put("watchdog", watchdog);
-                    addIndexedParmeter(parameters, "hostpci", hostpciN);
-                    addIndexedParmeter(parameters, "ide", ideN);
-                    addIndexedParmeter(parameters, "net", netN);
-                    addIndexedParmeter(parameters, "numa", numaN);
-                    addIndexedParmeter(parameters, "parallel", parallelN);
-                    addIndexedParmeter(parameters, "sata", sataN);
-                    addIndexedParmeter(parameters, "scsi", scsiN);
-                    addIndexedParmeter(parameters, "serial", serialN);
-                    addIndexedParmeter(parameters, "unused", unusedN);
-                    addIndexedParmeter(parameters, "usb", usbN);
-                    addIndexedParmeter(parameters, "virtio", virtioN);
-                    return _client.post("/nodes/" + _node + "/qemu", parameters);
+                    addIndexedParameter(parameters, "hostpci", hostpciN);
+                    addIndexedParameter(parameters, "ide", ideN);
+                    addIndexedParameter(parameters, "net", netN);
+                    addIndexedParameter(parameters, "numa", numaN);
+                    addIndexedParameter(parameters, "parallel", parallelN);
+                    addIndexedParameter(parameters, "sata", sataN);
+                    addIndexedParameter(parameters, "scsi", scsiN);
+                    addIndexedParameter(parameters, "serial", serialN);
+                    addIndexedParameter(parameters, "unused", unusedN);
+                    addIndexedParameter(parameters, "usb", usbN);
+                    addIndexedParameter(parameters, "virtio", virtioN);
+                    return _client.create("/nodes/" + _node + "/qemu", parameters);
                 }
 
                 /**
                  * Create or restore a virtual machine.
                  *
                  * @param vmid The (unique) ID of the VM.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param acpi Enable/disable ACPI.
+                 * @param agent Enable/disable Qemu GuestAgent.
+                 * @param archive The backup file.
+                 * @param args Arbitrary arguments passed to kvm.
+                 * @param autostart Automatic restart after crash (currently
+                 * ignored).
+                 * @param balloon Amount of target RAM for the VM in MB. Using
+                 * zero disables the ballon driver.
+                 * @param bios Select BIOS implementation. Enum: seabios,ovmf
+                 * @param boot Boot on floppy (a), hard disk (c), CD-ROM (d), or
+                 * network (n).
+                 * @param bootdisk Enable booting from specified disk.
+                 * @param cdrom This is an alias for option -ide2
+                 * @param cores The number of cores per socket.
+                 * @param cpu Emulated CPU type.
+                 * @param cpulimit Limit of CPU usage.
+                 * @param cpuunits CPU weight for a VM.
+                 * @param description Description for the VM. Only used on the
+                 * configuration web interface. This is saved as comment inside
+                 * the configuration file.
+                 * @param force Allow to overwrite existing VM.
+                 * @param freeze Freeze CPU at startup (use 'c' monitor command
+                 * to start execution).
+                 * @param hostpciN Map host PCI devices into guest.
+                 * @param hotplug Selectively enable hotplug features. This is a
+                 * comma separated list of hotplug features: 'network', 'disk',
+                 * 'cpu', 'memory' and 'usb'. Use '0' to disable hotplug
+                 * completely. Value '1' is an alias for the default
+                 * 'network,disk,usb'.
+                 * @param hugepages Enable/disable hugepages memory. Enum:
+                 * any,2,1024
+                 * @param ideN Use volume as IDE hard disk or CD-ROM (n is 0 to
+                 * 3).
+                 * @param keyboard Keybord layout for vnc server. Default is
+                 * read from the '/etc/pve/datacenter.conf' configuration file.
+                 * Enum:
+                 * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
+                 * @param kvm Enable/disable KVM hardware virtualization.
+                 * @param localtime Set the real time clock to local time. This
+                 * is enabled by default if ostype indicates a Microsoft OS.
+                 * @param lock_ Lock/unlock the VM. Enum:
+                 * migrate,backup,snapshot,rollback
+                 * @param machine Specific the Qemu machine type.
+                 * @param memory Amount of RAM for the VM in MB. This is the
+                 * maximum available memory when you use the balloon device.
+                 * @param migrate_downtime Set maximum tolerated downtime (in
+                 * seconds) for migrations.
+                 * @param migrate_speed Set maximum speed (in MB/s) for
+                 * migrations. Value 0 is no limit.
+                 * @param name Set a name for the VM. Only used on the
+                 * configuration web interface.
+                 * @param netN Specify network devices.
+                 * @param numa Enable/disable NUMA.
+                 * @param numaN NUMA topology.
+                 * @param onboot Specifies whether a VM will be started during
+                 * system bootup.
+                 * @param ostype Specify guest operating system. Enum:
+                 * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,l24,l26,solaris
+                 * @param parallelN Map host parallel devices (n is 0 to 2).
+                 * @param pool Add the VM to the specified pool.
+                 * @param protection Sets the protection flag of the VM. This
+                 * will disable the remove VM and remove disk operations.
+                 * @param reboot Allow reboot. If set to '0' the VM exit on
+                 * reboot.
+                 * @param sataN Use volume as SATA hard disk or CD-ROM (n is 0
+                 * to 5).
+                 * @param scsiN Use volume as SCSI hard disk or CD-ROM (n is 0
+                 * to 13).
+                 * @param scsihw SCSI controller model Enum:
+                 * lsi,lsi53c810,virtio-scsi-pci,virtio-scsi-single,megasas,pvscsi
+                 * @param serialN Create a serial device inside the VM (n is 0
+                 * to 3)
+                 * @param shares Amount of memory shares for auto-ballooning.
+                 * The larger the number is, the more memory this VM gets.
+                 * Number is relative to weights of all other running VMs. Using
+                 * zero disables auto-ballooning
+                 * @param smbios1 Specify SMBIOS type 1 fields.
+                 * @param smp The number of CPUs. Please use option -sockets
+                 * instead.
+                 * @param sockets The number of CPU sockets.
+                 * @param startdate Set the initial date of the real time clock.
+                 * Valid format for date are: 'now' or '2006-06-17T16:01:21' or
+                 * '2006-06-17'.
+                 * @param startup Startup and shutdown behavior. Order is a
+                 * non-negative number defining the general startup order.
+                 * Shutdown in done with reverse ordering. Additionally you can
+                 * set the 'up' or 'down' delay in seconds, which specifies a
+                 * delay to wait before the next VM is started or stopped.
+                 * @param storage Default storage.
+                 * @param tablet Enable/disable the USB tablet device.
+                 * @param tdf Enable/disable time drift fix.
+                 * @param template Enable/disable Template.
+                 * @param unique Assign a unique random ethernet address.
+                 * @param unusedN Reference to unused volumes. This is used
+                 * internally, and should not be modified manually.
+                 * @param usbN Configure an USB device (n is 0 to 4).
+                 * @param vcpus Number of hotplugged vcpus.
+                 * @param vga Select the VGA type. Enum:
+                 * std,cirrus,vmware,qxl,serial0,serial1,serial2,serial3,qxl2,qxl3,qxl4
+                 * @param virtioN Use volume as VIRTIO hard disk (n is 0 to 15).
+                 * @param vmstatestorage Default storage for VM state
+                 * volumes/files.
+                 * @param watchdog Create a virtual hardware watchdog device.
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result createVm(int vmid) throws JSONException {
+                public Result createVm(int vmid, Boolean acpi, Boolean agent, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmstatestorage, String watchdog) throws JSONException {
+                    return createRest(vmid, acpi, agent, archive, args, autostart, balloon, bios, boot, bootdisk, cdrom, cores, cpu, cpulimit, cpuunits, description, force, freeze, hostpciN, hotplug, hugepages, ideN, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, netN, numa, numaN, onboot, ostype, parallelN, pool, protection, reboot, sataN, scsiN, scsihw, serialN, shares, smbios1, smp, sockets, startdate, startup, storage, tablet, tdf, template, unique, unusedN, usbN, vcpus, vga, virtioN, vmstatestorage, watchdog);
+                }
+
+                /**
+                 * Create or restore a virtual machine.
+                 *
+                 * @param vmid The (unique) ID of the VM.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest(int vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vmid", vmid);
-                    return _client.post("/nodes/" + _node + "/qemu", parameters);
+                    return _client.create("/nodes/" + _node + "/qemu", parameters);
+                }
+
+                /**
+                 * Create or restore a virtual machine.
+                 *
+                 * @param vmid The (unique) ID of the VM.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createVm(int vmid) throws JSONException {
+                    return createRest(vmid);
                 }
             }
 
@@ -5997,11 +9158,21 @@ public class Client {
                         /**
                          * Get container configuration.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/config", null);
+                        }
+
+                        /**
+                         * Get container configuration.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result vmConfig() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/config", null);
+                            return getRest();
                         }
 
                         /**
@@ -6077,10 +9248,10 @@ public class Client {
                          * unprivileged user. (Should not be modified manually.)
                          * @param unusedN Reference to unused volumes. This is
                          * used internally, and should not be modified manually.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result updateVm(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String rootfs, String searchdomain, String startup, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                        public Result setRest(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String rootfs, String searchdomain, String startup, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("arch", arch);
                             parameters.put("cmode", cmode);
@@ -6105,20 +9276,110 @@ public class Client {
                             parameters.put("template", template);
                             parameters.put("tty", tty);
                             parameters.put("unprivileged", unprivileged);
-                            addIndexedParmeter(parameters, "mp", mpN);
-                            addIndexedParmeter(parameters, "net", netN);
-                            addIndexedParmeter(parameters, "unused", unusedN);
-                            return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/config", parameters);
+                            addIndexedParameter(parameters, "mp", mpN);
+                            addIndexedParameter(parameters, "net", netN);
+                            addIndexedParameter(parameters, "unused", unusedN);
+                            return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/config", parameters);
                         }
 
                         /**
                          * Set container options.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param arch OS architecture type. Enum: amd64,i386
+                         * @param cmode Console mode. By default, the console
+                         * command tries to open a connection to one of the
+                         * available tty devices. By setting cmode to 'console'
+                         * it tries to attach to /dev/console instead. If you
+                         * set cmode to 'shell', it simply invokes a shell
+                         * inside the container (no login). Enum:
+                         * shell,console,tty
+                         * @param console Attach a console device (/dev/console)
+                         * to the container.
+                         * @param cores The number of cores assigned to the
+                         * container. A container can use all available cores by
+                         * default.
+                         * @param cpulimit Limit of CPU usage. NOTE: If the
+                         * computer has 2 CPUs, it has a total of '2' CPU time.
+                         * Value '0' indicates no CPU limit.
+                         * @param cpuunits CPU weight for a VM. Argument is used
+                         * in the kernel fair scheduler. The larger the number
+                         * is, the more CPU time this VM gets. Number is
+                         * relative to the weights of all the other running VMs.
+                         * NOTE: You can disable fair-scheduler configuration by
+                         * setting this to 0.
+                         * @param delete A list of settings you want to delete.
+                         * @param description Container description. Only used
+                         * on the configuration web interface.
+                         * @param digest Prevent changes if current
+                         * configuration file has different SHA1 digest. This
+                         * can be used to prevent concurrent modifications.
+                         * @param hostname Set a host name for the container.
+                         * @param lock_ Lock/unlock the VM. Enum:
+                         * migrate,backup,snapshot,rollback
+                         * @param memory Amount of RAM for the VM in MB.
+                         * @param mpN Use volume as container mount point.
+                         * @param nameserver Sets DNS server IP address for a
+                         * container. Create will automatically use the setting
+                         * from the host if you neither set searchdomain nor
+                         * nameserver.
+                         * @param netN Specifies network interfaces for the
+                         * container.
+                         * @param onboot Specifies whether a VM will be started
+                         * during system bootup.
+                         * @param ostype OS type. This is used to setup
+                         * configuration inside the container, and corresponds
+                         * to lxc setup scripts in
+                         * /usr/share/lxc/config/&amp;lt;ostype&amp;gt;.common.conf.
+                         * Value 'unmanaged' can be used to skip and OS specific
+                         * setup. Enum:
+                         * debian,ubuntu,centos,fedora,opensuse,archlinux,alpine,gentoo,unmanaged
+                         * @param protection Sets the protection flag of the
+                         * container. This will prevent the CT or CT's disk
+                         * remove/update operation.
+                         * @param rootfs Use volume as container root.
+                         * @param searchdomain Sets DNS search domains for a
+                         * container. Create will automatically use the setting
+                         * from the host if you neither set searchdomain nor
+                         * nameserver.
+                         * @param startup Startup and shutdown behavior. Order
+                         * is a non-negative number defining the general startup
+                         * order. Shutdown in done with reverse ordering.
+                         * Additionally you can set the 'up' or 'down' delay in
+                         * seconds, which specifies a delay to wait before the
+                         * next VM is started or stopped.
+                         * @param swap Amount of SWAP for the VM in MB.
+                         * @param template Enable/disable Template.
+                         * @param tty Specify the number of tty available to the
+                         * container
+                         * @param unprivileged Makes the container run as
+                         * unprivileged user. (Should not be modified manually.)
+                         * @param unusedN Reference to unused volumes. This is
+                         * used internally, and should not be modified manually.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result updateVm(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String rootfs, String searchdomain, String startup, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                            return setRest(arch, cmode, console, cores, cpulimit, cpuunits, delete, description, digest, hostname, lock_, memory, mpN, nameserver, netN, onboot, ostype, protection, rootfs, searchdomain, startup, swap, template, tty, unprivileged, unusedN);
+                        }
+
+                        /**
+                         * Set container options.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result setRest() throws JSONException {
+                            return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/config", null);
+                        }
+
+                        /**
+                         * Set container options.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result updateVm() throws JSONException {
-                            return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/config", null);
+                            return setRest();
                         }
                     }
 
@@ -6195,11 +9456,21 @@ public class Client {
                             /**
                              * Get virtual machine status.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/status/current", null);
+                            }
+
+                            /**
+                             * Get virtual machine status.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result vmStatus() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/status/current", null);
+                                return getRest();
                             }
                         }
 
@@ -6219,23 +9490,45 @@ public class Client {
                              *
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result vmStart(Boolean skiplock) throws JSONException {
+                            public Result createRest(Boolean skiplock) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("skiplock", skiplock);
-                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/start", parameters);
+                                return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/start", parameters);
                             }
 
                             /**
                              * Start the container.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param skiplock Ignore locks - only root is
+                             * allowed to use this option.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result vmStart(Boolean skiplock) throws JSONException {
+                                return createRest(skiplock);
+                            }
+
+                            /**
+                             * Start the container.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest() throws JSONException {
+                                return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/start", null);
+                            }
+
+                            /**
+                             * Start the container.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result vmStart() throws JSONException {
-                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/start", null);
+                                return createRest();
                             }
                         }
 
@@ -6256,24 +9549,48 @@ public class Client {
                              *
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result vmStop(Boolean skiplock) throws JSONException {
+                            public Result createRest(Boolean skiplock) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("skiplock", skiplock);
-                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/stop", parameters);
+                                return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/stop", parameters);
                             }
 
                             /**
                              * Stop the container. This will abruptly stop all
                              * processes running in the container.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param skiplock Ignore locks - only root is
+                             * allowed to use this option.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result vmStop(Boolean skiplock) throws JSONException {
+                                return createRest(skiplock);
+                            }
+
+                            /**
+                             * Stop the container. This will abruptly stop all
+                             * processes running in the container.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest() throws JSONException {
+                                return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/stop", null);
+                            }
+
+                            /**
+                             * Stop the container. This will abruptly stop all
+                             * processes running in the container.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result vmStop() throws JSONException {
-                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/stop", null);
+                                return createRest();
                             }
                         }
 
@@ -6295,14 +9612,14 @@ public class Client {
                              *
                              * @param forceStop Make sure the Container stops.
                              * @param timeout Wait maximal timeout seconds.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result vmShutdown(Boolean forceStop, Integer timeout) throws JSONException {
+                            public Result createRest(Boolean forceStop, Integer timeout) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("forceStop", forceStop);
                                 parameters.put("timeout", timeout);
-                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/shutdown", parameters);
+                                return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/shutdown", parameters);
                             }
 
                             /**
@@ -6310,11 +9627,37 @@ public class Client {
                              * shutdown of the container, see lxc-stop(1) for
                              * details.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param forceStop Make sure the Container stops.
+                             * @param timeout Wait maximal timeout seconds.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result vmShutdown(Boolean forceStop, Integer timeout) throws JSONException {
+                                return createRest(forceStop, timeout);
+                            }
+
+                            /**
+                             * Shutdown the container. This will trigger a clean
+                             * shutdown of the container, see lxc-stop(1) for
+                             * details.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest() throws JSONException {
+                                return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/shutdown", null);
+                            }
+
+                            /**
+                             * Shutdown the container. This will trigger a clean
+                             * shutdown of the container, see lxc-stop(1) for
+                             * details.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result vmShutdown() throws JSONException {
-                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/shutdown", null);
+                                return createRest();
                             }
                         }
 
@@ -6332,11 +9675,21 @@ public class Client {
                             /**
                              * Suspend the container.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest() throws JSONException {
+                                return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/suspend", null);
+                            }
+
+                            /**
+                             * Suspend the container.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result vmSuspend() throws JSONException {
-                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/suspend", null);
+                                return createRest();
                             }
                         }
 
@@ -6354,22 +9707,42 @@ public class Client {
                             /**
                              * Resume the container.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest() throws JSONException {
+                                return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/resume", null);
+                            }
+
+                            /**
+                             * Resume the container.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result vmResume() throws JSONException {
-                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/status/resume", null);
+                                return createRest();
                             }
                         }
 
                         /**
                          * Directory index
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/status", null);
+                        }
+
+                        /**
+                         * Directory index
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result vmcmdidx() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/status", null);
+                            return getRest();
                         }
                     }
 
@@ -6433,11 +9806,21 @@ public class Client {
                                 /**
                                  * Rollback LXC state to specified snapshot.
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result createRest() throws JSONException {
+                                    return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/rollback", null);
+                                }
+
+                                /**
+                                 * Rollback LXC state to specified snapshot.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result rollback() throws JSONException {
-                                    return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/rollback", null);
+                                    return createRest();
                                 }
                             }
 
@@ -6457,11 +9840,21 @@ public class Client {
                                 /**
                                  * Get snapshot configuration
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result getRest() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/config", null);
+                                }
+
+                                /**
+                                 * Get snapshot configuration
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result getSnapshotConfig() throws JSONException {
-                                    return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/config", null);
+                                    return getRest();
                                 }
 
                                 /**
@@ -6469,23 +9862,45 @@ public class Client {
                                  *
                                  * @param description A textual description or
                                  * comment.
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result updateSnapshotConfig(String description) throws JSONException {
+                                public Result setRest(String description) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("description", description);
-                                    return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/config", parameters);
+                                    return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/config", parameters);
                                 }
 
                                 /**
                                  * Update snapshot metadata.
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @param description A textual description or
+                                 * comment.
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result updateSnapshotConfig(String description) throws JSONException {
+                                    return setRest(description);
+                                }
+
+                                /**
+                                 * Update snapshot metadata.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result setRest() throws JSONException {
+                                    return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/config", null);
+                                }
+
+                                /**
+                                 * Update snapshot metadata.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result updateSnapshotConfig() throws JSONException {
-                                    return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/config", null);
+                                    return setRest();
                                 }
                             }
 
@@ -6494,10 +9909,10 @@ public class Client {
                              *
                              * @param force For removal from config file, even
                              * if removing disk snapshots fails.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result delsnapshot(Boolean force) throws JSONException {
+                            public Result deleteRest(Boolean force) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("force", force);
                                 return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "", parameters);
@@ -6506,30 +9921,72 @@ public class Client {
                             /**
                              * Delete a LXC snapshot.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param force For removal from config file, even
+                             * if removing disk snapshots fails.
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result delsnapshot() throws JSONException {
+                            public Result delsnapshot(Boolean force) throws JSONException {
+                                return deleteRest(force);
+                            }
+
+                            /**
+                             * Delete a LXC snapshot.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result deleteRest() throws JSONException {
                                 return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "", null);
                             }
 
                             /**
+                             * Delete a LXC snapshot.
                              *
-                             * @return @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result delsnapshot() throws JSONException {
+                                return deleteRest();
+                            }
+
+                            /**
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "", null);
+                            }
+
+                            /**
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result snapshotCmdIdx() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "", null);
+                                return getRest();
                             }
                         }
 
                         /**
                          * List all snapshots.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot", null);
+                        }
+
+                        /**
+                         * List all snapshots.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result list() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot", null);
+                            return getRest();
                         }
 
                         /**
@@ -6537,27 +9994,50 @@ public class Client {
                          *
                          * @param snapname The name of the snapshot.
                          * @param description A textual description or comment.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result snapshot(String snapname, String description) throws JSONException {
+                        public Result createRest(String snapname, String description) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
                             parameters.put("description", description);
-                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot", parameters);
+                            return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot", parameters);
                         }
 
                         /**
                          * Snapshot a container.
                          *
                          * @param snapname The name of the snapshot.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param description A textual description or comment.
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result snapshot(String snapname) throws JSONException {
+                        public Result snapshot(String snapname, String description) throws JSONException {
+                            return createRest(snapname, description);
+                        }
+
+                        /**
+                         * Snapshot a container.
+                         *
+                         * @param snapname The name of the snapshot.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest(String snapname) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
-                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot", parameters);
+                            return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot", parameters);
+                        }
+
+                        /**
+                         * Snapshot a container.
+                         *
+                         * @param snapname The name of the snapshot.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result snapshot(String snapname) throws JSONException {
+                            return createRest(snapname);
                         }
                     }
 
@@ -6655,10 +10135,10 @@ public class Client {
                                  * configuration file has different SHA1 digest.
                                  * This can be used to prevent concurrent
                                  * modifications.
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result deleteRule(String digest) throws JSONException {
+                                public Result deleteRest(String digest) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("digest", digest);
                                     return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", parameters);
@@ -6667,21 +10147,55 @@ public class Client {
                                 /**
                                  * Delete rule.
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @param digest Prevent changes if current
+                                 * configuration file has different SHA1 digest.
+                                 * This can be used to prevent concurrent
+                                 * modifications.
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result deleteRule(String digest) throws JSONException {
+                                    return deleteRest(digest);
+                                }
+
+                                /**
+                                 * Delete rule.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result deleteRest() throws JSONException {
+                                    return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
+                                }
+
+                                /**
+                                 * Delete rule.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result deleteRule() throws JSONException {
-                                    return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
+                                    return deleteRest();
                                 }
 
                                 /**
                                  * Get single rule data.
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result getRest() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
+                                }
+
+                                /**
+                                 * Get single rule data.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result getRule() throws JSONException {
-                                    return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
+                                    return getRest();
                                 }
 
                                 /**
@@ -6740,10 +10254,10 @@ public class Client {
                                  * separated list to match several ports or
                                  * ranges.
                                  * @param type Rule type. Enum: in,out,group
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                                public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("action", action);
                                     parameters.put("comment", comment);
@@ -6759,28 +10273,111 @@ public class Client {
                                     parameters.put("source", source);
                                     parameters.put("sport", sport);
                                     parameters.put("type", type);
-                                    return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", parameters);
+                                    return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", parameters);
                                 }
 
                                 /**
                                  * Modify rule data.
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @param action Rule action ('ACCEPT', 'DROP',
+                                 * 'REJECT') or security group name.
+                                 * @param comment Descriptive comment.
+                                 * @param delete A list of settings you want to
+                                 * delete.
+                                 * @param dest Restrict packet destination
+                                 * address. This can refer to a single IP
+                                 * address, an IP set ('+ipsetname') or an IP
+                                 * alias definition. You can also specify an
+                                 * address range like
+                                 * '20.34.101.207-201.3.9.99', or a list of IP
+                                 * addresses and networks (entries are separated
+                                 * by comma). Please do not mix IPv4 and IPv6
+                                 * addresses inside such lists.
+                                 * @param digest Prevent changes if current
+                                 * configuration file has different SHA1 digest.
+                                 * This can be used to prevent concurrent
+                                 * modifications.
+                                 * @param dport Restrict TCP/UDP destination
+                                 * port. You can use service names or simple
+                                 * numbers (0-65535), as defined in
+                                 * '/etc/services'. Port ranges can be specified
+                                 * with '\d+:\d+', for example '80:85', and you
+                                 * can use comma separated list to match several
+                                 * ports or ranges.
+                                 * @param enable Flag to enable/disable a rule.
+                                 * @param iface Network interface name. You have
+                                 * to use network configuration key names for
+                                 * VMs and containers ('net\d+'). Host related
+                                 * rules can use arbitrary strings.
+                                 * @param macro Use predefined standard macro.
+                                 * @param moveto Move rule to new position
+                                 * &amp;lt;moveto&amp;gt;. Other arguments are
+                                 * ignored.
+                                 * @param proto IP protocol. You can use
+                                 * protocol names ('tcp'/'udp') or simple
+                                 * numbers, as defined in '/etc/protocols'.
+                                 * @param source Restrict packet source address.
+                                 * This can refer to a single IP address, an IP
+                                 * set ('+ipsetname') or an IP alias definition.
+                                 * You can also specify an address range like
+                                 * '20.34.101.207-201.3.9.99', or a list of IP
+                                 * addresses and networks (entries are separated
+                                 * by comma). Please do not mix IPv4 and IPv6
+                                 * addresses inside such lists.
+                                 * @param sport Restrict TCP/UDP source port.
+                                 * You can use service names or simple numbers
+                                 * (0-65535), as defined in '/etc/services'.
+                                 * Port ranges can be specified with '\d+:\d+',
+                                 * for example '80:85', and you can use comma
+                                 * separated list to match several ports or
+                                 * ranges.
+                                 * @param type Rule type. Enum: in,out,group
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                                    return setRest(action, comment, delete, dest, digest, dport, enable, iface, macro, moveto, proto, source, sport, type);
+                                }
+
+                                /**
+                                 * Modify rule data.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result setRest() throws JSONException {
+                                    return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
+                                }
+
+                                /**
+                                 * Modify rule data.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result updateRule() throws JSONException {
-                                    return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
+                                    return setRest();
                                 }
                             }
 
                             /**
                              * List rules.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules", null);
+                            }
+
+                            /**
+                             * List rules.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result getRules() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules", null);
+                                return getRest();
                             }
 
                             /**
@@ -6833,10 +10430,10 @@ public class Client {
                              * ranges can be specified with '\d+:\d+', for
                              * example '80:85', and you can use comma separated
                              * list to match several ports or ranges.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                            public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
@@ -6851,7 +10448,7 @@ public class Client {
                                 parameters.put("proto", proto);
                                 parameters.put("source", source);
                                 parameters.put("sport", sport);
-                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules", parameters);
+                                return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules", parameters);
                             }
 
                             /**
@@ -6860,14 +10457,84 @@ public class Client {
                              * @param action Rule action ('ACCEPT', 'DROP',
                              * 'REJECT') or security group name.
                              * @param type Rule type. Enum: in,out,group
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param comment Descriptive comment.
+                             * @param dest Restrict packet destination address.
+                             * This can refer to a single IP address, an IP set
+                             * ('+ipsetname') or an IP alias definition. You can
+                             * also specify an address range like
+                             * '20.34.101.207-201.3.9.99', or a list of IP
+                             * addresses and networks (entries are separated by
+                             * comma). Please do not mix IPv4 and IPv6 addresses
+                             * inside such lists.
+                             * @param digest Prevent changes if current
+                             * configuration file has different SHA1 digest.
+                             * This can be used to prevent concurrent
+                             * modifications.
+                             * @param dport Restrict TCP/UDP destination port.
+                             * You can use service names or simple numbers
+                             * (0-65535), as defined in '/etc/services'. Port
+                             * ranges can be specified with '\d+:\d+', for
+                             * example '80:85', and you can use comma separated
+                             * list to match several ports or ranges.
+                             * @param enable Flag to enable/disable a rule.
+                             * @param iface Network interface name. You have to
+                             * use network configuration key names for VMs and
+                             * containers ('net\d+'). Host related rules can use
+                             * arbitrary strings.
+                             * @param macro Use predefined standard macro.
+                             * @param pos Update rule at position
+                             * &amp;lt;pos&amp;gt;.
+                             * @param proto IP protocol. You can use protocol
+                             * names ('tcp'/'udp') or simple numbers, as defined
+                             * in '/etc/protocols'.
+                             * @param source Restrict packet source address.
+                             * This can refer to a single IP address, an IP set
+                             * ('+ipsetname') or an IP alias definition. You can
+                             * also specify an address range like
+                             * '20.34.101.207-201.3.9.99', or a list of IP
+                             * addresses and networks (entries are separated by
+                             * comma). Please do not mix IPv4 and IPv6 addresses
+                             * inside such lists.
+                             * @param sport Restrict TCP/UDP source port. You
+                             * can use service names or simple numbers
+                             * (0-65535), as defined in '/etc/services'. Port
+                             * ranges can be specified with '\d+:\d+', for
+                             * example '80:85', and you can use comma separated
+                             * list to match several ports or ranges.
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result createRule(String action, String type) throws JSONException {
+                            public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                                return createRest(action, type, comment, dest, digest, dport, enable, iface, macro, pos, proto, source, sport);
+                            }
+
+                            /**
+                             * Create new rule.
+                             *
+                             * @param action Rule action ('ACCEPT', 'DROP',
+                             * 'REJECT') or security group name.
+                             * @param type Rule type. Enum: in,out,group
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest(String action, String type) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
-                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules", parameters);
+                                return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules", parameters);
+                            }
+
+                            /**
+                             * Create new rule.
+                             *
+                             * @param action Rule action ('ACCEPT', 'DROP',
+                             * 'REJECT') or security group name.
+                             * @param type Rule type. Enum: in,out,group
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRule(String action, String type) throws JSONException {
+                                return createRest(action, type);
                             }
                         }
 
@@ -6906,10 +10573,10 @@ public class Client {
                                  * configuration file has different SHA1 digest.
                                  * This can be used to prevent concurrent
                                  * modifications.
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result removeAlias(String digest) throws JSONException {
+                                public Result deleteRest(String digest) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("digest", digest);
                                     return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
@@ -6918,21 +10585,55 @@ public class Client {
                                 /**
                                  * Remove IP or Network alias.
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @param digest Prevent changes if current
+                                 * configuration file has different SHA1 digest.
+                                 * This can be used to prevent concurrent
+                                 * modifications.
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result removeAlias(String digest) throws JSONException {
+                                    return deleteRest(digest);
+                                }
+
+                                /**
+                                 * Remove IP or Network alias.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result deleteRest() throws JSONException {
+                                    return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", null);
+                                }
+
+                                /**
+                                 * Remove IP or Network alias.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result removeAlias() throws JSONException {
-                                    return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", null);
+                                    return deleteRest();
                                 }
 
                                 /**
                                  * Read alias.
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result getRest() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", null);
+                                }
+
+                                /**
+                                 * Read alias.
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result readAlias() throws JSONException {
-                                    return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", null);
+                                    return getRest();
                                 }
 
                                 /**
@@ -6946,16 +10647,16 @@ public class Client {
                                  * This can be used to prevent concurrent
                                  * modifications.
                                  * @param rename Rename an existing alias.
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result updateAlias(String cidr, String comment, String digest, String rename) throws JSONException {
+                                public Result setRest(String cidr, String comment, String digest, String rename) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
                                     parameters.put("comment", comment);
                                     parameters.put("digest", digest);
                                     parameters.put("rename", rename);
-                                    return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
+                                    return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
                                 }
 
                                 /**
@@ -6963,24 +10664,64 @@ public class Client {
                                  *
                                  * @param cidr Network/IP specification in CIDR
                                  * format.
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @param comment
+                                 * @param digest Prevent changes if current
+                                 * configuration file has different SHA1 digest.
+                                 * This can be used to prevent concurrent
+                                 * modifications.
+                                 * @param rename Rename an existing alias.
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result updateAlias(String cidr) throws JSONException {
+                                public Result updateAlias(String cidr, String comment, String digest, String rename) throws JSONException {
+                                    return setRest(cidr, comment, digest, rename);
+                                }
+
+                                /**
+                                 * Update IP or Network alias.
+                                 *
+                                 * @param cidr Network/IP specification in CIDR
+                                 * format.
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result setRest(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
-                                    return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
+                                    return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", parameters);
+                                }
+
+                                /**
+                                 * Update IP or Network alias.
+                                 *
+                                 * @param cidr Network/IP specification in CIDR
+                                 * format.
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result updateAlias(String cidr) throws JSONException {
+                                    return setRest(cidr);
                                 }
                             }
 
                             /**
                              * List aliases
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases", null);
+                            }
+
+                            /**
+                             * List aliases
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result getAliases() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases", null);
+                                return getRest();
                             }
 
                             /**
@@ -6990,15 +10731,15 @@ public class Client {
                              * format.
                              * @param name Alias name.
                              * @param comment
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result createAlias(String cidr, String name, String comment) throws JSONException {
+                            public Result createRest(String cidr, String name, String comment) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
                                 parameters.put("name", name);
                                 parameters.put("comment", comment);
-                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases", parameters);
+                                return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases", parameters);
                             }
 
                             /**
@@ -7007,14 +10748,41 @@ public class Client {
                              * @param cidr Network/IP specification in CIDR
                              * format.
                              * @param name Alias name.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param comment
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result createAlias(String cidr, String name) throws JSONException {
+                            public Result createAlias(String cidr, String name, String comment) throws JSONException {
+                                return createRest(cidr, name, comment);
+                            }
+
+                            /**
+                             * Create IP or Network Alias.
+                             *
+                             * @param cidr Network/IP specification in CIDR
+                             * format.
+                             * @param name Alias name.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest(String cidr, String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
                                 parameters.put("name", name);
-                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases", parameters);
+                                return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases", parameters);
+                            }
+
+                            /**
+                             * Create IP or Network Alias.
+                             *
+                             * @param cidr Network/IP specification in CIDR
+                             * format.
+                             * @param name Alias name.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createAlias(String cidr, String name) throws JSONException {
+                                return createRest(cidr, name);
                             }
                         }
 
@@ -7072,10 +10840,10 @@ public class Client {
                                      * configuration file has different SHA1
                                      * digest. This can be used to prevent
                                      * concurrent modifications.
-                                     * @return
-                                     * @throws org.json.JSONException
+                                     * @return Result
+                                     * @throws JSONException
                                      */
-                                    public Result removeIp(String digest) throws JSONException {
+                                    public Result deleteRest(String digest) throws JSONException {
                                         Map<String, Object> parameters = new HashMap<>();
                                         parameters.put("digest", digest);
                                         return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
@@ -7084,21 +10852,55 @@ public class Client {
                                     /**
                                      * Remove IP or Network from IPSet.
                                      *
-                                     * @return
-                                     * @throws org.json.JSONException
+                                     * @param digest Prevent changes if current
+                                     * configuration file has different SHA1
+                                     * digest. This can be used to prevent
+                                     * concurrent modifications.
+                                     * @return Result
+                                     * @throws JSONException
+                                     */
+                                    public Result removeIp(String digest) throws JSONException {
+                                        return deleteRest(digest);
+                                    }
+
+                                    /**
+                                     * Remove IP or Network from IPSet.
+                                     *
+                                     * @return Result
+                                     * @throws JSONException
+                                     */
+                                    public Result deleteRest() throws JSONException {
+                                        return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                                    }
+
+                                    /**
+                                     * Remove IP or Network from IPSet.
+                                     *
+                                     * @return Result
+                                     * @throws JSONException
                                      */
                                     public Result removeIp() throws JSONException {
-                                        return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                                        return deleteRest();
                                     }
 
                                     /**
                                      * Read IP or Network settings from IPSet.
                                      *
-                                     * @return
-                                     * @throws org.json.JSONException
+                                     * @return Result
+                                     * @throws JSONException
+                                     */
+                                    public Result getRest() throws JSONException {
+                                        return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                                    }
+
+                                    /**
+                                     * Read IP or Network settings from IPSet.
+                                     *
+                                     * @return Result
+                                     * @throws JSONException
                                      */
                                     public Result readIp() throws JSONException {
-                                        return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                                        return getRest();
                                     }
 
                                     /**
@@ -7110,46 +10912,92 @@ public class Client {
                                      * digest. This can be used to prevent
                                      * concurrent modifications.
                                      * @param nomatch
-                                     * @return
-                                     * @throws org.json.JSONException
+                                     * @return Result
+                                     * @throws JSONException
                                      */
-                                    public Result updateIp(String comment, String digest, Boolean nomatch) throws JSONException {
+                                    public Result setRest(String comment, String digest, Boolean nomatch) throws JSONException {
                                         Map<String, Object> parameters = new HashMap<>();
                                         parameters.put("comment", comment);
                                         parameters.put("digest", digest);
                                         parameters.put("nomatch", nomatch);
-                                        return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
+                                        return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", parameters);
                                     }
 
                                     /**
                                      * Update IP or Network settings
                                      *
-                                     * @return
-                                     * @throws org.json.JSONException
+                                     * @param comment
+                                     * @param digest Prevent changes if current
+                                     * configuration file has different SHA1
+                                     * digest. This can be used to prevent
+                                     * concurrent modifications.
+                                     * @param nomatch
+                                     * @return Result
+                                     * @throws JSONException
+                                     */
+                                    public Result updateIp(String comment, String digest, Boolean nomatch) throws JSONException {
+                                        return setRest(comment, digest, nomatch);
+                                    }
+
+                                    /**
+                                     * Update IP or Network settings
+                                     *
+                                     * @return Result
+                                     * @throws JSONException
+                                     */
+                                    public Result setRest() throws JSONException {
+                                        return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                                    }
+
+                                    /**
+                                     * Update IP or Network settings
+                                     *
+                                     * @return Result
+                                     * @throws JSONException
                                      */
                                     public Result updateIp() throws JSONException {
-                                        return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
+                                        return setRest();
                                     }
                                 }
 
                                 /**
                                  * Delete IPSet
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result deleteRest() throws JSONException {
+                                    return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", null);
+                                }
+
+                                /**
+                                 * Delete IPSet
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result deleteIpset() throws JSONException {
-                                    return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", null);
+                                    return deleteRest();
                                 }
 
                                 /**
                                  * List IPSet content
                                  *
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result getRest() throws JSONException {
+                                    return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", null);
+                                }
+
+                                /**
+                                 * List IPSet content
+                                 *
+                                 * @return Result
+                                 * @throws JSONException
                                  */
                                 public Result getIpset() throws JSONException {
-                                    return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", null);
+                                    return getRest();
                                 }
 
                                 /**
@@ -7159,15 +11007,15 @@ public class Client {
                                  * format.
                                  * @param comment
                                  * @param nomatch
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result createIp(String cidr, String comment, Boolean nomatch) throws JSONException {
+                                public Result createRest(String cidr, String comment, Boolean nomatch) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
                                     parameters.put("comment", comment);
                                     parameters.put("nomatch", nomatch);
-                                    return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", parameters);
+                                    return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", parameters);
                                 }
 
                                 /**
@@ -7175,24 +11023,60 @@ public class Client {
                                  *
                                  * @param cidr Network/IP specification in CIDR
                                  * format.
-                                 * @return
-                                 * @throws org.json.JSONException
+                                 * @param comment
+                                 * @param nomatch
+                                 * @return Result
+                                 * @throws JSONException
                                  */
-                                public Result createIp(String cidr) throws JSONException {
+                                public Result createIp(String cidr, String comment, Boolean nomatch) throws JSONException {
+                                    return createRest(cidr, comment, nomatch);
+                                }
+
+                                /**
+                                 * Add IP or Network to IPSet.
+                                 *
+                                 * @param cidr Network/IP specification in CIDR
+                                 * format.
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result createRest(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
-                                    return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", parameters);
+                                    return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", parameters);
+                                }
+
+                                /**
+                                 * Add IP or Network to IPSet.
+                                 *
+                                 * @param cidr Network/IP specification in CIDR
+                                 * format.
+                                 * @return Result
+                                 * @throws JSONException
+                                 */
+                                public Result createIp(String cidr) throws JSONException {
+                                    return createRest(cidr);
                                 }
                             }
 
                             /**
                              * List IPSets
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset", null);
+                            }
+
+                            /**
+                             * List IPSets
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result ipsetIndex() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset", null);
+                                return getRest();
                             }
 
                             /**
@@ -7207,29 +11091,59 @@ public class Client {
                              * @param rename Rename an existing IPSet. You can
                              * set 'rename' to the same value as 'name' to
                              * update the 'comment' of an existing IPSet.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result createIpset(String name, String comment, String digest, String rename) throws JSONException {
+                            public Result createRest(String name, String comment, String digest, String rename) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
                                 parameters.put("comment", comment);
                                 parameters.put("digest", digest);
                                 parameters.put("rename", rename);
-                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset", parameters);
+                                return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset", parameters);
                             }
 
                             /**
                              * Create new IPSet
                              *
                              * @param name IP set name.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param comment
+                             * @param digest Prevent changes if current
+                             * configuration file has different SHA1 digest.
+                             * This can be used to prevent concurrent
+                             * modifications.
+                             * @param rename Rename an existing IPSet. You can
+                             * set 'rename' to the same value as 'name' to
+                             * update the 'comment' of an existing IPSet.
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result createIpset(String name) throws JSONException {
+                            public Result createIpset(String name, String comment, String digest, String rename) throws JSONException {
+                                return createRest(name, comment, digest, rename);
+                            }
+
+                            /**
+                             * Create new IPSet
+                             *
+                             * @param name IP set name.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest(String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
-                                return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset", parameters);
+                                return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset", parameters);
+                            }
+
+                            /**
+                             * Create new IPSet
+                             *
+                             * @param name IP set name.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createIpset(String name) throws JSONException {
+                                return createRest(name);
                             }
                         }
 
@@ -7247,11 +11161,21 @@ public class Client {
                             /**
                              * Get VM firewall options.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/options", null);
+                            }
+
+                            /**
+                             * Get VM firewall options.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result getOptions() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/options", null);
+                                return getRest();
                             }
 
                             /**
@@ -7287,10 +11211,10 @@ public class Client {
                              * @param policy_out Output policy. Enum:
                              * ACCEPT,REJECT,DROP
                              * @param radv Allow sending Router Advertisement.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result setOptions(String delete, Boolean dhcp, String digest, Boolean enable, Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter, Boolean ndp, String policy_in, String policy_out, Boolean radv) throws JSONException {
+                            public Result setRest(String delete, Boolean dhcp, String digest, Boolean enable, Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter, Boolean ndp, String policy_in, String policy_out, Boolean radv) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("delete", delete);
                                 parameters.put("dhcp", dhcp);
@@ -7304,17 +11228,67 @@ public class Client {
                                 parameters.put("policy_in", policy_in);
                                 parameters.put("policy_out", policy_out);
                                 parameters.put("radv", radv);
-                                return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/options", parameters);
+                                return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/options", parameters);
                             }
 
                             /**
                              * Set Firewall options.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param delete A list of settings you want to
+                             * delete.
+                             * @param dhcp Enable DHCP.
+                             * @param digest Prevent changes if current
+                             * configuration file has different SHA1 digest.
+                             * This can be used to prevent concurrent
+                             * modifications.
+                             * @param enable Enable/disable firewall rules.
+                             * @param ipfilter Enable default IP filters. This
+                             * is equivalent to adding an empty
+                             * ipfilter-net&amp;lt;id&amp;gt; ipset for every
+                             * interface. Such ipsets implicitly contain sane
+                             * default restrictions such as restricting IPv6
+                             * link local addresses to the one derived from the
+                             * interface's MAC address. For containers the
+                             * configured IP addresses will be implicitly added.
+                             * @param log_level_in Log level for incoming
+                             * traffic. Enum:
+                             * emerg,alert,crit,err,warning,notice,info,debug,nolog
+                             * @param log_level_out Log level for outgoing
+                             * traffic. Enum:
+                             * emerg,alert,crit,err,warning,notice,info,debug,nolog
+                             * @param macfilter Enable/disable MAC address
+                             * filter.
+                             * @param ndp Enable NDP.
+                             * @param policy_in Input policy. Enum:
+                             * ACCEPT,REJECT,DROP
+                             * @param policy_out Output policy. Enum:
+                             * ACCEPT,REJECT,DROP
+                             * @param radv Allow sending Router Advertisement.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result setOptions(String delete, Boolean dhcp, String digest, Boolean enable, Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter, Boolean ndp, String policy_in, String policy_out, Boolean radv) throws JSONException {
+                                return setRest(delete, dhcp, digest, enable, ipfilter, log_level_in, log_level_out, macfilter, ndp, policy_in, policy_out, radv);
+                            }
+
+                            /**
+                             * Set Firewall options.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result setRest() throws JSONException {
+                                return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/options", null);
+                            }
+
+                            /**
+                             * Set Firewall options.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result setOptions() throws JSONException {
-                                return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/options", null);
+                                return setRest();
                             }
                         }
 
@@ -7334,10 +11308,10 @@ public class Client {
                              *
                              * @param limit
                              * @param start
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result log(Integer limit, Integer start) throws JSONException {
+                            public Result getRest(Integer limit, Integer start) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("limit", limit);
                                 parameters.put("start", start);
@@ -7347,11 +11321,33 @@ public class Client {
                             /**
                              * Read firewall log
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param limit
+                             * @param start
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result log(Integer limit, Integer start) throws JSONException {
+                                return getRest(limit, start);
+                            }
+
+                            /**
+                             * Read firewall log
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/log", null);
+                            }
+
+                            /**
+                             * Read firewall log
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result log() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/log", null);
+                                return getRest();
                             }
                         }
 
@@ -7372,10 +11368,10 @@ public class Client {
                              *
                              * @param type Only list references of specified
                              * type. Enum: alias,ipset
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result refs(String type) throws JSONException {
+                            public Result getRest(String type) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("type", type);
                                 return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/refs", parameters);
@@ -7385,22 +11381,56 @@ public class Client {
                              * Lists possible IPSet/Alias reference which are
                              * allowed in source/dest properties.
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param type Only list references of specified
+                             * type. Enum: alias,ipset
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result refs(String type) throws JSONException {
+                                return getRest(type);
+                            }
+
+                            /**
+                             * Lists possible IPSet/Alias reference which are
+                             * allowed in source/dest properties.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/refs", null);
+                            }
+
+                            /**
+                             * Lists possible IPSet/Alias reference which are
+                             * allowed in source/dest properties.
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result refs() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/refs", null);
+                                return getRest();
                             }
                         }
 
                         /**
                          * Directory index.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall", null);
+                        }
+
+                        /**
+                         * Directory index.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result index() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall", null);
+                            return getRest();
                         }
                     }
 
@@ -7424,10 +11454,10 @@ public class Client {
                          * interested in. Enum: hour,day,week,month,year
                          * @param cf The RRD consolidation function Enum:
                          * AVERAGE,MAX
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result rrd(String ds, String timeframe, String cf) throws JSONException {
+                        public Result getRest(String ds, String timeframe, String cf) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
@@ -7442,14 +11472,44 @@ public class Client {
                          * display.
                          * @param timeframe Specify the time frame you are
                          * interested in. Enum: hour,day,week,month,year
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param cf The RRD consolidation function Enum:
+                         * AVERAGE,MAX
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result rrd(String ds, String timeframe) throws JSONException {
+                        public Result rrd(String ds, String timeframe, String cf) throws JSONException {
+                            return getRest(ds, timeframe, cf);
+                        }
+
+                        /**
+                         * Read VM RRD statistics (returns PNG)
+                         *
+                         * @param ds The list of datasources you want to
+                         * display.
+                         * @param timeframe Specify the time frame you are
+                         * interested in. Enum: hour,day,week,month,year
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest(String ds, String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
                             return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/rrd", parameters);
+                        }
+
+                        /**
+                         * Read VM RRD statistics (returns PNG)
+                         *
+                         * @param ds The list of datasources you want to
+                         * display.
+                         * @param timeframe Specify the time frame you are
+                         * interested in. Enum: hour,day,week,month,year
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result rrd(String ds, String timeframe) throws JSONException {
+                            return getRest(ds, timeframe);
                         }
                     }
 
@@ -7471,10 +11531,10 @@ public class Client {
                          * interested in. Enum: hour,day,week,month,year
                          * @param cf The RRD consolidation function Enum:
                          * AVERAGE,MAX
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result rrddata(String timeframe, String cf) throws JSONException {
+                        public Result getRest(String timeframe, String cf) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
                             parameters.put("cf", cf);
@@ -7486,13 +11546,39 @@ public class Client {
                          *
                          * @param timeframe Specify the time frame you are
                          * interested in. Enum: hour,day,week,month,year
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param cf The RRD consolidation function Enum:
+                         * AVERAGE,MAX
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result rrddata(String timeframe) throws JSONException {
+                        public Result rrddata(String timeframe, String cf) throws JSONException {
+                            return getRest(timeframe, cf);
+                        }
+
+                        /**
+                         * Read VM RRD statistics
+                         *
+                         * @param timeframe Specify the time frame you are
+                         * interested in. Enum: hour,day,week,month,year
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest(String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
                             return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/rrddata", parameters);
+                        }
+
+                        /**
+                         * Read VM RRD statistics
+                         *
+                         * @param timeframe Specify the time frame you are
+                         * interested in. Enum: hour,day,week,month,year
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result rrddata(String timeframe) throws JSONException {
+                            return getRest(timeframe);
                         }
                     }
 
@@ -7515,25 +11601,50 @@ public class Client {
                          * @param websocket use websocket instead of standard
                          * VNC.
                          * @param width sets the width of the console in pixels.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result vncproxy(Integer height, Boolean websocket, Integer width) throws JSONException {
+                        public Result createRest(Integer height, Boolean websocket, Integer width) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("height", height);
                             parameters.put("websocket", websocket);
                             parameters.put("width", width);
-                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/vncproxy", parameters);
+                            return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/vncproxy", parameters);
                         }
 
                         /**
                          * Creates a TCP VNC proxy connections.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param height sets the height of the console in
+                         * pixels.
+                         * @param websocket use websocket instead of standard
+                         * VNC.
+                         * @param width sets the width of the console in pixels.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result vncproxy(Integer height, Boolean websocket, Integer width) throws JSONException {
+                            return createRest(height, websocket, width);
+                        }
+
+                        /**
+                         * Creates a TCP VNC proxy connections.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/vncproxy", null);
+                        }
+
+                        /**
+                         * Creates a TCP VNC proxy connections.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result vncproxy() throws JSONException {
-                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/vncproxy", null);
+                            return createRest();
                         }
                     }
 
@@ -7555,14 +11666,28 @@ public class Client {
                          * call.
                          * @param vncticket Ticket from previous call to
                          * vncproxy.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result vncwebsocket(int port, String vncticket) throws JSONException {
+                        public Result getRest(int port, String vncticket) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("port", port);
                             parameters.put("vncticket", vncticket);
                             return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/vncwebsocket", parameters);
+                        }
+
+                        /**
+                         * Opens a weksocket for VNC traffic.
+                         *
+                         * @param port Port number returned by previous vncproxy
+                         * call.
+                         * @param vncticket Ticket from previous call to
+                         * vncproxy.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result vncwebsocket(int port, String vncticket) throws JSONException {
+                            return getRest(port, vncticket);
                         }
                     }
 
@@ -7588,23 +11713,51 @@ public class Client {
                          * setting is to use same node you use to connect to the
                          * API (This is window.location.hostname for the JS
                          * GUI).
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result spiceproxy(String proxy) throws JSONException {
+                        public Result createRest(String proxy) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("proxy", proxy);
-                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/spiceproxy", parameters);
+                            return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/spiceproxy", parameters);
                         }
 
                         /**
                          * Returns a SPICE configuration to connect to the CT.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param proxy SPICE proxy server. This can be used by
+                         * the client to specify the proxy server. All nodes in
+                         * a cluster runs 'spiceproxy', so it is up to the
+                         * client to choose one. By default, we return the node
+                         * where the VM is currently running. As resonable
+                         * setting is to use same node you use to connect to the
+                         * API (This is window.location.hostname for the JS
+                         * GUI).
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result spiceproxy(String proxy) throws JSONException {
+                            return createRest(proxy);
+                        }
+
+                        /**
+                         * Returns a SPICE configuration to connect to the CT.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/spiceproxy", null);
+                        }
+
+                        /**
+                         * Returns a SPICE configuration to connect to the CT.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result spiceproxy() throws JSONException {
-                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/spiceproxy", null);
+                            return createRest();
                         }
                     }
 
@@ -7631,17 +11784,17 @@ public class Client {
                          * @param restart Use restart migration
                          * @param timeout Timeout in seconds for shutdown for
                          * restart migration
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result migrateVm(String target, Boolean force, Boolean online, Boolean restart, Integer timeout) throws JSONException {
+                        public Result createRest(String target, Boolean force, Boolean online, Boolean restart, Integer timeout) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
                             parameters.put("force", force);
                             parameters.put("online", online);
                             parameters.put("restart", restart);
                             parameters.put("timeout", timeout);
-                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/migrate", parameters);
+                            return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/migrate", parameters);
                         }
 
                         /**
@@ -7649,13 +11802,44 @@ public class Client {
                          * migration task.
                          *
                          * @param target Target node.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param force Force migration despite local bind /
+                         * device mounts. NOTE: deprecated, use 'shared'
+                         * property of mount point instead.
+                         * @param online Use online/live migration.
+                         * @param restart Use restart migration
+                         * @param timeout Timeout in seconds for shutdown for
+                         * restart migration
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result migrateVm(String target) throws JSONException {
+                        public Result migrateVm(String target, Boolean force, Boolean online, Boolean restart, Integer timeout) throws JSONException {
+                            return createRest(target, force, online, restart, timeout);
+                        }
+
+                        /**
+                         * Migrate the container to another node. Creates a new
+                         * migration task.
+                         *
+                         * @param target Target node.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest(String target) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
-                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/migrate", parameters);
+                            return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/migrate", parameters);
+                        }
+
+                        /**
+                         * Migrate the container to another node. Creates a new
+                         * migration task.
+                         *
+                         * @param target Target node.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result migrateVm(String target) throws JSONException {
+                            return createRest(target);
                         }
                     }
 
@@ -7675,10 +11859,10 @@ public class Client {
                          *
                          * @param feature Feature to check. Enum: snapshot
                          * @param snapname The name of the snapshot.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result vmFeature(String feature, String snapname) throws JSONException {
+                        public Result getRest(String feature, String snapname) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("feature", feature);
                             parameters.put("snapname", snapname);
@@ -7689,13 +11873,36 @@ public class Client {
                          * Check if feature for virtual machine is available.
                          *
                          * @param feature Feature to check. Enum: snapshot
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param snapname The name of the snapshot.
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result vmFeature(String feature) throws JSONException {
+                        public Result vmFeature(String feature, String snapname) throws JSONException {
+                            return getRest(feature, snapname);
+                        }
+
+                        /**
+                         * Check if feature for virtual machine is available.
+                         *
+                         * @param feature Feature to check. Enum: snapshot
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest(String feature) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("feature", feature);
                             return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/feature", parameters);
+                        }
+
+                        /**
+                         * Check if feature for virtual machine is available.
+                         *
+                         * @param feature Feature to check. Enum: snapshot
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result vmFeature(String feature) throws JSONException {
+                            return getRest(feature);
                         }
                     }
 
@@ -7716,13 +11923,26 @@ public class Client {
                          * @param experimental The template feature is
                          * experimental, set this flag if you know what you are
                          * doing.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result template(boolean experimental) throws JSONException {
+                        public Result createRest(boolean experimental) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("experimental", experimental);
-                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/template", parameters);
+                            return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/template", parameters);
+                        }
+
+                        /**
+                         * Create a Template.
+                         *
+                         * @param experimental The template feature is
+                         * experimental, set this flag if you know what you are
+                         * doing.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result template(boolean experimental) throws JSONException {
+                            return createRest(experimental);
                         }
                     }
 
@@ -7753,10 +11973,10 @@ public class Client {
                          * @param pool Add the new CT to the specified pool.
                          * @param snapname The name of the snapshot.
                          * @param storage Target storage for full clone.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result cloneVm(boolean experimental, int newid, String description, Boolean full, String hostname, String pool, String snapname, String storage) throws JSONException {
+                        public Result createRest(boolean experimental, int newid, String description, Boolean full, String hostname, String pool, String snapname, String storage) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("experimental", experimental);
                             parameters.put("newid", newid);
@@ -7766,7 +11986,7 @@ public class Client {
                             parameters.put("pool", pool);
                             parameters.put("snapname", snapname);
                             parameters.put("storage", storage);
-                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/clone", parameters);
+                            return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/clone", parameters);
                         }
 
                         /**
@@ -7776,14 +11996,51 @@ public class Client {
                          * experimental, set this flag if you know what you are
                          * doing.
                          * @param newid VMID for the clone.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param description Description for the new CT.
+                         * @param full Create a full copy of all disk. This is
+                         * always done when you clone a normal CT. For CT
+                         * templates, we try to create a linked clone by
+                         * default.
+                         * @param hostname Set a hostname for the new CT.
+                         * @param pool Add the new CT to the specified pool.
+                         * @param snapname The name of the snapshot.
+                         * @param storage Target storage for full clone.
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result cloneVm(boolean experimental, int newid) throws JSONException {
+                        public Result cloneVm(boolean experimental, int newid, String description, Boolean full, String hostname, String pool, String snapname, String storage) throws JSONException {
+                            return createRest(experimental, newid, description, full, hostname, pool, snapname, storage);
+                        }
+
+                        /**
+                         * Create a container clone/copy
+                         *
+                         * @param experimental The clone feature is
+                         * experimental, set this flag if you know what you are
+                         * doing.
+                         * @param newid VMID for the clone.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest(boolean experimental, int newid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("experimental", experimental);
                             parameters.put("newid", newid);
-                            return _client.post("/nodes/" + _node + "/lxc/" + _vmid + "/clone", parameters);
+                            return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/clone", parameters);
+                        }
+
+                        /**
+                         * Create a container clone/copy
+                         *
+                         * @param experimental The clone feature is
+                         * experimental, set this flag if you know what you are
+                         * doing.
+                         * @param newid VMID for the clone.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result cloneVm(boolean experimental, int newid) throws JSONException {
+                            return createRest(experimental, newid);
                         }
                     }
 
@@ -7810,15 +12067,15 @@ public class Client {
                          * @param digest Prevent changes if current
                          * configuration file has different SHA1 digest. This
                          * can be used to prevent concurrent modifications.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result resizeVm(String disk, String size, String digest) throws JSONException {
+                        public Result setRest(String disk, String size, String digest) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
                             parameters.put("size", size);
                             parameters.put("digest", digest);
-                            return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/resize", parameters);
+                            return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/resize", parameters);
                         }
 
                         /**
@@ -7830,46 +12087,111 @@ public class Client {
                          * is added to the actual size of the volume and without
                          * it, the value is taken as an absolute one. Shrinking
                          * disk size is not supported.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param digest Prevent changes if current
+                         * configuration file has different SHA1 digest. This
+                         * can be used to prevent concurrent modifications.
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result resizeVm(String disk, String size) throws JSONException {
+                        public Result resizeVm(String disk, String size, String digest) throws JSONException {
+                            return setRest(disk, size, digest);
+                        }
+
+                        /**
+                         * Resize a container mount point.
+                         *
+                         * @param disk The disk you want to resize. Enum:
+                         * rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9
+                         * @param size The new size. With the '+' sign the value
+                         * is added to the actual size of the volume and without
+                         * it, the value is taken as an absolute one. Shrinking
+                         * disk size is not supported.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result setRest(String disk, String size) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
                             parameters.put("size", size);
-                            return _client.put("/nodes/" + _node + "/lxc/" + _vmid + "/resize", parameters);
+                            return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/resize", parameters);
+                        }
+
+                        /**
+                         * Resize a container mount point.
+                         *
+                         * @param disk The disk you want to resize. Enum:
+                         * rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9
+                         * @param size The new size. With the '+' sign the value
+                         * is added to the actual size of the volume and without
+                         * it, the value is taken as an absolute one. Shrinking
+                         * disk size is not supported.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result resizeVm(String disk, String size) throws JSONException {
+                            return setRest(disk, size);
                         }
                     }
 
                     /**
                      * Destroy the container (also delete all uses files).
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result deleteRest() throws JSONException {
+                        return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "", null);
+                    }
+
+                    /**
+                     * Destroy the container (also delete all uses files).
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result destroyVm() throws JSONException {
-                        return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "", null);
+                        return deleteRest();
                     }
 
                     /**
                      * Directory index
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "", null);
+                    }
+
+                    /**
+                     * Directory index
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result vmdiridx() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "", null);
+                        return getRest();
                     }
                 }
 
                 /**
                  * LXC container index (per node).
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/lxc", null);
+                }
+
+                /**
+                 * LXC container index (per node).
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result vmlist() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/lxc", null);
+                    return getRest();
                 }
 
                 /**
@@ -7944,10 +12266,10 @@ public class Client {
                  * user. (Should not be modified manually.)
                  * @param unusedN Reference to unused volumes. This is used
                  * internally, and should not be modified manually.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result createVm(String ostemplate, int vmid, String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, Boolean force, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                public Result createRest(String ostemplate, int vmid, String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, Boolean force, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ostemplate", ostemplate);
                     parameters.put("vmid", vmid);
@@ -7979,10 +12301,10 @@ public class Client {
                     parameters.put("template", template);
                     parameters.put("tty", tty);
                     parameters.put("unprivileged", unprivileged);
-                    addIndexedParmeter(parameters, "mp", mpN);
-                    addIndexedParmeter(parameters, "net", netN);
-                    addIndexedParmeter(parameters, "unused", unusedN);
-                    return _client.post("/nodes/" + _node + "/lxc", parameters);
+                    addIndexedParameter(parameters, "mp", mpN);
+                    addIndexedParameter(parameters, "net", netN);
+                    addIndexedParameter(parameters, "unused", unusedN);
+                    return _client.create("/nodes/" + _node + "/lxc", parameters);
                 }
 
                 /**
@@ -7990,14 +12312,105 @@ public class Client {
                  *
                  * @param ostemplate The OS template or backup file.
                  * @param vmid The (unique) ID of the VM.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param arch OS architecture type. Enum: amd64,i386
+                 * @param cmode Console mode. By default, the console command
+                 * tries to open a connection to one of the available tty
+                 * devices. By setting cmode to 'console' it tries to attach to
+                 * /dev/console instead. If you set cmode to 'shell', it simply
+                 * invokes a shell inside the container (no login). Enum:
+                 * shell,console,tty
+                 * @param console Attach a console device (/dev/console) to the
+                 * container.
+                 * @param cores The number of cores assigned to the container. A
+                 * container can use all available cores by default.
+                 * @param cpulimit Limit of CPU usage. NOTE: If the computer has
+                 * 2 CPUs, it has a total of '2' CPU time. Value '0' indicates
+                 * no CPU limit.
+                 * @param cpuunits CPU weight for a VM. Argument is used in the
+                 * kernel fair scheduler. The larger the number is, the more CPU
+                 * time this VM gets. Number is relative to the weights of all
+                 * the other running VMs. NOTE: You can disable fair-scheduler
+                 * configuration by setting this to 0.
+                 * @param description Container description. Only used on the
+                 * configuration web interface.
+                 * @param force Allow to overwrite existing container.
+                 * @param hostname Set a host name for the container.
+                 * @param ignore_unpack_errors Ignore errors when extracting the
+                 * template.
+                 * @param lock_ Lock/unlock the VM. Enum:
+                 * migrate,backup,snapshot,rollback
+                 * @param memory Amount of RAM for the VM in MB.
+                 * @param mpN Use volume as container mount point.
+                 * @param nameserver Sets DNS server IP address for a container.
+                 * Create will automatically use the setting from the host if
+                 * you neither set searchdomain nor nameserver.
+                 * @param netN Specifies network interfaces for the container.
+                 * @param onboot Specifies whether a VM will be started during
+                 * system bootup.
+                 * @param ostype OS type. This is used to setup configuration
+                 * inside the container, and corresponds to lxc setup scripts in
+                 * /usr/share/lxc/config/&amp;lt;ostype&amp;gt;.common.conf.
+                 * Value 'unmanaged' can be used to skip and OS specific setup.
+                 * Enum:
+                 * debian,ubuntu,centos,fedora,opensuse,archlinux,alpine,gentoo,unmanaged
+                 * @param password Sets root password inside container.
+                 * @param pool Add the VM to the specified pool.
+                 * @param protection Sets the protection flag of the container.
+                 * This will prevent the CT or CT's disk remove/update
+                 * operation.
+                 * @param restore Mark this as restore task.
+                 * @param rootfs Use volume as container root.
+                 * @param searchdomain Sets DNS search domains for a container.
+                 * Create will automatically use the setting from the host if
+                 * you neither set searchdomain nor nameserver.
+                 * @param ssh_public_keys Setup public SSH keys (one key per
+                 * line, OpenSSH format).
+                 * @param startup Startup and shutdown behavior. Order is a
+                 * non-negative number defining the general startup order.
+                 * Shutdown in done with reverse ordering. Additionally you can
+                 * set the 'up' or 'down' delay in seconds, which specifies a
+                 * delay to wait before the next VM is started or stopped.
+                 * @param storage Default Storage.
+                 * @param swap Amount of SWAP for the VM in MB.
+                 * @param template Enable/disable Template.
+                 * @param tty Specify the number of tty available to the
+                 * container
+                 * @param unprivileged Makes the container run as unprivileged
+                 * user. (Should not be modified manually.)
+                 * @param unusedN Reference to unused volumes. This is used
+                 * internally, and should not be modified manually.
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result createVm(String ostemplate, int vmid) throws JSONException {
+                public Result createVm(String ostemplate, int vmid, String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, Boolean force, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                    return createRest(ostemplate, vmid, arch, cmode, console, cores, cpulimit, cpuunits, description, force, hostname, ignore_unpack_errors, lock_, memory, mpN, nameserver, netN, onboot, ostype, password, pool, protection, restore, rootfs, searchdomain, ssh_public_keys, startup, storage, swap, template, tty, unprivileged, unusedN);
+                }
+
+                /**
+                 * Create or restore a container.
+                 *
+                 * @param ostemplate The OS template or backup file.
+                 * @param vmid The (unique) ID of the VM.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest(String ostemplate, int vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ostemplate", ostemplate);
                     parameters.put("vmid", vmid);
-                    return _client.post("/nodes/" + _node + "/lxc", parameters);
+                    return _client.create("/nodes/" + _node + "/lxc", parameters);
+                }
+
+                /**
+                 * Create or restore a container.
+                 *
+                 * @param ostemplate The OS template or backup file.
+                 * @param vmid The (unique) ID of the VM.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createVm(String ostemplate, int vmid) throws JSONException {
+                    return createRest(ostemplate, vmid);
                 }
             }
 
@@ -8048,6 +12461,14 @@ public class Client {
                         _init = new PVEInit(_client, _node);
                     }
                     return _init;
+                }
+                private PVEMgr _mgr;
+
+                public PVEMgr getMgr() {
+                    if (_mgr == null) {
+                        _mgr = new PVEMgr(_client, _node);
+                    }
+                    return _mgr;
                 }
                 private PVEStop _stop;
 
@@ -8105,6 +12526,14 @@ public class Client {
                     }
                     return _log;
                 }
+                private PVERules _rules;
+
+                public PVERules getRules() {
+                    if (_rules == null) {
+                        _rules = new PVERules(_client, _node);
+                    }
+                    return _rules;
+                }
 
                 public class PVEOsd extends Base {
 
@@ -8160,11 +12589,21 @@ public class Client {
                             /**
                              * ceph osd in
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest() throws JSONException {
+                                return _client.create("/nodes/" + _node + "/ceph/osd/" + _osdid + "/in", null);
+                            }
+
+                            /**
+                             * ceph osd in
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result in() throws JSONException {
-                                return _client.post("/nodes/" + _node + "/ceph/osd/" + _osdid + "/in", null);
+                                return createRest();
                             }
                         }
 
@@ -8182,11 +12621,21 @@ public class Client {
                             /**
                              * ceph osd out
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest() throws JSONException {
+                                return _client.create("/nodes/" + _node + "/ceph/osd/" + _osdid + "/out", null);
+                            }
+
+                            /**
+                             * ceph osd out
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result out() throws JSONException {
-                                return _client.post("/nodes/" + _node + "/ceph/osd/" + _osdid + "/out", null);
+                                return createRest();
                             }
                         }
 
@@ -8195,10 +12644,10 @@ public class Client {
                          *
                          * @param cleanup If set, we remove partition table
                          * entries.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result destroyosd(Boolean cleanup) throws JSONException {
+                        public Result deleteRest(Boolean cleanup) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("cleanup", cleanup);
                             return _client.delete("/nodes/" + _node + "/ceph/osd/" + _osdid + "", parameters);
@@ -8207,22 +12656,54 @@ public class Client {
                         /**
                          * Destroy OSD
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param cleanup If set, we remove partition table
+                         * entries.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result destroyosd(Boolean cleanup) throws JSONException {
+                            return deleteRest(cleanup);
+                        }
+
+                        /**
+                         * Destroy OSD
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest() throws JSONException {
+                            return _client.delete("/nodes/" + _node + "/ceph/osd/" + _osdid + "", null);
+                        }
+
+                        /**
+                         * Destroy OSD
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result destroyosd() throws JSONException {
-                            return _client.delete("/nodes/" + _node + "/ceph/osd/" + _osdid + "", null);
+                            return deleteRest();
                         }
                     }
 
                     /**
                      * Get Ceph osd list/tree.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/osd", null);
+                    }
+
+                    /**
+                     * Get Ceph osd list/tree.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result index() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/ceph/osd", null);
+                        return getRest();
                     }
 
                     /**
@@ -8232,30 +12713,63 @@ public class Client {
                      * @param bluestore Use bluestore instead of filestore.
                      * @param fstype File system type (filestore only). Enum:
                      * xfs,ext4,btrfs
-                     * @param journal_dev Block device name for journal.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param journal_dev Block device name for journal
+                     * (filestore) or block.db (bluestore).
+                     * @param wal_dev Block device name for block.wal (bluestore
+                     * only).
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result createosd(String dev, Boolean bluestore, String fstype, String journal_dev) throws JSONException {
+                    public Result createRest(String dev, Boolean bluestore, String fstype, String journal_dev, String wal_dev) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("dev", dev);
                         parameters.put("bluestore", bluestore);
                         parameters.put("fstype", fstype);
                         parameters.put("journal_dev", journal_dev);
-                        return _client.post("/nodes/" + _node + "/ceph/osd", parameters);
+                        parameters.put("wal_dev", wal_dev);
+                        return _client.create("/nodes/" + _node + "/ceph/osd", parameters);
                     }
 
                     /**
                      * Create OSD
                      *
                      * @param dev Block device name.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param bluestore Use bluestore instead of filestore.
+                     * @param fstype File system type (filestore only). Enum:
+                     * xfs,ext4,btrfs
+                     * @param journal_dev Block device name for journal
+                     * (filestore) or block.db (bluestore).
+                     * @param wal_dev Block device name for block.wal (bluestore
+                     * only).
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result createosd(String dev) throws JSONException {
+                    public Result createosd(String dev, Boolean bluestore, String fstype, String journal_dev, String wal_dev) throws JSONException {
+                        return createRest(dev, bluestore, fstype, journal_dev, wal_dev);
+                    }
+
+                    /**
+                     * Create OSD
+                     *
+                     * @param dev Block device name.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRest(String dev) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("dev", dev);
-                        return _client.post("/nodes/" + _node + "/ceph/osd", parameters);
+                        return _client.create("/nodes/" + _node + "/ceph/osd", parameters);
+                    }
+
+                    /**
+                     * Create OSD
+                     *
+                     * @param dev Block device name.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createosd(String dev) throws JSONException {
+                        return createRest(dev);
                     }
                 }
 
@@ -8273,10 +12787,10 @@ public class Client {
                      *
                      * @param type Only list specific types of disks. Enum:
                      * unused,journal_disks
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result disks(String type) throws JSONException {
+                    public Result getRest(String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("type", type);
                         return _client.get("/nodes/" + _node + "/ceph/disks", parameters);
@@ -8285,11 +12799,33 @@ public class Client {
                     /**
                      * List local disks.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param type Only list specific types of disks. Enum:
+                     * unused,journal_disks
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result disks(String type) throws JSONException {
+                        return getRest(type);
+                    }
+
+                    /**
+                     * List local disks.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/disks", null);
+                    }
+
+                    /**
+                     * List local disks.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result disks() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/ceph/disks", null);
+                        return getRest();
                     }
                 }
 
@@ -8305,11 +12841,21 @@ public class Client {
                     /**
                      * Get Ceph configuration.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/config", null);
+                    }
+
+                    /**
+                     * Get Ceph configuration.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result config() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/ceph/config", null);
+                        return getRest();
                     }
                 }
 
@@ -8338,34 +12884,121 @@ public class Client {
                         }
 
                         /**
-                         * Destroy Ceph monitor.
+                         * Destroy Ceph Monitor and Manager.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param exclude_manager When set, removes only the
+                         * monitor, not the manager
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest(Boolean exclude_manager) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("exclude-manager", exclude_manager);
+                            return _client.delete("/nodes/" + _node + "/ceph/mon/" + _monid + "", parameters);
+                        }
+
+                        /**
+                         * Destroy Ceph Monitor and Manager.
+                         *
+                         * @param exclude_manager When set, removes only the
+                         * monitor, not the manager
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result destroymon(Boolean exclude_manager) throws JSONException {
+                            return deleteRest(exclude_manager);
+                        }
+
+                        /**
+                         * Destroy Ceph Monitor and Manager.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest() throws JSONException {
+                            return _client.delete("/nodes/" + _node + "/ceph/mon/" + _monid + "", null);
+                        }
+
+                        /**
+                         * Destroy Ceph Monitor and Manager.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result destroymon() throws JSONException {
-                            return _client.delete("/nodes/" + _node + "/ceph/mon/" + _monid + "", null);
+                            return deleteRest();
                         }
                     }
 
                     /**
                      * Get Ceph monitor list.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result listmon() throws JSONException {
+                    public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/ceph/mon", null);
                     }
 
                     /**
-                     * Create Ceph Monitor
+                     * Get Ceph monitor list.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result listmon() throws JSONException {
+                        return getRest();
+                    }
+
+                    /**
+                     * Create Ceph Monitor and Manager
+                     *
+                     * @param exclude_manager When set, only a monitor will be
+                     * created.
+                     * @param id The ID for the monitor, when omitted the same
+                     * as the nodename
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRest(Boolean exclude_manager, String id) throws JSONException {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("exclude-manager", exclude_manager);
+                        parameters.put("id", id);
+                        return _client.create("/nodes/" + _node + "/ceph/mon", parameters);
+                    }
+
+                    /**
+                     * Create Ceph Monitor and Manager
+                     *
+                     * @param exclude_manager When set, only a monitor will be
+                     * created.
+                     * @param id The ID for the monitor, when omitted the same
+                     * as the nodename
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createmon(Boolean exclude_manager, String id) throws JSONException {
+                        return createRest(exclude_manager, id);
+                    }
+
+                    /**
+                     * Create Ceph Monitor and Manager
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRest() throws JSONException {
+                        return _client.create("/nodes/" + _node + "/ceph/mon", null);
+                    }
+
+                    /**
+                     * Create Ceph Monitor and Manager
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result createmon() throws JSONException {
-                        return _client.post("/nodes/" + _node + "/ceph/mon", null);
+                        return createRest();
                     }
                 }
 
@@ -8394,28 +13027,154 @@ public class Client {
                      * default number of placement groups. NOTE: 'osd pool
                      * default pg num' does not work for default pools.
                      * @param size Targeted number of replicas per object
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result init(Boolean disable_cephx, Integer min_size, String network, Integer pg_bits, Integer size) throws JSONException {
+                    public Result createRest(Boolean disable_cephx, Integer min_size, String network, Integer pg_bits, Integer size) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("disable_cephx", disable_cephx);
                         parameters.put("min_size", min_size);
                         parameters.put("network", network);
                         parameters.put("pg_bits", pg_bits);
                         parameters.put("size", size);
-                        return _client.post("/nodes/" + _node + "/ceph/init", parameters);
+                        return _client.create("/nodes/" + _node + "/ceph/init", parameters);
                     }
 
                     /**
                      * Create initial ceph default configuration and setup
                      * symlinks.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param disable_cephx Disable cephx authentification.
+                     * WARNING: cephx is a security feature protecting against
+                     * man-in-the-middle attacks. Only consider disabling cephx
+                     * if your network is private!
+                     * @param min_size Minimum number of available replicas per
+                     * object to allow I/O
+                     * @param network Use specific network for all ceph related
+                     * traffic
+                     * @param pg_bits Placement group bits, used to specify the
+                     * default number of placement groups. NOTE: 'osd pool
+                     * default pg num' does not work for default pools.
+                     * @param size Targeted number of replicas per object
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result init(Boolean disable_cephx, Integer min_size, String network, Integer pg_bits, Integer size) throws JSONException {
+                        return createRest(disable_cephx, min_size, network, pg_bits, size);
+                    }
+
+                    /**
+                     * Create initial ceph default configuration and setup
+                     * symlinks.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRest() throws JSONException {
+                        return _client.create("/nodes/" + _node + "/ceph/init", null);
+                    }
+
+                    /**
+                     * Create initial ceph default configuration and setup
+                     * symlinks.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result init() throws JSONException {
-                        return _client.post("/nodes/" + _node + "/ceph/init", null);
+                        return createRest();
+                    }
+                }
+
+                public class PVEMgr extends Base {
+
+                    private final Object _node;
+
+                    protected PVEMgr(Client client, Object node) {
+                        _client = client;
+                        _node = node;
+                    }
+
+                    public PVEItemId get(Object id) {
+                        return new PVEItemId(_client, _node, id);
+                    }
+
+                    public class PVEItemId extends Base {
+
+                        private final Object _node;
+                        private final Object _id;
+
+                        protected PVEItemId(Client client, Object node, Object id) {
+                            _client = client;
+                            _node = node;
+                            _id = id;
+                        }
+
+                        /**
+                         * Destroy Ceph Manager.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest() throws JSONException {
+                            return _client.delete("/nodes/" + _node + "/ceph/mgr/" + _id + "", null);
+                        }
+
+                        /**
+                         * Destroy Ceph Manager.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result destroymgr() throws JSONException {
+                            return deleteRest();
+                        }
+                    }
+
+                    /**
+                     * Create Ceph Manager
+                     *
+                     * @param id The ID for the manager, when omitted the same
+                     * as the nodename
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRest(String id) throws JSONException {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("id", id);
+                        return _client.create("/nodes/" + _node + "/ceph/mgr", parameters);
+                    }
+
+                    /**
+                     * Create Ceph Manager
+                     *
+                     * @param id The ID for the manager, when omitted the same
+                     * as the nodename
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createmgr(String id) throws JSONException {
+                        return createRest(id);
+                    }
+
+                    /**
+                     * Create Ceph Manager
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRest() throws JSONException {
+                        return _client.create("/nodes/" + _node + "/ceph/mgr", null);
+                    }
+
+                    /**
+                     * Create Ceph Manager
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createmgr() throws JSONException {
+                        return createRest();
                     }
                 }
 
@@ -8432,23 +13191,44 @@ public class Client {
                      * Stop ceph services.
                      *
                      * @param service Ceph service name.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result stop(String service) throws JSONException {
+                    public Result createRest(String service) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("service", service);
-                        return _client.post("/nodes/" + _node + "/ceph/stop", parameters);
+                        return _client.create("/nodes/" + _node + "/ceph/stop", parameters);
                     }
 
                     /**
                      * Stop ceph services.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param service Ceph service name.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result stop(String service) throws JSONException {
+                        return createRest(service);
+                    }
+
+                    /**
+                     * Stop ceph services.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRest() throws JSONException {
+                        return _client.create("/nodes/" + _node + "/ceph/stop", null);
+                    }
+
+                    /**
+                     * Stop ceph services.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result stop() throws JSONException {
-                        return _client.post("/nodes/" + _node + "/ceph/stop", null);
+                        return createRest();
                     }
                 }
 
@@ -8465,23 +13245,44 @@ public class Client {
                      * Start ceph services.
                      *
                      * @param service Ceph service name.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result start(String service) throws JSONException {
+                    public Result createRest(String service) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("service", service);
-                        return _client.post("/nodes/" + _node + "/ceph/start", parameters);
+                        return _client.create("/nodes/" + _node + "/ceph/start", parameters);
                     }
 
                     /**
                      * Start ceph services.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param service Ceph service name.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result start(String service) throws JSONException {
+                        return createRest(service);
+                    }
+
+                    /**
+                     * Start ceph services.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRest() throws JSONException {
+                        return _client.create("/nodes/" + _node + "/ceph/start", null);
+                    }
+
+                    /**
+                     * Start ceph services.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result start() throws JSONException {
-                        return _client.post("/nodes/" + _node + "/ceph/start", null);
+                        return createRest();
                     }
                 }
 
@@ -8497,11 +13298,21 @@ public class Client {
                     /**
                      * Get ceph status.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/status", null);
+                    }
+
+                    /**
+                     * Get ceph status.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result status() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/ceph/status", null);
+                        return getRest();
                     }
                 }
 
@@ -8533,69 +13344,142 @@ public class Client {
                          * Destroy pool
                          *
                          * @param force If true, destroys pool even if in use
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param remove_storages Remove all pveceph-managed
+                         * storages configured for this pool
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result destroypool(Boolean force) throws JSONException {
+                        public Result deleteRest(Boolean force, Boolean remove_storages) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("force", force);
+                            parameters.put("remove_storages", remove_storages);
                             return _client.delete("/nodes/" + _node + "/ceph/pools/" + _name + "", parameters);
                         }
 
                         /**
                          * Destroy pool
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param force If true, destroys pool even if in use
+                         * @param remove_storages Remove all pveceph-managed
+                         * storages configured for this pool
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result destroypool(Boolean force, Boolean remove_storages) throws JSONException {
+                            return deleteRest(force, remove_storages);
+                        }
+
+                        /**
+                         * Destroy pool
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest() throws JSONException {
+                            return _client.delete("/nodes/" + _node + "/ceph/pools/" + _name + "", null);
+                        }
+
+                        /**
+                         * Destroy pool
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result destroypool() throws JSONException {
-                            return _client.delete("/nodes/" + _node + "/ceph/pools/" + _name + "", null);
+                            return deleteRest();
                         }
                     }
 
                     /**
                      * List all pools.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result lspools() throws JSONException {
+                    public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/ceph/pools", null);
                     }
 
                     /**
-                     * Create POOL
+                     * List all pools.
                      *
-                     * @param name The name of the pool. It must be unique.
-                     * @param crush_ruleset The ruleset to use for mapping
-                     * object placement in the cluster.
-                     * @param min_size Minimum number of replicas per object
-                     * @param pg_num Number of placement groups.
-                     * @param size Number of replicas per object
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result createpool(String name, Integer crush_ruleset, Integer min_size, Integer pg_num, Integer size) throws JSONException {
-                        Map<String, Object> parameters = new HashMap<>();
-                        parameters.put("name", name);
-                        parameters.put("crush_ruleset", crush_ruleset);
-                        parameters.put("min_size", min_size);
-                        parameters.put("pg_num", pg_num);
-                        parameters.put("size", size);
-                        return _client.post("/nodes/" + _node + "/ceph/pools", parameters);
+                    public Result lspools() throws JSONException {
+                        return getRest();
                     }
 
                     /**
                      * Create POOL
                      *
                      * @param name The name of the pool. It must be unique.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param add_storages Configure VM and CT storages using
+                     * the new pool.
+                     * @param application The application of the pool, 'rbd' by
+                     * default. Enum: rbd,cephfs,rgw
+                     * @param crush_rule The rule to use for mapping object
+                     * placement in the cluster.
+                     * @param min_size Minimum number of replicas per object
+                     * @param pg_num Number of placement groups.
+                     * @param size Number of replicas per object
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result createpool(String name) throws JSONException {
+                    public Result createRest(String name, Boolean add_storages, String application, String crush_rule, Integer min_size, Integer pg_num, Integer size) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
-                        return _client.post("/nodes/" + _node + "/ceph/pools", parameters);
+                        parameters.put("add_storages", add_storages);
+                        parameters.put("application", application);
+                        parameters.put("crush_rule", crush_rule);
+                        parameters.put("min_size", min_size);
+                        parameters.put("pg_num", pg_num);
+                        parameters.put("size", size);
+                        return _client.create("/nodes/" + _node + "/ceph/pools", parameters);
+                    }
+
+                    /**
+                     * Create POOL
+                     *
+                     * @param name The name of the pool. It must be unique.
+                     * @param add_storages Configure VM and CT storages using
+                     * the new pool.
+                     * @param application The application of the pool, 'rbd' by
+                     * default. Enum: rbd,cephfs,rgw
+                     * @param crush_rule The rule to use for mapping object
+                     * placement in the cluster.
+                     * @param min_size Minimum number of replicas per object
+                     * @param pg_num Number of placement groups.
+                     * @param size Number of replicas per object
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createpool(String name, Boolean add_storages, String application, String crush_rule, Integer min_size, Integer pg_num, Integer size) throws JSONException {
+                        return createRest(name, add_storages, application, crush_rule, min_size, pg_num, size);
+                    }
+
+                    /**
+                     * Create POOL
+                     *
+                     * @param name The name of the pool. It must be unique.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRest(String name) throws JSONException {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("name", name);
+                        return _client.create("/nodes/" + _node + "/ceph/pools", parameters);
+                    }
+
+                    /**
+                     * Create POOL
+                     *
+                     * @param name The name of the pool. It must be unique.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createpool(String name) throws JSONException {
+                        return createRest(name);
                     }
                 }
 
@@ -8626,32 +13510,62 @@ public class Client {
                         /**
                          * Unset a ceph flag
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest() throws JSONException {
+                            return _client.delete("/nodes/" + _node + "/ceph/flags/" + _flag + "", null);
+                        }
+
+                        /**
+                         * Unset a ceph flag
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result unsetFlag() throws JSONException {
-                            return _client.delete("/nodes/" + _node + "/ceph/flags/" + _flag + "", null);
+                            return deleteRest();
                         }
 
                         /**
                          * Set a ceph flag
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/ceph/flags/" + _flag + "", null);
+                        }
+
+                        /**
+                         * Set a ceph flag
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result setFlag() throws JSONException {
-                            return _client.post("/nodes/" + _node + "/ceph/flags/" + _flag + "", null);
+                            return createRest();
                         }
                     }
 
                     /**
                      * get all set ceph flags
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/flags", null);
+                    }
+
+                    /**
+                     * get all set ceph flags
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result getFlags() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/ceph/flags", null);
+                        return getRest();
                     }
                 }
 
@@ -8667,11 +13581,21 @@ public class Client {
                     /**
                      * Get OSD crush map
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/crush", null);
+                    }
+
+                    /**
+                     * Get OSD crush map
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result crush() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/ceph/crush", null);
+                        return getRest();
                     }
                 }
 
@@ -8689,10 +13613,10 @@ public class Client {
                      *
                      * @param limit
                      * @param start
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result log(Integer limit, Integer start) throws JSONException {
+                    public Result getRest(Integer limit, Integer start) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("limit", limit);
                         parameters.put("start", start);
@@ -8702,22 +13626,84 @@ public class Client {
                     /**
                      * Read ceph log
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param limit
+                     * @param start
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result log(Integer limit, Integer start) throws JSONException {
+                        return getRest(limit, start);
+                    }
+
+                    /**
+                     * Read ceph log
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/log", null);
+                    }
+
+                    /**
+                     * Read ceph log
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result log() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/ceph/log", null);
+                        return getRest();
+                    }
+                }
+
+                public class PVERules extends Base {
+
+                    private final Object _node;
+
+                    protected PVERules(Client client, Object node) {
+                        _client = client;
+                        _node = node;
+                    }
+
+                    /**
+                     * List ceph rules.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/rules", null);
+                    }
+
+                    /**
+                     * List ceph rules.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result rules() throws JSONException {
+                        return getRest();
                     }
                 }
 
                 /**
                  * Directory index.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/ceph", null);
+                }
+
+                /**
+                 * Directory index.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result index() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/ceph", null);
+                    return getRest();
                 }
             }
 
@@ -8751,13 +13737,24 @@ public class Client {
                      * Extract configuration from vzdump backup archive.
                      *
                      * @param volume Volume identifier
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result extractconfig(String volume) throws JSONException {
+                    public Result getRest(String volume) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("volume", volume);
                         return _client.get("/nodes/" + _node + "/vzdump/extractconfig", parameters);
+                    }
+
+                    /**
+                     * Extract configuration from vzdump backup archive.
+                     *
+                     * @param volume Volume identifier
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result extractconfig(String volume) throws JSONException {
+                        return getRest(volume);
                     }
                 }
 
@@ -8797,10 +13794,10 @@ public class Client {
                  * @param storage Store resulting file to this storage.
                  * @param tmpdir Store temporary files to specified directory.
                  * @param vmid The ID of the guest system you want to backup.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result vzdump(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
+                public Result createRest(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("all", all);
                     parameters.put("bwlimit", bwlimit);
@@ -8826,17 +13823,70 @@ public class Client {
                     parameters.put("storage", storage);
                     parameters.put("tmpdir", tmpdir);
                     parameters.put("vmid", vmid);
-                    return _client.post("/nodes/" + _node + "/vzdump", parameters);
+                    return _client.create("/nodes/" + _node + "/vzdump", parameters);
                 }
 
                 /**
                  * Create backup.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param all Backup all known guest systems on this host.
+                 * @param bwlimit Limit I/O bandwidth (KBytes per second).
+                 * @param compress Compress dump file. Enum: 0,1,gzip,lzo
+                 * @param dumpdir Store resulting files to specified directory.
+                 * @param exclude Exclude specified guest systems (assumes
+                 * --all)
+                 * @param exclude_path Exclude certain files/directories (shell
+                 * globs).
+                 * @param ionice Set CFQ ionice priority.
+                 * @param lockwait Maximal time to wait for the global lock
+                 * (minutes).
+                 * @param mailnotification Specify when to send an email Enum:
+                 * always,failure
+                 * @param mailto Comma-separated list of email addresses that
+                 * should receive email notifications.
+                 * @param maxfiles Maximal number of backup files per guest
+                 * system.
+                 * @param mode Backup mode. Enum: snapshot,suspend,stop
+                 * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1
+                 * uses half of cores, N&amp;gt;1 uses N as thread count.
+                 * @param quiet Be quiet.
+                 * @param remove Remove old backup files if there are more than
+                 * 'maxfiles' backup files.
+                 * @param script Use specified hook script.
+                 * @param size Unused, will be removed in a future release.
+                 * @param stdexcludes Exclude temporary files and logs.
+                 * @param stdout Write tar to stdout, not to a file.
+                 * @param stop Stop runnig backup jobs on this host.
+                 * @param stopwait Maximal time to wait until a guest system is
+                 * stopped (minutes).
+                 * @param storage Store resulting file to this storage.
+                 * @param tmpdir Store temporary files to specified directory.
+                 * @param vmid The ID of the guest system you want to backup.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result vzdump(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
+                    return createRest(all, bwlimit, compress, dumpdir, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, pigz, quiet, remove, script, size, stdexcludes, stdout, stop, stopwait, storage, tmpdir, vmid);
+                }
+
+                /**
+                 * Create backup.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest() throws JSONException {
+                    return _client.create("/nodes/" + _node + "/vzdump", null);
+                }
+
+                /**
+                 * Create backup.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result vzdump() throws JSONException {
-                    return _client.post("/nodes/" + _node + "/vzdump", null);
+                    return createRest();
                 }
             }
 
@@ -8918,11 +13968,21 @@ public class Client {
                         /**
                          * Read service properties
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/services/" + _service + "/state", null);
+                        }
+
+                        /**
+                         * Read service properties
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result serviceState() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/services/" + _service + "/state", null);
+                            return getRest();
                         }
                     }
 
@@ -8940,11 +14000,21 @@ public class Client {
                         /**
                          * Start service.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/services/" + _service + "/start", null);
+                        }
+
+                        /**
+                         * Start service.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result serviceStart() throws JSONException {
-                            return _client.post("/nodes/" + _node + "/services/" + _service + "/start", null);
+                            return createRest();
                         }
                     }
 
@@ -8962,11 +14032,21 @@ public class Client {
                         /**
                          * Stop service.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/services/" + _service + "/stop", null);
+                        }
+
+                        /**
+                         * Stop service.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result serviceStop() throws JSONException {
-                            return _client.post("/nodes/" + _node + "/services/" + _service + "/stop", null);
+                            return createRest();
                         }
                     }
 
@@ -8984,11 +14064,21 @@ public class Client {
                         /**
                          * Restart service.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/services/" + _service + "/restart", null);
+                        }
+
+                        /**
+                         * Restart service.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result serviceRestart() throws JSONException {
-                            return _client.post("/nodes/" + _node + "/services/" + _service + "/restart", null);
+                            return createRest();
                         }
                     }
 
@@ -9006,33 +14096,63 @@ public class Client {
                         /**
                          * Reload service.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/services/" + _service + "/reload", null);
+                        }
+
+                        /**
+                         * Reload service.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result serviceReload() throws JSONException {
-                            return _client.post("/nodes/" + _node + "/services/" + _service + "/reload", null);
+                            return createRest();
                         }
                     }
 
                     /**
                      * Directory index
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/services/" + _service + "", null);
+                    }
+
+                    /**
+                     * Directory index
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result srvcmdidx() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/services/" + _service + "", null);
+                        return getRest();
                     }
                 }
 
                 /**
                  * Service list.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/services", null);
+                }
+
+                /**
+                 * Service list.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result index() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/services", null);
+                    return getRest();
                 }
             }
 
@@ -9048,11 +14168,21 @@ public class Client {
                 /**
                  * Read subscription info.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/subscription", null);
+                }
+
+                /**
+                 * Read subscription info.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result get() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/subscription", null);
+                    return getRest();
                 }
 
                 /**
@@ -9060,36 +14190,69 @@ public class Client {
                  *
                  * @param force Always connect to server, even if we have up to
                  * date info inside local cache.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result update(Boolean force) throws JSONException {
+                public Result createRest(Boolean force) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("force", force);
-                    return _client.post("/nodes/" + _node + "/subscription", parameters);
+                    return _client.create("/nodes/" + _node + "/subscription", parameters);
                 }
 
                 /**
                  * Update subscription info.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param force Always connect to server, even if we have up to
+                 * date info inside local cache.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result update(Boolean force) throws JSONException {
+                    return createRest(force);
+                }
+
+                /**
+                 * Update subscription info.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest() throws JSONException {
+                    return _client.create("/nodes/" + _node + "/subscription", null);
+                }
+
+                /**
+                 * Update subscription info.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result update() throws JSONException {
-                    return _client.post("/nodes/" + _node + "/subscription", null);
+                    return createRest();
                 }
 
                 /**
                  * Set subscription key.
                  *
                  * @param key Proxmox VE subscription key
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result set(String key) throws JSONException {
+                public Result setRest(String key) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("key", key);
-                    return _client.put("/nodes/" + _node + "/subscription", parameters);
+                    return _client.set("/nodes/" + _node + "/subscription", parameters);
+                }
+
+                /**
+                 * Set subscription key.
+                 *
+                 * @param key Proxmox VE subscription key
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result set(String key) throws JSONException {
+                    return setRest(key);
                 }
             }
 
@@ -9120,21 +14283,41 @@ public class Client {
                     /**
                      * Delete network device configuration
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result deleteRest() throws JSONException {
+                        return _client.delete("/nodes/" + _node + "/network/" + _iface + "", null);
+                    }
+
+                    /**
+                     * Delete network device configuration
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result deleteNetwork() throws JSONException {
-                        return _client.delete("/nodes/" + _node + "/network/" + _iface + "", null);
+                        return deleteRest();
                     }
 
                     /**
                      * Read network device configuration
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/network/" + _iface + "", null);
+                    }
+
+                    /**
+                     * Read network device configuration
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result networkConfig() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/network/" + _iface + "", null);
+                        return getRest();
                     }
 
                     /**
@@ -9171,10 +14354,10 @@ public class Client {
                      * OVSIntPort, OVSBond)
                      * @param slaves Specify the interfaces used by the bonding
                      * device.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result updateNetwork(String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String comments, String comments6, String delete, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
+                    public Result setRest(String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String comments, String comments6, String delete, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("type", type);
                         parameters.put("address", address);
@@ -9197,7 +14380,7 @@ public class Client {
                         parameters.put("ovs_ports", ovs_ports);
                         parameters.put("ovs_tag", ovs_tag);
                         parameters.put("slaves", slaves);
-                        return _client.put("/nodes/" + _node + "/network/" + _iface + "", parameters);
+                        return _client.set("/nodes/" + _node + "/network/" + _iface + "", parameters);
                     }
 
                     /**
@@ -9205,24 +14388,87 @@ public class Client {
                      *
                      * @param type Network interface type Enum:
                      * bridge,bond,eth,alias,vlan,OVSBridge,OVSBond,OVSPort,OVSIntPort,unknown
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param address IP address.
+                     * @param address6 IP address.
+                     * @param autostart Automatically start interface on boot.
+                     * @param bond_mode Bonding mode. Enum:
+                     * balance-rr,active-backup,balance-xor,broadcast,802.3ad,balance-tlb,balance-alb,balance-slb,lacp-balance-slb,lacp-balance-tcp
+                     * @param bond_xmit_hash_policy Selects the transmit hash
+                     * policy to use for slave selection in balance-xor and
+                     * 802.3ad modes. Enum: layer2,layer2+3,layer3+4
+                     * @param bridge_ports Specify the iterfaces you want to add
+                     * to your bridge.
+                     * @param bridge_vlan_aware Enable bridge vlan support.
+                     * @param comments Comments
+                     * @param comments6 Comments
+                     * @param delete A list of settings you want to delete.
+                     * @param gateway Default gateway address.
+                     * @param gateway6 Default ipv6 gateway address.
+                     * @param netmask Network mask.
+                     * @param netmask6 Network mask.
+                     * @param ovs_bonds Specify the interfaces used by the
+                     * bonding device.
+                     * @param ovs_bridge The OVS bridge associated with a OVS
+                     * port. This is required when you create an OVS port.
+                     * @param ovs_options OVS interface options.
+                     * @param ovs_ports Specify the iterfaces you want to add to
+                     * your bridge.
+                     * @param ovs_tag Specify a VLan tag (used by OVSPort,
+                     * OVSIntPort, OVSBond)
+                     * @param slaves Specify the interfaces used by the bonding
+                     * device.
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result updateNetwork(String type) throws JSONException {
+                    public Result updateNetwork(String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String comments, String comments6, String delete, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
+                        return setRest(type, address, address6, autostart, bond_mode, bond_xmit_hash_policy, bridge_ports, bridge_vlan_aware, comments, comments6, delete, gateway, gateway6, netmask, netmask6, ovs_bonds, ovs_bridge, ovs_options, ovs_ports, ovs_tag, slaves);
+                    }
+
+                    /**
+                     * Update network device configuration
+                     *
+                     * @param type Network interface type Enum:
+                     * bridge,bond,eth,alias,vlan,OVSBridge,OVSBond,OVSPort,OVSIntPort,unknown
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result setRest(String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("type", type);
-                        return _client.put("/nodes/" + _node + "/network/" + _iface + "", parameters);
+                        return _client.set("/nodes/" + _node + "/network/" + _iface + "", parameters);
+                    }
+
+                    /**
+                     * Update network device configuration
+                     *
+                     * @param type Network interface type Enum:
+                     * bridge,bond,eth,alias,vlan,OVSBridge,OVSBond,OVSPort,OVSIntPort,unknown
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result updateNetwork(String type) throws JSONException {
+                        return setRest(type);
                     }
                 }
 
                 /**
                  * Revert network configuration changes.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result deleteRest() throws JSONException {
+                    return _client.delete("/nodes/" + _node + "/network", null);
+                }
+
+                /**
+                 * Revert network configuration changes.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result revertNetworkChanges() throws JSONException {
-                    return _client.delete("/nodes/" + _node + "/network", null);
+                    return deleteRest();
                 }
 
                 /**
@@ -9230,10 +14476,10 @@ public class Client {
                  *
                  * @param type Only list specific interface types. Enum:
                  * bridge,bond,eth,alias,vlan,OVSBridge,OVSBond,OVSPort,OVSIntPort,any_bridge
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result index(String type) throws JSONException {
+                public Result getRest(String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     return _client.get("/nodes/" + _node + "/network", parameters);
@@ -9242,11 +14488,33 @@ public class Client {
                 /**
                  * List available networks
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param type Only list specific interface types. Enum:
+                 * bridge,bond,eth,alias,vlan,OVSBridge,OVSBond,OVSPort,OVSIntPort,any_bridge
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result index(String type) throws JSONException {
+                    return getRest(type);
+                }
+
+                /**
+                 * List available networks
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/network", null);
+                }
+
+                /**
+                 * List available networks
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result index() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/network", null);
+                    return getRest();
                 }
 
                 /**
@@ -9283,10 +14551,10 @@ public class Client {
                  * OVSIntPort, OVSBond)
                  * @param slaves Specify the interfaces used by the bonding
                  * device.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result createNetwork(String iface, String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String comments, String comments6, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
+                public Result createRest(String iface, String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String comments, String comments6, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("iface", iface);
                     parameters.put("type", type);
@@ -9309,7 +14577,7 @@ public class Client {
                     parameters.put("ovs_ports", ovs_ports);
                     parameters.put("ovs_tag", ovs_tag);
                     parameters.put("slaves", slaves);
-                    return _client.post("/nodes/" + _node + "/network", parameters);
+                    return _client.create("/nodes/" + _node + "/network", parameters);
                 }
 
                 /**
@@ -9318,14 +14586,68 @@ public class Client {
                  * @param iface Network interface name.
                  * @param type Network interface type Enum:
                  * bridge,bond,eth,alias,vlan,OVSBridge,OVSBond,OVSPort,OVSIntPort,unknown
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param address IP address.
+                 * @param address6 IP address.
+                 * @param autostart Automatically start interface on boot.
+                 * @param bond_mode Bonding mode. Enum:
+                 * balance-rr,active-backup,balance-xor,broadcast,802.3ad,balance-tlb,balance-alb,balance-slb,lacp-balance-slb,lacp-balance-tcp
+                 * @param bond_xmit_hash_policy Selects the transmit hash policy
+                 * to use for slave selection in balance-xor and 802.3ad modes.
+                 * Enum: layer2,layer2+3,layer3+4
+                 * @param bridge_ports Specify the iterfaces you want to add to
+                 * your bridge.
+                 * @param bridge_vlan_aware Enable bridge vlan support.
+                 * @param comments Comments
+                 * @param comments6 Comments
+                 * @param gateway Default gateway address.
+                 * @param gateway6 Default ipv6 gateway address.
+                 * @param netmask Network mask.
+                 * @param netmask6 Network mask.
+                 * @param ovs_bonds Specify the interfaces used by the bonding
+                 * device.
+                 * @param ovs_bridge The OVS bridge associated with a OVS port.
+                 * This is required when you create an OVS port.
+                 * @param ovs_options OVS interface options.
+                 * @param ovs_ports Specify the iterfaces you want to add to
+                 * your bridge.
+                 * @param ovs_tag Specify a VLan tag (used by OVSPort,
+                 * OVSIntPort, OVSBond)
+                 * @param slaves Specify the interfaces used by the bonding
+                 * device.
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result createNetwork(String iface, String type) throws JSONException {
+                public Result createNetwork(String iface, String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String comments, String comments6, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
+                    return createRest(iface, type, address, address6, autostart, bond_mode, bond_xmit_hash_policy, bridge_ports, bridge_vlan_aware, comments, comments6, gateway, gateway6, netmask, netmask6, ovs_bonds, ovs_bridge, ovs_options, ovs_ports, ovs_tag, slaves);
+                }
+
+                /**
+                 * Create network device configuration
+                 *
+                 * @param iface Network interface name.
+                 * @param type Network interface type Enum:
+                 * bridge,bond,eth,alias,vlan,OVSBridge,OVSBond,OVSPort,OVSIntPort,unknown
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest(String iface, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("iface", iface);
                     parameters.put("type", type);
-                    return _client.post("/nodes/" + _node + "/network", parameters);
+                    return _client.create("/nodes/" + _node + "/network", parameters);
+                }
+
+                /**
+                 * Create network device configuration
+                 *
+                 * @param iface Network interface name.
+                 * @param type Network interface type Enum:
+                 * bridge,bond,eth,alias,vlan,OVSBridge,OVSBond,OVSPort,OVSIntPort,unknown
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createNetwork(String iface, String type) throws JSONException {
+                    return createRest(iface, type);
                 }
             }
 
@@ -9385,10 +14707,10 @@ public class Client {
                          *
                          * @param limit
                          * @param start
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result readTaskLog(Integer limit, Integer start) throws JSONException {
+                        public Result getRest(Integer limit, Integer start) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("limit", limit);
                             parameters.put("start", start);
@@ -9398,11 +14720,33 @@ public class Client {
                         /**
                          * Read task log.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param limit
+                         * @param start
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result readTaskLog(Integer limit, Integer start) throws JSONException {
+                            return getRest(limit, start);
+                        }
+
+                        /**
+                         * Read task log.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/tasks/" + _upid + "/log", null);
+                        }
+
+                        /**
+                         * Read task log.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result readTaskLog() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/tasks/" + _upid + "/log", null);
+                            return getRest();
                         }
                     }
 
@@ -9420,30 +14764,60 @@ public class Client {
                         /**
                          * Read task status.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/tasks/" + _upid + "/status", null);
+                        }
+
+                        /**
+                         * Read task status.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result readTaskStatus() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/tasks/" + _upid + "/status", null);
+                            return getRest();
                         }
                     }
 
                     /**
                      * Stop a task.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result stopTask() throws JSONException {
+                    public Result deleteRest() throws JSONException {
                         return _client.delete("/nodes/" + _node + "/tasks/" + _upid + "", null);
                     }
 
                     /**
+                     * Stop a task.
                      *
-                     * @return @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result stopTask() throws JSONException {
+                        return deleteRest();
+                    }
+
+                    /**
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/tasks/" + _upid + "", null);
+                    }
+
+                    /**
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result upidIndex() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/tasks/" + _upid + "", null);
+                        return getRest();
                     }
                 }
 
@@ -9455,10 +14829,10 @@ public class Client {
                  * @param start
                  * @param userfilter
                  * @param vmid Only list tasks for this VM.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result nodeTasks(Boolean errors, Integer limit, Integer start, String userfilter, Integer vmid) throws JSONException {
+                public Result getRest(Boolean errors, Integer limit, Integer start, String userfilter, Integer vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("errors", errors);
                     parameters.put("limit", limit);
@@ -9471,11 +14845,36 @@ public class Client {
                 /**
                  * Read task list for one node (finished tasks).
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param errors
+                 * @param limit
+                 * @param start
+                 * @param userfilter
+                 * @param vmid Only list tasks for this VM.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result nodeTasks(Boolean errors, Integer limit, Integer start, String userfilter, Integer vmid) throws JSONException {
+                    return getRest(errors, limit, start, userfilter, vmid);
+                }
+
+                /**
+                 * Read task list for one node (finished tasks).
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/tasks", null);
+                }
+
+                /**
+                 * Read task list for one node (finished tasks).
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result nodeTasks() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/tasks", null);
+                    return getRest();
                 }
             }
 
@@ -9556,11 +14955,21 @@ public class Client {
                     /**
                      * Scan zfs pool list on local node.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/scan/zfs", null);
+                    }
+
+                    /**
+                     * Scan zfs pool list on local node.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result zfsscan() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/scan/zfs", null);
+                        return getRest();
                     }
                 }
 
@@ -9577,13 +14986,24 @@ public class Client {
                      * Scan remote NFS server.
                      *
                      * @param server
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result nfsscan(String server) throws JSONException {
+                    public Result getRest(String server) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("server", server);
                         return _client.get("/nodes/" + _node + "/scan/nfs", parameters);
+                    }
+
+                    /**
+                     * Scan remote NFS server.
+                     *
+                     * @param server
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result nfsscan(String server) throws JSONException {
+                        return getRest(server);
                     }
                 }
 
@@ -9600,13 +15020,24 @@ public class Client {
                      * Scan remote GlusterFS server.
                      *
                      * @param server
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result glusterfsscan(String server) throws JSONException {
+                    public Result getRest(String server) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("server", server);
                         return _client.get("/nodes/" + _node + "/scan/glusterfs", parameters);
+                    }
+
+                    /**
+                     * Scan remote GlusterFS server.
+                     *
+                     * @param server
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result glusterfsscan(String server) throws JSONException {
+                        return getRest(server);
                     }
                 }
 
@@ -9623,13 +15054,24 @@ public class Client {
                      * Scan remote iSCSI server.
                      *
                      * @param portal
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result iscsiscan(String portal) throws JSONException {
+                    public Result getRest(String portal) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("portal", portal);
                         return _client.get("/nodes/" + _node + "/scan/iscsi", parameters);
+                    }
+
+                    /**
+                     * Scan remote iSCSI server.
+                     *
+                     * @param portal
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result iscsiscan(String portal) throws JSONException {
+                        return getRest(portal);
                     }
                 }
 
@@ -9645,11 +15087,21 @@ public class Client {
                     /**
                      * List local LVM volume groups.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/scan/lvm", null);
+                    }
+
+                    /**
+                     * List local LVM volume groups.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result lvmscan() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/scan/lvm", null);
+                        return getRest();
                     }
                 }
 
@@ -9666,13 +15118,24 @@ public class Client {
                      * List local LVM Thin Pools.
                      *
                      * @param vg
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result lvmthinscan(String vg) throws JSONException {
+                    public Result getRest(String vg) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("vg", vg);
                         return _client.get("/nodes/" + _node + "/scan/lvmthin", parameters);
+                    }
+
+                    /**
+                     * List local LVM Thin Pools.
+                     *
+                     * @param vg
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result lvmthinscan(String vg) throws JSONException {
+                        return getRest(vg);
                     }
                 }
 
@@ -9688,22 +15151,42 @@ public class Client {
                     /**
                      * List local USB devices.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/scan/usb", null);
+                    }
+
+                    /**
+                     * List local USB devices.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result usbscan() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/scan/usb", null);
+                        return getRest();
                     }
                 }
 
                 /**
                  * Index of available scan methods
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/scan", null);
+                }
+
+                /**
+                 * Index of available scan methods
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result index() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/scan", null);
+                    return getRest();
                 }
             }
 
@@ -9802,21 +15285,41 @@ public class Client {
                             /**
                              * Delete volume
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result deleteRest() throws JSONException {
+                                return _client.delete("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", null);
+                            }
+
+                            /**
+                             * Delete volume
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result delete() throws JSONException {
-                                return _client.delete("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", null);
+                                return deleteRest();
                             }
 
                             /**
                              * Get volume attributes
                              *
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest() throws JSONException {
+                                return _client.get("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", null);
+                            }
+
+                            /**
+                             * Get volume attributes
+                             *
+                             * @return Result
+                             * @throws JSONException
                              */
                             public Result info() throws JSONException {
-                                return _client.get("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", null);
+                                return getRest();
                             }
 
                             /**
@@ -9826,14 +15329,14 @@ public class Client {
                              * @param target Target volume identifier
                              * @param target_node Target node. Default is local
                              * node.
-                             * @return
-                             * @throws org.json.JSONException
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result copy(String target, String target_node) throws JSONException {
+                            public Result createRest(String target, String target_node) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("target", target);
                                 parameters.put("target_node", target_node);
-                                return _client.post("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", parameters);
+                                return _client.create("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", parameters);
                             }
 
                             /**
@@ -9841,13 +15344,39 @@ public class Client {
                              * use.
                              *
                              * @param target Target volume identifier
-                             * @return
-                             * @throws org.json.JSONException
+                             * @param target_node Target node. Default is local
+                             * node.
+                             * @return Result
+                             * @throws JSONException
                              */
-                            public Result copy(String target) throws JSONException {
+                            public Result copy(String target, String target_node) throws JSONException {
+                                return createRest(target, target_node);
+                            }
+
+                            /**
+                             * Copy a volume. This is experimental code - do not
+                             * use.
+                             *
+                             * @param target Target volume identifier
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest(String target) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("target", target);
-                                return _client.post("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", parameters);
+                                return _client.create("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", parameters);
+                            }
+
+                            /**
+                             * Copy a volume. This is experimental code - do not
+                             * use.
+                             *
+                             * @param target Target volume identifier
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result copy(String target) throws JSONException {
+                                return createRest(target);
                             }
                         }
 
@@ -9856,10 +15385,10 @@ public class Client {
                          *
                          * @param content Only list content of this type.
                          * @param vmid Only list images for this VM
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result index(String content, Integer vmid) throws JSONException {
+                        public Result getRest(String content, Integer vmid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("content", content);
                             parameters.put("vmid", vmid);
@@ -9869,11 +15398,33 @@ public class Client {
                         /**
                          * List storage content.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param content Only list content of this type.
+                         * @param vmid Only list images for this VM
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result index(String content, Integer vmid) throws JSONException {
+                            return getRest(content, vmid);
+                        }
+
+                        /**
+                         * List storage content.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/storage/" + _storage + "/content", null);
+                        }
+
+                        /**
+                         * List storage content.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result index() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/storage/" + _storage + "/content", null);
+                            return getRest();
                         }
 
                         /**
@@ -9885,16 +15436,16 @@ public class Client {
                          * 1024M)
                          * @param vmid Specify owner VM
                          * @param format Enum: raw,qcow2,subvol
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result create(String filename, String size, int vmid, String format) throws JSONException {
+                        public Result createRest(String filename, String size, int vmid, String format) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("filename", filename);
                             parameters.put("size", size);
                             parameters.put("vmid", vmid);
                             parameters.put("format", format);
-                            return _client.post("/nodes/" + _node + "/storage/" + _storage + "/content", parameters);
+                            return _client.create("/nodes/" + _node + "/storage/" + _storage + "/content", parameters);
                         }
 
                         /**
@@ -9905,15 +15456,46 @@ public class Client {
                          * suffixes 'M' (megabyte, 1024K) and 'G' (gigabyte,
                          * 1024M)
                          * @param vmid Specify owner VM
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param format Enum: raw,qcow2,subvol
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result create(String filename, String size, int vmid) throws JSONException {
+                        public Result create(String filename, String size, int vmid, String format) throws JSONException {
+                            return createRest(filename, size, vmid, format);
+                        }
+
+                        /**
+                         * Allocate disk images.
+                         *
+                         * @param filename The name of the file to create.
+                         * @param size Size in kilobyte (1024 bytes). Optional
+                         * suffixes 'M' (megabyte, 1024K) and 'G' (gigabyte,
+                         * 1024M)
+                         * @param vmid Specify owner VM
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest(String filename, String size, int vmid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("filename", filename);
                             parameters.put("size", size);
                             parameters.put("vmid", vmid);
-                            return _client.post("/nodes/" + _node + "/storage/" + _storage + "/content", parameters);
+                            return _client.create("/nodes/" + _node + "/storage/" + _storage + "/content", parameters);
+                        }
+
+                        /**
+                         * Allocate disk images.
+                         *
+                         * @param filename The name of the file to create.
+                         * @param size Size in kilobyte (1024 bytes). Optional
+                         * suffixes 'M' (megabyte, 1024K) and 'G' (gigabyte,
+                         * 1024M)
+                         * @param vmid Specify owner VM
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result create(String filename, String size, int vmid) throws JSONException {
+                            return createRest(filename, size, vmid);
                         }
                     }
 
@@ -9931,11 +15513,21 @@ public class Client {
                         /**
                          * Read storage status.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/storage/" + _storage + "/status", null);
+                        }
+
+                        /**
+                         * Read storage status.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result readStatus() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/storage/" + _storage + "/status", null);
+                            return getRest();
                         }
                     }
 
@@ -9959,10 +15551,10 @@ public class Client {
                          * interested in. Enum: hour,day,week,month,year
                          * @param cf The RRD consolidation function Enum:
                          * AVERAGE,MAX
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result rrd(String ds, String timeframe, String cf) throws JSONException {
+                        public Result getRest(String ds, String timeframe, String cf) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
@@ -9977,14 +15569,44 @@ public class Client {
                          * display.
                          * @param timeframe Specify the time frame you are
                          * interested in. Enum: hour,day,week,month,year
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param cf The RRD consolidation function Enum:
+                         * AVERAGE,MAX
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result rrd(String ds, String timeframe) throws JSONException {
+                        public Result rrd(String ds, String timeframe, String cf) throws JSONException {
+                            return getRest(ds, timeframe, cf);
+                        }
+
+                        /**
+                         * Read storage RRD statistics (returns PNG).
+                         *
+                         * @param ds The list of datasources you want to
+                         * display.
+                         * @param timeframe Specify the time frame you are
+                         * interested in. Enum: hour,day,week,month,year
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest(String ds, String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
                             return _client.get("/nodes/" + _node + "/storage/" + _storage + "/rrd", parameters);
+                        }
+
+                        /**
+                         * Read storage RRD statistics (returns PNG).
+                         *
+                         * @param ds The list of datasources you want to
+                         * display.
+                         * @param timeframe Specify the time frame you are
+                         * interested in. Enum: hour,day,week,month,year
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result rrd(String ds, String timeframe) throws JSONException {
+                            return getRest(ds, timeframe);
                         }
                     }
 
@@ -10006,10 +15628,10 @@ public class Client {
                          * interested in. Enum: hour,day,week,month,year
                          * @param cf The RRD consolidation function Enum:
                          * AVERAGE,MAX
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result rrddata(String timeframe, String cf) throws JSONException {
+                        public Result getRest(String timeframe, String cf) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
                             parameters.put("cf", cf);
@@ -10021,13 +15643,39 @@ public class Client {
                          *
                          * @param timeframe Specify the time frame you are
                          * interested in. Enum: hour,day,week,month,year
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param cf The RRD consolidation function Enum:
+                         * AVERAGE,MAX
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result rrddata(String timeframe) throws JSONException {
+                        public Result rrddata(String timeframe, String cf) throws JSONException {
+                            return getRest(timeframe, cf);
+                        }
+
+                        /**
+                         * Read storage RRD statistics.
+                         *
+                         * @param timeframe Specify the time frame you are
+                         * interested in. Enum: hour,day,week,month,year
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest(String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
                             return _client.get("/nodes/" + _node + "/storage/" + _storage + "/rrddata", parameters);
+                        }
+
+                        /**
+                         * Read storage RRD statistics.
+                         *
+                         * @param timeframe Specify the time frame you are
+                         * interested in. Enum: hour,day,week,month,year
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result rrddata(String timeframe) throws JSONException {
+                            return getRest(timeframe);
                         }
                     }
 
@@ -10051,15 +15699,15 @@ public class Client {
                          * parameter is usually set by the REST handler. You can
                          * only overwrite it when connecting to the trustet port
                          * on localhost.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result upload(String content, String filename, String tmpfilename) throws JSONException {
+                        public Result createRest(String content, String filename, String tmpfilename) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("content", content);
                             parameters.put("filename", filename);
                             parameters.put("tmpfilename", tmpfilename);
-                            return _client.post("/nodes/" + _node + "/storage/" + _storage + "/upload", parameters);
+                            return _client.create("/nodes/" + _node + "/storage/" + _storage + "/upload", parameters);
                         }
 
                         /**
@@ -10067,23 +15715,61 @@ public class Client {
                          *
                          * @param content Content type.
                          * @param filename The name of the file to create.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param tmpfilename The source file name. This
+                         * parameter is usually set by the REST handler. You can
+                         * only overwrite it when connecting to the trustet port
+                         * on localhost.
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result upload(String content, String filename) throws JSONException {
+                        public Result upload(String content, String filename, String tmpfilename) throws JSONException {
+                            return createRest(content, filename, tmpfilename);
+                        }
+
+                        /**
+                         * Upload templates and ISO images.
+                         *
+                         * @param content Content type.
+                         * @param filename The name of the file to create.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest(String content, String filename) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("content", content);
                             parameters.put("filename", filename);
-                            return _client.post("/nodes/" + _node + "/storage/" + _storage + "/upload", parameters);
+                            return _client.create("/nodes/" + _node + "/storage/" + _storage + "/upload", parameters);
+                        }
+
+                        /**
+                         * Upload templates and ISO images.
+                         *
+                         * @param content Content type.
+                         * @param filename The name of the file to create.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result upload(String content, String filename) throws JSONException {
+                            return createRest(content, filename);
                         }
                     }
 
                     /**
                      *
-                     * @return @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/storage/" + _storage + "", null);
+                    }
+
+                    /**
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result diridx() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/storage/" + _storage + "", null);
+                        return getRest();
                     }
                 }
 
@@ -10098,10 +15784,10 @@ public class Client {
                  * @param target If target is different to 'node', we only lists
                  * shared storages which content is accessible on this 'node'
                  * and the specified 'target' node.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result index(String content, Boolean enabled, String storage, String target) throws JSONException {
+                public Result getRest(String content, Boolean enabled, String storage, String target) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("content", content);
                     parameters.put("enabled", enabled);
@@ -10113,11 +15799,39 @@ public class Client {
                 /**
                  * Get status for all datastores.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param content Only list stores which support this content
+                 * type.
+                 * @param enabled Only list stores which are enabled (not
+                 * disabled in config).
+                 * @param storage Only list status for specified storage
+                 * @param target If target is different to 'node', we only lists
+                 * shared storages which content is accessible on this 'node'
+                 * and the specified 'target' node.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result index(String content, Boolean enabled, String storage, String target) throws JSONException {
+                    return getRest(content, enabled, storage, target);
+                }
+
+                /**
+                 * Get status for all datastores.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/storage", null);
+                }
+
+                /**
+                 * Get status for all datastores.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result index() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/storage", null);
+                    return getRest();
                 }
             }
 
@@ -10166,11 +15880,21 @@ public class Client {
                     /**
                      * List local disks.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/disks/list", null);
+                    }
+
+                    /**
+                     * List local disks.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result list() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/disks/list", null);
+                        return getRest();
                     }
                 }
 
@@ -10188,10 +15912,10 @@ public class Client {
                      *
                      * @param disk Block device name
                      * @param healthonly If true returns only the health status
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result smart(String disk, Boolean healthonly) throws JSONException {
+                    public Result getRest(String disk, Boolean healthonly) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("disk", disk);
                         parameters.put("healthonly", healthonly);
@@ -10202,13 +15926,36 @@ public class Client {
                      * Get SMART Health of a disk.
                      *
                      * @param disk Block device name
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param healthonly If true returns only the health status
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result smart(String disk) throws JSONException {
+                    public Result smart(String disk, Boolean healthonly) throws JSONException {
+                        return getRest(disk, healthonly);
+                    }
+
+                    /**
+                     * Get SMART Health of a disk.
+                     *
+                     * @param disk Block device name
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest(String disk) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("disk", disk);
                         return _client.get("/nodes/" + _node + "/disks/smart", parameters);
+                    }
+
+                    /**
+                     * Get SMART Health of a disk.
+                     *
+                     * @param disk Block device name
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result smart(String disk) throws JSONException {
+                        return getRest(disk);
                     }
                 }
 
@@ -10226,38 +15973,71 @@ public class Client {
                      *
                      * @param disk Block device name
                      * @param uuid UUID for the GPT table
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result initgpt(String disk, String uuid) throws JSONException {
+                    public Result createRest(String disk, String uuid) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("disk", disk);
                         parameters.put("uuid", uuid);
-                        return _client.post("/nodes/" + _node + "/disks/initgpt", parameters);
+                        return _client.create("/nodes/" + _node + "/disks/initgpt", parameters);
                     }
 
                     /**
                      * Initialize Disk with GPT
                      *
                      * @param disk Block device name
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param uuid UUID for the GPT table
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result initgpt(String disk) throws JSONException {
+                    public Result initgpt(String disk, String uuid) throws JSONException {
+                        return createRest(disk, uuid);
+                    }
+
+                    /**
+                     * Initialize Disk with GPT
+                     *
+                     * @param disk Block device name
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRest(String disk) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("disk", disk);
-                        return _client.post("/nodes/" + _node + "/disks/initgpt", parameters);
+                        return _client.create("/nodes/" + _node + "/disks/initgpt", parameters);
+                    }
+
+                    /**
+                     * Initialize Disk with GPT
+                     *
+                     * @param disk Block device name
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result initgpt(String disk) throws JSONException {
+                        return createRest(disk);
                     }
                 }
 
                 /**
                  * Node index.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/disks", null);
+                }
+
+                /**
+                 * Node index.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result index() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/disks", null);
+                    return getRest();
                 }
             }
 
@@ -10306,11 +16086,21 @@ public class Client {
                     /**
                      * List available updates.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/apt/update", null);
+                    }
+
+                    /**
+                     * List available updates.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result listUpdates() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/apt/update", null);
+                        return getRest();
                     }
 
                     /**
@@ -10321,25 +16111,51 @@ public class Client {
                      * (to email address specified for user 'root@pam').
                      * @param quiet Only produces output suitable for logging,
                      * omitting progress indicators.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result updateDatabase(Boolean notify, Boolean quiet) throws JSONException {
+                    public Result createRest(Boolean notify, Boolean quiet) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("notify", notify);
                         parameters.put("quiet", quiet);
-                        return _client.post("/nodes/" + _node + "/apt/update", parameters);
+                        return _client.create("/nodes/" + _node + "/apt/update", parameters);
                     }
 
                     /**
                      * This is used to resynchronize the package index files
                      * from their sources (apt-get update).
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param notify Send notification mail about new packages
+                     * (to email address specified for user 'root@pam').
+                     * @param quiet Only produces output suitable for logging,
+                     * omitting progress indicators.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result updateDatabase(Boolean notify, Boolean quiet) throws JSONException {
+                        return createRest(notify, quiet);
+                    }
+
+                    /**
+                     * This is used to resynchronize the package index files
+                     * from their sources (apt-get update).
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRest() throws JSONException {
+                        return _client.create("/nodes/" + _node + "/apt/update", null);
+                    }
+
+                    /**
+                     * This is used to resynchronize the package index files
+                     * from their sources (apt-get update).
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result updateDatabase() throws JSONException {
-                        return _client.post("/nodes/" + _node + "/apt/update", null);
+                        return createRest();
                     }
                 }
 
@@ -10357,10 +16173,10 @@ public class Client {
                      *
                      * @param name Package name.
                      * @param version Package version.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result changelog(String name, String version) throws JSONException {
+                    public Result getRest(String name, String version) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
                         parameters.put("version", version);
@@ -10371,13 +16187,36 @@ public class Client {
                      * Get package changelogs.
                      *
                      * @param name Package name.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param version Package version.
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result changelog(String name) throws JSONException {
+                    public Result changelog(String name, String version) throws JSONException {
+                        return getRest(name, version);
+                    }
+
+                    /**
+                     * Get package changelogs.
+                     *
+                     * @param name Package name.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest(String name) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
                         return _client.get("/nodes/" + _node + "/apt/changelog", parameters);
+                    }
+
+                    /**
+                     * Get package changelogs.
+                     *
+                     * @param name Package name.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result changelog(String name) throws JSONException {
+                        return getRest(name);
                     }
                 }
 
@@ -10393,22 +16232,42 @@ public class Client {
                     /**
                      * Get package information for important Proxmox packages.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/apt/versions", null);
+                    }
+
+                    /**
+                     * Get package information for important Proxmox packages.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result versions() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/apt/versions", null);
+                        return getRest();
                     }
                 }
 
                 /**
                  * Directory index for apt (Advanced Package Tool).
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/apt", null);
+                }
+
+                /**
+                 * Directory index for apt (Advanced Package Tool).
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result index() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/apt", null);
+                    return getRest();
                 }
             }
 
@@ -10475,10 +16334,10 @@ public class Client {
                          * @param digest Prevent changes if current
                          * configuration file has different SHA1 digest. This
                          * can be used to prevent concurrent modifications.
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result deleteRule(String digest) throws JSONException {
+                        public Result deleteRest(String digest) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("digest", digest);
                             return _client.delete("/nodes/" + _node + "/firewall/rules/" + _pos + "", parameters);
@@ -10487,21 +16346,54 @@ public class Client {
                         /**
                          * Delete rule.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param digest Prevent changes if current
+                         * configuration file has different SHA1 digest. This
+                         * can be used to prevent concurrent modifications.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRule(String digest) throws JSONException {
+                            return deleteRest(digest);
+                        }
+
+                        /**
+                         * Delete rule.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest() throws JSONException {
+                            return _client.delete("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
+                        }
+
+                        /**
+                         * Delete rule.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result deleteRule() throws JSONException {
-                            return _client.delete("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
+                            return deleteRest();
                         }
 
                         /**
                          * Get single rule data.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
+                        }
+
+                        /**
+                         * Get single rule data.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result getRule() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
+                            return getRest();
                         }
 
                         /**
@@ -10552,10 +16444,10 @@ public class Client {
                          * you can use comma separated list to match several
                          * ports or ranges.
                          * @param type Rule type. Enum: in,out,group
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                        public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("action", action);
                             parameters.put("comment", comment);
@@ -10571,28 +16463,103 @@ public class Client {
                             parameters.put("source", source);
                             parameters.put("sport", sport);
                             parameters.put("type", type);
-                            return _client.put("/nodes/" + _node + "/firewall/rules/" + _pos + "", parameters);
+                            return _client.set("/nodes/" + _node + "/firewall/rules/" + _pos + "", parameters);
                         }
 
                         /**
                          * Modify rule data.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param action Rule action ('ACCEPT', 'DROP',
+                         * 'REJECT') or security group name.
+                         * @param comment Descriptive comment.
+                         * @param delete A list of settings you want to delete.
+                         * @param dest Restrict packet destination address. This
+                         * can refer to a single IP address, an IP set
+                         * ('+ipsetname') or an IP alias definition. You can
+                         * also specify an address range like
+                         * '20.34.101.207-201.3.9.99', or a list of IP addresses
+                         * and networks (entries are separated by comma). Please
+                         * do not mix IPv4 and IPv6 addresses inside such lists.
+                         * @param digest Prevent changes if current
+                         * configuration file has different SHA1 digest. This
+                         * can be used to prevent concurrent modifications.
+                         * @param dport Restrict TCP/UDP destination port. You
+                         * can use service names or simple numbers (0-65535), as
+                         * defined in '/etc/services'. Port ranges can be
+                         * specified with '\d+:\d+', for example '80:85', and
+                         * you can use comma separated list to match several
+                         * ports or ranges.
+                         * @param enable Flag to enable/disable a rule.
+                         * @param iface Network interface name. You have to use
+                         * network configuration key names for VMs and
+                         * containers ('net\d+'). Host related rules can use
+                         * arbitrary strings.
+                         * @param macro Use predefined standard macro.
+                         * @param moveto Move rule to new position
+                         * &amp;lt;moveto&amp;gt;. Other arguments are ignored.
+                         * @param proto IP protocol. You can use protocol names
+                         * ('tcp'/'udp') or simple numbers, as defined in
+                         * '/etc/protocols'.
+                         * @param source Restrict packet source address. This
+                         * can refer to a single IP address, an IP set
+                         * ('+ipsetname') or an IP alias definition. You can
+                         * also specify an address range like
+                         * '20.34.101.207-201.3.9.99', or a list of IP addresses
+                         * and networks (entries are separated by comma). Please
+                         * do not mix IPv4 and IPv6 addresses inside such lists.
+                         * @param sport Restrict TCP/UDP source port. You can
+                         * use service names or simple numbers (0-65535), as
+                         * defined in '/etc/services'. Port ranges can be
+                         * specified with '\d+:\d+', for example '80:85', and
+                         * you can use comma separated list to match several
+                         * ports or ranges.
+                         * @param type Rule type. Enum: in,out,group
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                            return setRest(action, comment, delete, dest, digest, dport, enable, iface, macro, moveto, proto, source, sport, type);
+                        }
+
+                        /**
+                         * Modify rule data.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result setRest() throws JSONException {
+                            return _client.set("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
+                        }
+
+                        /**
+                         * Modify rule data.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result updateRule() throws JSONException {
-                            return _client.put("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
+                            return setRest();
                         }
                     }
 
                     /**
                      * List rules.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/firewall/rules", null);
+                    }
+
+                    /**
+                     * List rules.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result getRules() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/firewall/rules", null);
+                        return getRest();
                     }
 
                     /**
@@ -10638,10 +16605,10 @@ public class Client {
                      * '/etc/services'. Port ranges can be specified with
                      * '\d+:\d+', for example '80:85', and you can use comma
                      * separated list to match several ports or ranges.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                    public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
                         parameters.put("type", type);
@@ -10656,7 +16623,7 @@ public class Client {
                         parameters.put("proto", proto);
                         parameters.put("source", source);
                         parameters.put("sport", sport);
-                        return _client.post("/nodes/" + _node + "/firewall/rules", parameters);
+                        return _client.create("/nodes/" + _node + "/firewall/rules", parameters);
                     }
 
                     /**
@@ -10665,14 +16632,77 @@ public class Client {
                      * @param action Rule action ('ACCEPT', 'DROP', 'REJECT') or
                      * security group name.
                      * @param type Rule type. Enum: in,out,group
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param comment Descriptive comment.
+                     * @param dest Restrict packet destination address. This can
+                     * refer to a single IP address, an IP set ('+ipsetname') or
+                     * an IP alias definition. You can also specify an address
+                     * range like '20.34.101.207-201.3.9.99', or a list of IP
+                     * addresses and networks (entries are separated by comma).
+                     * Please do not mix IPv4 and IPv6 addresses inside such
+                     * lists.
+                     * @param digest Prevent changes if current configuration
+                     * file has different SHA1 digest. This can be used to
+                     * prevent concurrent modifications.
+                     * @param dport Restrict TCP/UDP destination port. You can
+                     * use service names or simple numbers (0-65535), as defined
+                     * in '/etc/services'. Port ranges can be specified with
+                     * '\d+:\d+', for example '80:85', and you can use comma
+                     * separated list to match several ports or ranges.
+                     * @param enable Flag to enable/disable a rule.
+                     * @param iface Network interface name. You have to use
+                     * network configuration key names for VMs and containers
+                     * ('net\d+'). Host related rules can use arbitrary strings.
+                     * @param macro Use predefined standard macro.
+                     * @param pos Update rule at position &amp;lt;pos&amp;gt;.
+                     * @param proto IP protocol. You can use protocol names
+                     * ('tcp'/'udp') or simple numbers, as defined in
+                     * '/etc/protocols'.
+                     * @param source Restrict packet source address. This can
+                     * refer to a single IP address, an IP set ('+ipsetname') or
+                     * an IP alias definition. You can also specify an address
+                     * range like '20.34.101.207-201.3.9.99', or a list of IP
+                     * addresses and networks (entries are separated by comma).
+                     * Please do not mix IPv4 and IPv6 addresses inside such
+                     * lists.
+                     * @param sport Restrict TCP/UDP source port. You can use
+                     * service names or simple numbers (0-65535), as defined in
+                     * '/etc/services'. Port ranges can be specified with
+                     * '\d+:\d+', for example '80:85', and you can use comma
+                     * separated list to match several ports or ranges.
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result createRule(String action, String type) throws JSONException {
+                    public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                        return createRest(action, type, comment, dest, digest, dport, enable, iface, macro, pos, proto, source, sport);
+                    }
+
+                    /**
+                     * Create new rule.
+                     *
+                     * @param action Rule action ('ACCEPT', 'DROP', 'REJECT') or
+                     * security group name.
+                     * @param type Rule type. Enum: in,out,group
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRest(String action, String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
                         parameters.put("type", type);
-                        return _client.post("/nodes/" + _node + "/firewall/rules", parameters);
+                        return _client.create("/nodes/" + _node + "/firewall/rules", parameters);
+                    }
+
+                    /**
+                     * Create new rule.
+                     *
+                     * @param action Rule action ('ACCEPT', 'DROP', 'REJECT') or
+                     * security group name.
+                     * @param type Rule type. Enum: in,out,group
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createRule(String action, String type) throws JSONException {
+                        return createRest(action, type);
                     }
                 }
 
@@ -10688,11 +16718,21 @@ public class Client {
                     /**
                      * Get host firewall options.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/firewall/options", null);
+                    }
+
+                    /**
+                     * Get host firewall options.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result getOptions() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/firewall/options", null);
+                        return getRest();
                     }
 
                     /**
@@ -10720,10 +16760,10 @@ public class Client {
                      * flags filter. Enum:
                      * emerg,alert,crit,err,warning,notice,info,debug,nolog
                      * @param tcpflags Filter illegal combinations of TCP flags.
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result setOptions(String delete, String digest, Boolean enable, String log_level_in, String log_level_out, Boolean ndp, Integer nf_conntrack_max, Integer nf_conntrack_tcp_timeout_established, Boolean nosmurfs, String smurf_log_level, String tcp_flags_log_level, Boolean tcpflags) throws JSONException {
+                    public Result setRest(String delete, String digest, Boolean enable, String log_level_in, String log_level_out, Boolean ndp, Integer nf_conntrack_max, Integer nf_conntrack_tcp_timeout_established, Boolean nosmurfs, String smurf_log_level, String tcp_flags_log_level, Boolean tcpflags) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("delete", delete);
                         parameters.put("digest", digest);
@@ -10737,17 +16777,59 @@ public class Client {
                         parameters.put("smurf_log_level", smurf_log_level);
                         parameters.put("tcp_flags_log_level", tcp_flags_log_level);
                         parameters.put("tcpflags", tcpflags);
-                        return _client.put("/nodes/" + _node + "/firewall/options", parameters);
+                        return _client.set("/nodes/" + _node + "/firewall/options", parameters);
                     }
 
                     /**
                      * Set Firewall options.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param delete A list of settings you want to delete.
+                     * @param digest Prevent changes if current configuration
+                     * file has different SHA1 digest. This can be used to
+                     * prevent concurrent modifications.
+                     * @param enable Enable host firewall rules.
+                     * @param log_level_in Log level for incoming traffic. Enum:
+                     * emerg,alert,crit,err,warning,notice,info,debug,nolog
+                     * @param log_level_out Log level for outgoing traffic.
+                     * Enum:
+                     * emerg,alert,crit,err,warning,notice,info,debug,nolog
+                     * @param ndp Enable NDP.
+                     * @param nf_conntrack_max Maximum number of tracked
+                     * connections.
+                     * @param nf_conntrack_tcp_timeout_established Conntrack
+                     * established timeout.
+                     * @param nosmurfs Enable SMURFS filter.
+                     * @param smurf_log_level Log level for SMURFS filter. Enum:
+                     * emerg,alert,crit,err,warning,notice,info,debug,nolog
+                     * @param tcp_flags_log_level Log level for illegal tcp
+                     * flags filter. Enum:
+                     * emerg,alert,crit,err,warning,notice,info,debug,nolog
+                     * @param tcpflags Filter illegal combinations of TCP flags.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result setOptions(String delete, String digest, Boolean enable, String log_level_in, String log_level_out, Boolean ndp, Integer nf_conntrack_max, Integer nf_conntrack_tcp_timeout_established, Boolean nosmurfs, String smurf_log_level, String tcp_flags_log_level, Boolean tcpflags) throws JSONException {
+                        return setRest(delete, digest, enable, log_level_in, log_level_out, ndp, nf_conntrack_max, nf_conntrack_tcp_timeout_established, nosmurfs, smurf_log_level, tcp_flags_log_level, tcpflags);
+                    }
+
+                    /**
+                     * Set Firewall options.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result setRest() throws JSONException {
+                        return _client.set("/nodes/" + _node + "/firewall/options", null);
+                    }
+
+                    /**
+                     * Set Firewall options.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result setOptions() throws JSONException {
-                        return _client.put("/nodes/" + _node + "/firewall/options", null);
+                        return setRest();
                     }
                 }
 
@@ -10765,10 +16847,10 @@ public class Client {
                      *
                      * @param limit
                      * @param start
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
                      */
-                    public Result log(Integer limit, Integer start) throws JSONException {
+                    public Result getRest(Integer limit, Integer start) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("limit", limit);
                         parameters.put("start", start);
@@ -10778,22 +16860,54 @@ public class Client {
                     /**
                      * Read firewall log
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @param limit
+                     * @param start
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result log(Integer limit, Integer start) throws JSONException {
+                        return getRest(limit, start);
+                    }
+
+                    /**
+                     * Read firewall log
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/firewall/log", null);
+                    }
+
+                    /**
+                     * Read firewall log
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result log() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/firewall/log", null);
+                        return getRest();
                     }
                 }
 
                 /**
                  * Directory index.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/firewall", null);
+                }
+
+                /**
+                 * Directory index.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result index() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/firewall", null);
+                    return getRest();
                 }
             }
 
@@ -10859,11 +16973,21 @@ public class Client {
                         /**
                          * Get replication job status.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/replication/" + _id + "/status", null);
+                        }
+
+                        /**
+                         * Get replication job status.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result jobStatus() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/replication/" + _id + "/status", null);
+                            return getRest();
                         }
                     }
 
@@ -10883,10 +17007,10 @@ public class Client {
                          *
                          * @param limit
                          * @param start
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
                          */
-                        public Result readJobLog(Integer limit, Integer start) throws JSONException {
+                        public Result getRest(Integer limit, Integer start) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("limit", limit);
                             parameters.put("start", start);
@@ -10896,11 +17020,33 @@ public class Client {
                         /**
                          * Read replication job log.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @param limit
+                         * @param start
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result readJobLog(Integer limit, Integer start) throws JSONException {
+                            return getRest(limit, start);
+                        }
+
+                        /**
+                         * Read replication job log.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/replication/" + _id + "/log", null);
+                        }
+
+                        /**
+                         * Read replication job log.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result readJobLog() throws JSONException {
-                            return _client.get("/nodes/" + _node + "/replication/" + _id + "/log", null);
+                            return getRest();
                         }
                     }
 
@@ -10919,22 +17065,43 @@ public class Client {
                          * Schedule replication job to start as soon as
                          * possible.
                          *
-                         * @return
-                         * @throws org.json.JSONException
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/replication/" + _id + "/schedule_now", null);
+                        }
+
+                        /**
+                         * Schedule replication job to start as soon as
+                         * possible.
+                         *
+                         * @return Result
+                         * @throws JSONException
                          */
                         public Result scheduleNow() throws JSONException {
-                            return _client.post("/nodes/" + _node + "/replication/" + _id + "/schedule_now", null);
+                            return createRest();
                         }
                     }
 
                     /**
                      * Directory index.
                      *
-                     * @return
-                     * @throws org.json.JSONException
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/replication/" + _id + "", null);
+                    }
+
+                    /**
+                     * Directory index.
+                     *
+                     * @return Result
+                     * @throws JSONException
                      */
                     public Result index() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/replication/" + _id + "", null);
+                        return getRest();
                     }
                 }
 
@@ -10942,10 +17109,10 @@ public class Client {
                  * List status of all replication jobs on this node.
                  *
                  * @param guest Only list replication jobs for this guest.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result status(Integer guest) throws JSONException {
+                public Result getRest(Integer guest) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("guest", guest);
                     return _client.get("/nodes/" + _node + "/replication", parameters);
@@ -10954,11 +17121,32 @@ public class Client {
                 /**
                  * List status of all replication jobs on this node.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param guest Only list replication jobs for this guest.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result status(Integer guest) throws JSONException {
+                    return getRest(guest);
+                }
+
+                /**
+                 * List status of all replication jobs on this node.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/replication", null);
+                }
+
+                /**
+                 * List status of all replication jobs on this node.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result status() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/replication", null);
+                    return getRest();
                 }
             }
 
@@ -10974,11 +17162,21 @@ public class Client {
                 /**
                  * API version details
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/version", null);
+                }
+
+                /**
+                 * API version details
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result version() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/version", null);
+                    return getRest();
                 }
             }
 
@@ -10994,24 +17192,45 @@ public class Client {
                 /**
                  * Read node status
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/status", null);
+                }
+
+                /**
+                 * Read node status
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result status() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/status", null);
+                    return getRest();
                 }
 
                 /**
                  * Reboot or shutdown a node.
                  *
                  * @param command Specify the command. Enum: reboot,shutdown
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result nodeCmd(String command) throws JSONException {
+                public Result createRest(String command) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("command", command);
-                    return _client.post("/nodes/" + _node + "/status", parameters);
+                    return _client.create("/nodes/" + _node + "/status", parameters);
+                }
+
+                /**
+                 * Reboot or shutdown a node.
+                 *
+                 * @param command Specify the command. Enum: reboot,shutdown
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result nodeCmd(String command) throws JSONException {
+                    return createRest(command);
                 }
             }
 
@@ -11027,11 +17246,21 @@ public class Client {
                 /**
                  * Read tap/vm network device interface counters
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/netstat", null);
+                }
+
+                /**
+                 * Read tap/vm network device interface counters
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result netstat() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/netstat", null);
+                    return getRest();
                 }
             }
 
@@ -11048,13 +17277,24 @@ public class Client {
                  * Execute multiple commands in order.
                  *
                  * @param commands JSON encoded array of commands.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result execute(String commands) throws JSONException {
+                public Result createRest(String commands) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("commands", commands);
-                    return _client.post("/nodes/" + _node + "/execute", parameters);
+                    return _client.create("/nodes/" + _node + "/execute", parameters);
+                }
+
+                /**
+                 * Execute multiple commands in order.
+                 *
+                 * @param commands JSON encoded array of commands.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result execute(String commands) throws JSONException {
+                    return createRest(commands);
                 }
             }
 
@@ -11074,10 +17314,10 @@ public class Client {
                  * @param timeframe Specify the time frame you are interested
                  * in. Enum: hour,day,week,month,year
                  * @param cf The RRD consolidation function Enum: AVERAGE,MAX
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result rrd(String ds, String timeframe, String cf) throws JSONException {
+                public Result getRest(String ds, String timeframe, String cf) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ds", ds);
                     parameters.put("timeframe", timeframe);
@@ -11091,14 +17331,41 @@ public class Client {
                  * @param ds The list of datasources you want to display.
                  * @param timeframe Specify the time frame you are interested
                  * in. Enum: hour,day,week,month,year
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param cf The RRD consolidation function Enum: AVERAGE,MAX
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result rrd(String ds, String timeframe) throws JSONException {
+                public Result rrd(String ds, String timeframe, String cf) throws JSONException {
+                    return getRest(ds, timeframe, cf);
+                }
+
+                /**
+                 * Read node RRD statistics (returns PNG)
+                 *
+                 * @param ds The list of datasources you want to display.
+                 * @param timeframe Specify the time frame you are interested
+                 * in. Enum: hour,day,week,month,year
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest(String ds, String timeframe) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ds", ds);
                     parameters.put("timeframe", timeframe);
                     return _client.get("/nodes/" + _node + "/rrd", parameters);
+                }
+
+                /**
+                 * Read node RRD statistics (returns PNG)
+                 *
+                 * @param ds The list of datasources you want to display.
+                 * @param timeframe Specify the time frame you are interested
+                 * in. Enum: hour,day,week,month,year
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result rrd(String ds, String timeframe) throws JSONException {
+                    return getRest(ds, timeframe);
                 }
             }
 
@@ -11117,10 +17384,10 @@ public class Client {
                  * @param timeframe Specify the time frame you are interested
                  * in. Enum: hour,day,week,month,year
                  * @param cf The RRD consolidation function Enum: AVERAGE,MAX
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result rrddata(String timeframe, String cf) throws JSONException {
+                public Result getRest(String timeframe, String cf) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("timeframe", timeframe);
                     parameters.put("cf", cf);
@@ -11132,13 +17399,38 @@ public class Client {
                  *
                  * @param timeframe Specify the time frame you are interested
                  * in. Enum: hour,day,week,month,year
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param cf The RRD consolidation function Enum: AVERAGE,MAX
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result rrddata(String timeframe) throws JSONException {
+                public Result rrddata(String timeframe, String cf) throws JSONException {
+                    return getRest(timeframe, cf);
+                }
+
+                /**
+                 * Read node RRD statistics
+                 *
+                 * @param timeframe Specify the time frame you are interested
+                 * in. Enum: hour,day,week,month,year
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest(String timeframe) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("timeframe", timeframe);
                     return _client.get("/nodes/" + _node + "/rrddata", parameters);
+                }
+
+                /**
+                 * Read node RRD statistics
+                 *
+                 * @param timeframe Specify the time frame you are interested
+                 * in. Enum: hour,day,week,month,year
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result rrddata(String timeframe) throws JSONException {
+                    return getRest(timeframe);
                 }
             }
 
@@ -11158,10 +17450,10 @@ public class Client {
                  * @param since Display all log since this date-time string.
                  * @param start
                  * @param until Display all log until this date-time string.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result syslog(Integer limit, String since, Integer start, String until) throws JSONException {
+                public Result getRest(Integer limit, String since, Integer start, String until) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("limit", limit);
                     parameters.put("since", since);
@@ -11173,11 +17465,35 @@ public class Client {
                 /**
                  * Read system log
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param limit
+                 * @param since Display all log since this date-time string.
+                 * @param start
+                 * @param until Display all log until this date-time string.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result syslog(Integer limit, String since, Integer start, String until) throws JSONException {
+                    return getRest(limit, since, start, until);
+                }
+
+                /**
+                 * Read system log
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/syslog", null);
+                }
+
+                /**
+                 * Read system log
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result syslog() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/syslog", null);
+                    return getRest();
                 }
             }
 
@@ -11198,26 +17514,51 @@ public class Client {
                  * shell.
                  * @param websocket use websocket instead of standard vnc.
                  * @param width sets the width of the console in pixels.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result vncshell(Integer height, Boolean upgrade, Boolean websocket, Integer width) throws JSONException {
+                public Result createRest(Integer height, Boolean upgrade, Boolean websocket, Integer width) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("height", height);
                     parameters.put("upgrade", upgrade);
                     parameters.put("websocket", websocket);
                     parameters.put("width", width);
-                    return _client.post("/nodes/" + _node + "/vncshell", parameters);
+                    return _client.create("/nodes/" + _node + "/vncshell", parameters);
                 }
 
                 /**
                  * Creates a VNC Shell proxy.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param height sets the height of the console in pixels.
+                 * @param upgrade Run 'apt-get dist-upgrade' instead of normal
+                 * shell.
+                 * @param websocket use websocket instead of standard vnc.
+                 * @param width sets the width of the console in pixels.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result vncshell(Integer height, Boolean upgrade, Boolean websocket, Integer width) throws JSONException {
+                    return createRest(height, upgrade, websocket, width);
+                }
+
+                /**
+                 * Creates a VNC Shell proxy.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest() throws JSONException {
+                    return _client.create("/nodes/" + _node + "/vncshell", null);
+                }
+
+                /**
+                 * Creates a VNC Shell proxy.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result vncshell() throws JSONException {
-                    return _client.post("/nodes/" + _node + "/vncshell", null);
+                    return createRest();
                 }
             }
 
@@ -11235,14 +17576,26 @@ public class Client {
                  *
                  * @param port Port number returned by previous vncproxy call.
                  * @param vncticket Ticket from previous call to vncproxy.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result vncwebsocket(int port, String vncticket) throws JSONException {
+                public Result getRest(int port, String vncticket) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("port", port);
                     parameters.put("vncticket", vncticket);
                     return _client.get("/nodes/" + _node + "/vncwebsocket", parameters);
+                }
+
+                /**
+                 * Opens a weksocket for VNC traffic.
+                 *
+                 * @param port Port number returned by previous vncproxy call.
+                 * @param vncticket Ticket from previous call to vncproxy.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result vncwebsocket(int port, String vncticket) throws JSONException {
+                    return getRest(port, vncticket);
                 }
             }
 
@@ -11267,24 +17620,53 @@ public class Client {
                  * JS GUI).
                  * @param upgrade Run 'apt-get dist-upgrade' instead of normal
                  * shell.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result spiceshell(String proxy, Boolean upgrade) throws JSONException {
+                public Result createRest(String proxy, Boolean upgrade) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("proxy", proxy);
                     parameters.put("upgrade", upgrade);
-                    return _client.post("/nodes/" + _node + "/spiceshell", parameters);
+                    return _client.create("/nodes/" + _node + "/spiceshell", parameters);
                 }
 
                 /**
                  * Creates a SPICE shell.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param proxy SPICE proxy server. This can be used by the
+                 * client to specify the proxy server. All nodes in a cluster
+                 * runs 'spiceproxy', so it is up to the client to choose one.
+                 * By default, we return the node where the VM is currently
+                 * running. As resonable setting is to use same node you use to
+                 * connect to the API (This is window.location.hostname for the
+                 * JS GUI).
+                 * @param upgrade Run 'apt-get dist-upgrade' instead of normal
+                 * shell.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result spiceshell(String proxy, Boolean upgrade) throws JSONException {
+                    return createRest(proxy, upgrade);
+                }
+
+                /**
+                 * Creates a SPICE shell.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest() throws JSONException {
+                    return _client.create("/nodes/" + _node + "/spiceshell", null);
+                }
+
+                /**
+                 * Creates a SPICE shell.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result spiceshell() throws JSONException {
-                    return _client.post("/nodes/" + _node + "/spiceshell", null);
+                    return createRest();
                 }
             }
 
@@ -11300,11 +17682,21 @@ public class Client {
                 /**
                  * Read DNS settings.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/dns", null);
+                }
+
+                /**
+                 * Read DNS settings.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result dns() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/dns", null);
+                    return getRest();
                 }
 
                 /**
@@ -11314,29 +17706,54 @@ public class Client {
                  * @param dns1 First name server IP address.
                  * @param dns2 Second name server IP address.
                  * @param dns3 Third name server IP address.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result updateDns(String search, String dns1, String dns2, String dns3) throws JSONException {
+                public Result setRest(String search, String dns1, String dns2, String dns3) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("search", search);
                     parameters.put("dns1", dns1);
                     parameters.put("dns2", dns2);
                     parameters.put("dns3", dns3);
-                    return _client.put("/nodes/" + _node + "/dns", parameters);
+                    return _client.set("/nodes/" + _node + "/dns", parameters);
                 }
 
                 /**
                  * Write DNS settings.
                  *
                  * @param search Search domain for host-name lookup.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param dns1 First name server IP address.
+                 * @param dns2 Second name server IP address.
+                 * @param dns3 Third name server IP address.
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result updateDns(String search) throws JSONException {
+                public Result updateDns(String search, String dns1, String dns2, String dns3) throws JSONException {
+                    return setRest(search, dns1, dns2, dns3);
+                }
+
+                /**
+                 * Write DNS settings.
+                 *
+                 * @param search Search domain for host-name lookup.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result setRest(String search) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("search", search);
-                    return _client.put("/nodes/" + _node + "/dns", parameters);
+                    return _client.set("/nodes/" + _node + "/dns", parameters);
+                }
+
+                /**
+                 * Write DNS settings.
+                 *
+                 * @param search Search domain for host-name lookup.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result updateDns(String search) throws JSONException {
+                    return setRest(search);
                 }
             }
 
@@ -11352,11 +17769,21 @@ public class Client {
                 /**
                  * Read server time and time zone settings.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/time", null);
+                }
+
+                /**
+                 * Read server time and time zone settings.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result time() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/time", null);
+                    return getRest();
                 }
 
                 /**
@@ -11365,13 +17792,26 @@ public class Client {
                  * @param timezone Time zone. The file
                  * '/usr/share/zoneinfo/zone.tab' contains the list of valid
                  * names.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result setTimezone(String timezone) throws JSONException {
+                public Result setRest(String timezone) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("timezone", timezone);
-                    return _client.put("/nodes/" + _node + "/time", parameters);
+                    return _client.set("/nodes/" + _node + "/time", parameters);
+                }
+
+                /**
+                 * Set time zone.
+                 *
+                 * @param timezone Time zone. The file
+                 * '/usr/share/zoneinfo/zone.tab' contains the list of valid
+                 * names.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result setTimezone(String timezone) throws JSONException {
+                    return setRest(timezone);
                 }
             }
 
@@ -11387,11 +17827,21 @@ public class Client {
                 /**
                  * Get list of appliances.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/aplinfo", null);
+                }
+
+                /**
+                 * Get list of appliances.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result aplinfo() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/aplinfo", null);
+                    return getRest();
                 }
 
                 /**
@@ -11399,14 +17849,26 @@ public class Client {
                  *
                  * @param storage The storage where the template will be stored
                  * @param template The template wich will downloaded
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result aplDownload(String storage, String template) throws JSONException {
+                public Result createRest(String storage, String template) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("storage", storage);
                     parameters.put("template", template);
-                    return _client.post("/nodes/" + _node + "/aplinfo", parameters);
+                    return _client.create("/nodes/" + _node + "/aplinfo", parameters);
+                }
+
+                /**
+                 * Download appliance templates.
+                 *
+                 * @param storage The storage where the template will be stored
+                 * @param template The template wich will downloaded
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result aplDownload(String storage, String template) throws JSONException {
+                    return createRest(storage, template);
                 }
             }
 
@@ -11422,11 +17884,21 @@ public class Client {
                 /**
                  * Gather various systems information about a node
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/report", null);
+                }
+
+                /**
+                 * Gather various systems information about a node
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result report() throws JSONException {
-                    return _client.get("/nodes/" + _node + "/report", null);
+                    return getRest();
                 }
             }
 
@@ -11444,24 +17916,46 @@ public class Client {
                  *
                  * @param force force if onboot=0.
                  * @param vms Only consider Guests with these IDs.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result startall(Boolean force, String vms) throws JSONException {
+                public Result createRest(Boolean force, String vms) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("force", force);
                     parameters.put("vms", vms);
-                    return _client.post("/nodes/" + _node + "/startall", parameters);
+                    return _client.create("/nodes/" + _node + "/startall", parameters);
                 }
 
                 /**
                  * Start all VMs and containers (when onboot=1).
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param force force if onboot=0.
+                 * @param vms Only consider Guests with these IDs.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result startall(Boolean force, String vms) throws JSONException {
+                    return createRest(force, vms);
+                }
+
+                /**
+                 * Start all VMs and containers (when onboot=1).
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest() throws JSONException {
+                    return _client.create("/nodes/" + _node + "/startall", null);
+                }
+
+                /**
+                 * Start all VMs and containers (when onboot=1).
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result startall() throws JSONException {
-                    return _client.post("/nodes/" + _node + "/startall", null);
+                    return createRest();
                 }
             }
 
@@ -11478,23 +17972,44 @@ public class Client {
                  * Stop all VMs and Containers.
                  *
                  * @param vms Only consider Guests with these IDs.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result stopall(String vms) throws JSONException {
+                public Result createRest(String vms) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vms", vms);
-                    return _client.post("/nodes/" + _node + "/stopall", parameters);
+                    return _client.create("/nodes/" + _node + "/stopall", parameters);
                 }
 
                 /**
                  * Stop all VMs and Containers.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param vms Only consider Guests with these IDs.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result stopall(String vms) throws JSONException {
+                    return createRest(vms);
+                }
+
+                /**
+                 * Stop all VMs and Containers.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest() throws JSONException {
+                    return _client.create("/nodes/" + _node + "/stopall", null);
+                }
+
+                /**
+                 * Stop all VMs and Containers.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result stopall() throws JSONException {
-                    return _client.post("/nodes/" + _node + "/stopall", null);
+                    return createRest();
                 }
             }
 
@@ -11515,50 +18030,96 @@ public class Client {
                  * If not set use 'max_workers' from datacenter.cfg, one of both
                  * must be set!
                  * @param vms Only consider Guests with these IDs.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result migrateall(String target, Integer maxworkers, String vms) throws JSONException {
+                public Result createRest(String target, Integer maxworkers, String vms) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("target", target);
                     parameters.put("maxworkers", maxworkers);
                     parameters.put("vms", vms);
-                    return _client.post("/nodes/" + _node + "/migrateall", parameters);
+                    return _client.create("/nodes/" + _node + "/migrateall", parameters);
                 }
 
                 /**
                  * Migrate all VMs and Containers.
                  *
                  * @param target Target node.
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param maxworkers Maximal number of parallel migration job.
+                 * If not set use 'max_workers' from datacenter.cfg, one of both
+                 * must be set!
+                 * @param vms Only consider Guests with these IDs.
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result migrateall(String target) throws JSONException {
+                public Result migrateall(String target, Integer maxworkers, String vms) throws JSONException {
+                    return createRest(target, maxworkers, vms);
+                }
+
+                /**
+                 * Migrate all VMs and Containers.
+                 *
+                 * @param target Target node.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest(String target) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("target", target);
-                    return _client.post("/nodes/" + _node + "/migrateall", parameters);
+                    return _client.create("/nodes/" + _node + "/migrateall", parameters);
+                }
+
+                /**
+                 * Migrate all VMs and Containers.
+                 *
+                 * @param target Target node.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result migrateall(String target) throws JSONException {
+                    return createRest(target);
                 }
             }
 
             /**
              * Node index.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/nodes/" + _node + "", null);
+            }
+
+            /**
+             * Node index.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result index() throws JSONException {
-                return _client.get("/nodes/" + _node + "", null);
+                return getRest();
             }
         }
 
         /**
          * Cluster node index.
          *
-         * @return
-         * @throws org.json.JSONException
+         * @return Result
+         * @throws JSONException
+         */
+        public Result getRest() throws JSONException {
+            return _client.get("/nodes", null);
+        }
+
+        /**
+         * Cluster node index.
+         *
+         * @return Result
+         * @throws JSONException
          */
         public Result index() throws JSONException {
-            return _client.get("/nodes", null);
+            return getRest();
         }
     }
 
@@ -11584,21 +18145,41 @@ public class Client {
             /**
              * Delete storage configuration.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result deleteRest() throws JSONException {
+                return _client.delete("/storage/" + _storage + "", null);
+            }
+
+            /**
+             * Delete storage configuration.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result delete() throws JSONException {
-                return _client.delete("/storage/" + _storage + "", null);
+                return deleteRest();
             }
 
             /**
              * Read storage configuration.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/storage/" + _storage + "", null);
+            }
+
+            /**
+             * Read storage configuration.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result read() throws JSONException {
-                return _client.get("/storage/" + _storage + "", null);
+                return getRest();
             }
 
             /**
@@ -11615,13 +18196,15 @@ public class Client {
              * modifications.
              * @param disable Flag to disable the storage.
              * @param format Default image format.
-             * @param is_mountpoint Assume the directory is an externally
-             * managed mountpoint. If nothing is mounted the storage will be
-             * considered offline.
+             * @param is_mountpoint Assume the given path is an externally
+             * managed mountpoint and consider the storage offline if it is not
+             * mounted. Using a boolean (yes/no) value serves as a shortcut to
+             * using the target path in this field.
              * @param krbd Access rbd through krbd kernel module.
              * @param maxfiles Maximal number of backup files per VM. Use '0'
              * for unlimted.
              * @param mkdir Create the directory if it doesn't exist.
+             * @param monhost IP addresses of monitors (for external clusters).
              * @param nodes List of cluster node names.
              * @param nowritecache disable write caching on the target
              * @param options NFS mount options (see 'man nfs')
@@ -11641,10 +18224,10 @@ public class Client {
              * @param transport Gluster transport: tcp or rdma Enum:
              * tcp,rdma,unix
              * @param username RBD Id.
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result update(String blocksize, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String format, Boolean is_mountpoint, Boolean krbd, Integer maxfiles, Boolean mkdir, String nodes, Boolean nowritecache, String options, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, Boolean sparse, Boolean tagged_only, String transport, String username) throws JSONException {
+            public Result setRest(String blocksize, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String format, String is_mountpoint, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, Boolean sparse, Boolean tagged_only, String transport, String username) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("blocksize", blocksize);
                 parameters.put("comstar_hg", comstar_hg);
@@ -11658,6 +18241,7 @@ public class Client {
                 parameters.put("krbd", krbd);
                 parameters.put("maxfiles", maxfiles);
                 parameters.put("mkdir", mkdir);
+                parameters.put("monhost", monhost);
                 parameters.put("nodes", nodes);
                 parameters.put("nowritecache", nowritecache);
                 parameters.put("options", options);
@@ -11672,17 +18256,76 @@ public class Client {
                 parameters.put("tagged_only", tagged_only);
                 parameters.put("transport", transport);
                 parameters.put("username", username);
-                return _client.put("/storage/" + _storage + "", parameters);
+                return _client.set("/storage/" + _storage + "", parameters);
             }
 
             /**
              * Update storage configuration.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @param blocksize block size
+             * @param comstar_hg host group for comstar views
+             * @param comstar_tg target group for comstar views
+             * @param content Allowed content types. NOTE: the value 'rootdir'
+             * is used for Containers, and value 'images' for VMs.
+             * @param delete A list of settings you want to delete.
+             * @param digest Prevent changes if current configuration file has
+             * different SHA1 digest. This can be used to prevent concurrent
+             * modifications.
+             * @param disable Flag to disable the storage.
+             * @param format Default image format.
+             * @param is_mountpoint Assume the given path is an externally
+             * managed mountpoint and consider the storage offline if it is not
+             * mounted. Using a boolean (yes/no) value serves as a shortcut to
+             * using the target path in this field.
+             * @param krbd Access rbd through krbd kernel module.
+             * @param maxfiles Maximal number of backup files per VM. Use '0'
+             * for unlimted.
+             * @param mkdir Create the directory if it doesn't exist.
+             * @param monhost IP addresses of monitors (for external clusters).
+             * @param nodes List of cluster node names.
+             * @param nowritecache disable write caching on the target
+             * @param options NFS mount options (see 'man nfs')
+             * @param pool Pool.
+             * @param redundancy The redundancy count specifies the number of
+             * nodes to which the resource should be deployed. It must be at
+             * least 1 and at most the number of nodes in the cluster.
+             * @param saferemove Zero-out data when removing LVs.
+             * @param saferemove_throughput Wipe throughput (cstream -t
+             * parameter value).
+             * @param server Server IP or DNS name.
+             * @param server2 Backup volfile server IP or DNS name.
+             * @param shared Mark storage as shared.
+             * @param sparse use sparse volumes
+             * @param tagged_only Only use logical volumes tagged with
+             * 'pve-vm-ID'.
+             * @param transport Gluster transport: tcp or rdma Enum:
+             * tcp,rdma,unix
+             * @param username RBD Id.
+             * @return Result
+             * @throws JSONException
+             */
+            public Result update(String blocksize, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String format, String is_mountpoint, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, Boolean sparse, Boolean tagged_only, String transport, String username) throws JSONException {
+                return setRest(blocksize, comstar_hg, comstar_tg, content, delete, digest, disable, format, is_mountpoint, krbd, maxfiles, mkdir, monhost, nodes, nowritecache, options, pool, redundancy, saferemove, saferemove_throughput, server, server2, shared, sparse, tagged_only, transport, username);
+            }
+
+            /**
+             * Update storage configuration.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result setRest() throws JSONException {
+                return _client.set("/storage/" + _storage + "", null);
+            }
+
+            /**
+             * Update storage configuration.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result update() throws JSONException {
-                return _client.put("/storage/" + _storage + "", null);
+                return setRest();
             }
         }
 
@@ -11691,10 +18334,10 @@ public class Client {
          *
          * @param type Only list storage of specific type Enum:
          * dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
-         * @return
-         * @throws org.json.JSONException
+         * @return Result
+         * @throws JSONException
          */
-        public Result index(String type) throws JSONException {
+        public Result getRest(String type) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("type", type);
             return _client.get("/storage", parameters);
@@ -11703,11 +18346,33 @@ public class Client {
         /**
          * Storage index.
          *
-         * @return
-         * @throws org.json.JSONException
+         * @param type Only list storage of specific type Enum:
+         * dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * @return Result
+         * @throws JSONException
+         */
+        public Result index(String type) throws JSONException {
+            return getRest(type);
+        }
+
+        /**
+         * Storage index.
+         *
+         * @return Result
+         * @throws JSONException
+         */
+        public Result getRest() throws JSONException {
+            return _client.get("/storage", null);
+        }
+
+        /**
+         * Storage index.
+         *
+         * @return Result
+         * @throws JSONException
          */
         public Result index() throws JSONException {
-            return _client.get("/storage", null);
+            return getRest();
         }
 
         /**
@@ -11726,15 +18391,16 @@ public class Client {
          * @param disable Flag to disable the storage.
          * @param export NFS export path.
          * @param format Default image format.
-         * @param is_mountpoint Assume the directory is an externally managed
-         * mountpoint. If nothing is mounted the storage will be considered
-         * offline.
+         * @param is_mountpoint Assume the given path is an externally managed
+         * mountpoint and consider the storage offline if it is not mounted.
+         * Using a boolean (yes/no) value serves as a shortcut to using the
+         * target path in this field.
          * @param iscsiprovider iscsi provider
          * @param krbd Access rbd through krbd kernel module.
          * @param maxfiles Maximal number of backup files per VM. Use '0' for
          * unlimted.
          * @param mkdir Create the directory if it doesn't exist.
-         * @param monhost Monitors daemon ips.
+         * @param monhost IP addresses of monitors (for external clusters).
          * @param nodes List of cluster node names.
          * @param nowritecache disable write caching on the target
          * @param options NFS mount options (see 'man nfs')
@@ -11758,10 +18424,10 @@ public class Client {
          * @param username RBD Id.
          * @param vgname Volume group name.
          * @param volume Glusterfs Volume.
-         * @return
-         * @throws org.json.JSONException
+         * @return Result
+         * @throws JSONException
          */
-        public Result create(String storage, String type, String authsupported, String base_, String blocksize, String comstar_hg, String comstar_tg, String content, Boolean disable, String export, String format, Boolean is_mountpoint, String iscsiprovider, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, Boolean sparse, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
+        public Result createRest(String storage, String type, String authsupported, String base_, String blocksize, String comstar_hg, String comstar_tg, String content, Boolean disable, String export, String format, String is_mountpoint, String iscsiprovider, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, Boolean sparse, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("storage", storage);
             parameters.put("type", type);
@@ -11800,7 +18466,7 @@ public class Client {
             parameters.put("username", username);
             parameters.put("vgname", vgname);
             parameters.put("volume", volume);
-            return _client.post("/storage", parameters);
+            return _client.create("/storage", parameters);
         }
 
         /**
@@ -11809,14 +18475,83 @@ public class Client {
          * @param storage The storage identifier.
          * @param type Storage type. Enum:
          * dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
-         * @return
-         * @throws org.json.JSONException
+         * @param authsupported Authsupported.
+         * @param base_ Base volume. This volume is automatically activated.
+         * @param blocksize block size
+         * @param comstar_hg host group for comstar views
+         * @param comstar_tg target group for comstar views
+         * @param content Allowed content types. NOTE: the value 'rootdir' is
+         * used for Containers, and value 'images' for VMs.
+         * @param disable Flag to disable the storage.
+         * @param export NFS export path.
+         * @param format Default image format.
+         * @param is_mountpoint Assume the given path is an externally managed
+         * mountpoint and consider the storage offline if it is not mounted.
+         * Using a boolean (yes/no) value serves as a shortcut to using the
+         * target path in this field.
+         * @param iscsiprovider iscsi provider
+         * @param krbd Access rbd through krbd kernel module.
+         * @param maxfiles Maximal number of backup files per VM. Use '0' for
+         * unlimted.
+         * @param mkdir Create the directory if it doesn't exist.
+         * @param monhost IP addresses of monitors (for external clusters).
+         * @param nodes List of cluster node names.
+         * @param nowritecache disable write caching on the target
+         * @param options NFS mount options (see 'man nfs')
+         * @param path File system path.
+         * @param pool Pool.
+         * @param portal iSCSI portal (IP or DNS name with optional port).
+         * @param redundancy The redundancy count specifies the number of nodes
+         * to which the resource should be deployed. It must be at least 1 and
+         * at most the number of nodes in the cluster.
+         * @param saferemove Zero-out data when removing LVs.
+         * @param saferemove_throughput Wipe throughput (cstream -t parameter
+         * value).
+         * @param server Server IP or DNS name.
+         * @param server2 Backup volfile server IP or DNS name.
+         * @param shared Mark storage as shared.
+         * @param sparse use sparse volumes
+         * @param tagged_only Only use logical volumes tagged with 'pve-vm-ID'.
+         * @param target iSCSI target.
+         * @param thinpool LVM thin pool LV name.
+         * @param transport Gluster transport: tcp or rdma Enum: tcp,rdma,unix
+         * @param username RBD Id.
+         * @param vgname Volume group name.
+         * @param volume Glusterfs Volume.
+         * @return Result
+         * @throws JSONException
          */
-        public Result create(String storage, String type) throws JSONException {
+        public Result create(String storage, String type, String authsupported, String base_, String blocksize, String comstar_hg, String comstar_tg, String content, Boolean disable, String export, String format, String is_mountpoint, String iscsiprovider, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, Boolean sparse, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
+            return createRest(storage, type, authsupported, base_, blocksize, comstar_hg, comstar_tg, content, disable, export, format, is_mountpoint, iscsiprovider, krbd, maxfiles, mkdir, monhost, nodes, nowritecache, options, path, pool, portal, redundancy, saferemove, saferemove_throughput, server, server2, shared, sparse, tagged_only, target, thinpool, transport, username, vgname, volume);
+        }
+
+        /**
+         * Create a new storage.
+         *
+         * @param storage The storage identifier.
+         * @param type Storage type. Enum:
+         * dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * @return Result
+         * @throws JSONException
+         */
+        public Result createRest(String storage, String type) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("storage", storage);
             parameters.put("type", type);
-            return _client.post("/storage", parameters);
+            return _client.create("/storage", parameters);
+        }
+
+        /**
+         * Create a new storage.
+         *
+         * @param storage The storage identifier.
+         * @param type Storage type. Enum:
+         * dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * @return Result
+         * @throws JSONException
+         */
+        public Result create(String storage, String type) throws JSONException {
+            return createRest(storage, type);
         }
     }
 
@@ -11904,21 +18639,41 @@ public class Client {
                 /**
                  * Delete user.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result deleteRest() throws JSONException {
+                    return _client.delete("/access/users/" + _userid + "", null);
+                }
+
+                /**
+                 * Delete user.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result deleteUser() throws JSONException {
-                    return _client.delete("/access/users/" + _userid + "", null);
+                    return deleteRest();
                 }
 
                 /**
                  * Get user configuration.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/access/users/" + _userid + "", null);
+                }
+
+                /**
+                 * Get user configuration.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result readUser() throws JSONException {
-                    return _client.get("/access/users/" + _userid + "", null);
+                    return getRest();
                 }
 
                 /**
@@ -11934,10 +18689,10 @@ public class Client {
                  * @param groups
                  * @param keys Keys for two factor auth (yubico).
                  * @param lastname
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result updateUser(Boolean append, String comment, String email, Boolean enable, Integer expire, String firstname, String groups, String keys, String lastname) throws JSONException {
+                public Result setRest(Boolean append, String comment, String email, Boolean enable, Integer expire, String firstname, String groups, String keys, String lastname) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("append", append);
                     parameters.put("comment", comment);
@@ -11948,17 +18703,47 @@ public class Client {
                     parameters.put("groups", groups);
                     parameters.put("keys", keys);
                     parameters.put("lastname", lastname);
-                    return _client.put("/access/users/" + _userid + "", parameters);
+                    return _client.set("/access/users/" + _userid + "", parameters);
                 }
 
                 /**
                  * Update user configuration.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param append
+                 * @param comment
+                 * @param email
+                 * @param enable Enable/disable the account.
+                 * @param expire Account expiration date (seconds since epoch).
+                 * '0' means no expiration date.
+                 * @param firstname
+                 * @param groups
+                 * @param keys Keys for two factor auth (yubico).
+                 * @param lastname
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result updateUser(Boolean append, String comment, String email, Boolean enable, Integer expire, String firstname, String groups, String keys, String lastname) throws JSONException {
+                    return setRest(append, comment, email, enable, expire, firstname, groups, keys, lastname);
+                }
+
+                /**
+                 * Update user configuration.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result setRest() throws JSONException {
+                    return _client.set("/access/users/" + _userid + "", null);
+                }
+
+                /**
+                 * Update user configuration.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result updateUser() throws JSONException {
-                    return _client.put("/access/users/" + _userid + "", null);
+                    return setRest();
                 }
             }
 
@@ -11966,10 +18751,10 @@ public class Client {
              * User index.
              *
              * @param enabled Optional filter for enable property.
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result index(Boolean enabled) throws JSONException {
+            public Result getRest(Boolean enabled) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("enabled", enabled);
                 return _client.get("/access/users", parameters);
@@ -11978,11 +18763,32 @@ public class Client {
             /**
              * User index.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @param enabled Optional filter for enable property.
+             * @return Result
+             * @throws JSONException
+             */
+            public Result index(Boolean enabled) throws JSONException {
+                return getRest(enabled);
+            }
+
+            /**
+             * User index.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/access/users", null);
+            }
+
+            /**
+             * User index.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result index() throws JSONException {
-                return _client.get("/access/users", null);
+                return getRest();
             }
 
             /**
@@ -12000,10 +18806,10 @@ public class Client {
              * @param keys Keys for two factor auth (yubico).
              * @param lastname
              * @param password Initial password.
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result createUser(String userid, String comment, String email, Boolean enable, Integer expire, String firstname, String groups, String keys, String lastname, String password) throws JSONException {
+            public Result createRest(String userid, String comment, String email, Boolean enable, Integer expire, String firstname, String groups, String keys, String lastname, String password) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("userid", userid);
                 parameters.put("comment", comment);
@@ -12015,20 +18821,53 @@ public class Client {
                 parameters.put("keys", keys);
                 parameters.put("lastname", lastname);
                 parameters.put("password", password);
-                return _client.post("/access/users", parameters);
+                return _client.create("/access/users", parameters);
             }
 
             /**
              * Create new user.
              *
              * @param userid User ID
-             * @return
-             * @throws org.json.JSONException
+             * @param comment
+             * @param email
+             * @param enable Enable the account (default). You can set this to
+             * '0' to disable the accout
+             * @param expire Account expiration date (seconds since epoch). '0'
+             * means no expiration date.
+             * @param firstname
+             * @param groups
+             * @param keys Keys for two factor auth (yubico).
+             * @param lastname
+             * @param password Initial password.
+             * @return Result
+             * @throws JSONException
              */
-            public Result createUser(String userid) throws JSONException {
+            public Result createUser(String userid, String comment, String email, Boolean enable, Integer expire, String firstname, String groups, String keys, String lastname, String password) throws JSONException {
+                return createRest(userid, comment, email, enable, expire, firstname, groups, keys, lastname, password);
+            }
+
+            /**
+             * Create new user.
+             *
+             * @param userid User ID
+             * @return Result
+             * @throws JSONException
+             */
+            public Result createRest(String userid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("userid", userid);
-                return _client.post("/access/users", parameters);
+                return _client.create("/access/users", parameters);
+            }
+
+            /**
+             * Create new user.
+             *
+             * @param userid User ID
+             * @return Result
+             * @throws JSONException
+             */
+            public Result createUser(String userid) throws JSONException {
+                return createRest(userid);
             }
         }
 
@@ -12054,55 +18893,106 @@ public class Client {
                 /**
                  * Delete group.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result deleteRest() throws JSONException {
+                    return _client.delete("/access/groups/" + _groupid + "", null);
+                }
+
+                /**
+                 * Delete group.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result deleteGroup() throws JSONException {
-                    return _client.delete("/access/groups/" + _groupid + "", null);
+                    return deleteRest();
                 }
 
                 /**
                  * Get group configuration.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/access/groups/" + _groupid + "", null);
+                }
+
+                /**
+                 * Get group configuration.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result readGroup() throws JSONException {
-                    return _client.get("/access/groups/" + _groupid + "", null);
+                    return getRest();
                 }
 
                 /**
                  * Update group data.
                  *
                  * @param comment
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result updateGroup(String comment) throws JSONException {
+                public Result setRest(String comment) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("comment", comment);
-                    return _client.put("/access/groups/" + _groupid + "", parameters);
+                    return _client.set("/access/groups/" + _groupid + "", parameters);
                 }
 
                 /**
                  * Update group data.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param comment
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result updateGroup(String comment) throws JSONException {
+                    return setRest(comment);
+                }
+
+                /**
+                 * Update group data.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result setRest() throws JSONException {
+                    return _client.set("/access/groups/" + _groupid + "", null);
+                }
+
+                /**
+                 * Update group data.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result updateGroup() throws JSONException {
-                    return _client.put("/access/groups/" + _groupid + "", null);
+                    return setRest();
                 }
             }
 
             /**
              * Group index.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/access/groups", null);
+            }
+
+            /**
+             * Group index.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result index() throws JSONException {
-                return _client.get("/access/groups", null);
+                return getRest();
             }
 
             /**
@@ -12110,27 +19000,50 @@ public class Client {
              *
              * @param groupid
              * @param comment
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result createGroup(String groupid, String comment) throws JSONException {
+            public Result createRest(String groupid, String comment) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("groupid", groupid);
                 parameters.put("comment", comment);
-                return _client.post("/access/groups", parameters);
+                return _client.create("/access/groups", parameters);
             }
 
             /**
              * Create new group.
              *
              * @param groupid
-             * @return
-             * @throws org.json.JSONException
+             * @param comment
+             * @return Result
+             * @throws JSONException
              */
-            public Result createGroup(String groupid) throws JSONException {
+            public Result createGroup(String groupid, String comment) throws JSONException {
+                return createRest(groupid, comment);
+            }
+
+            /**
+             * Create new group.
+             *
+             * @param groupid
+             * @return Result
+             * @throws JSONException
+             */
+            public Result createRest(String groupid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("groupid", groupid);
-                return _client.post("/access/groups", parameters);
+                return _client.create("/access/groups", parameters);
+            }
+
+            /**
+             * Create new group.
+             *
+             * @param groupid
+             * @return Result
+             * @throws JSONException
+             */
+            public Result createGroup(String groupid) throws JSONException {
+                return createRest(groupid);
             }
         }
 
@@ -12156,21 +19069,41 @@ public class Client {
                 /**
                  * Delete role.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result deleteRest() throws JSONException {
+                    return _client.delete("/access/roles/" + _roleid + "", null);
+                }
+
+                /**
+                 * Delete role.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result deleteRole() throws JSONException {
-                    return _client.delete("/access/roles/" + _roleid + "", null);
+                    return deleteRest();
                 }
 
                 /**
                  * Get role configuration.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/access/roles/" + _roleid + "", null);
+                }
+
+                /**
+                 * Get role configuration.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result readRole() throws JSONException {
-                    return _client.get("/access/roles/" + _roleid + "", null);
+                    return getRest();
                 }
 
                 /**
@@ -12178,38 +19111,71 @@ public class Client {
                  *
                  * @param privs
                  * @param append
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result updateRole(String privs, Boolean append) throws JSONException {
+                public Result setRest(String privs, Boolean append) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("privs", privs);
                     parameters.put("append", append);
-                    return _client.put("/access/roles/" + _roleid + "", parameters);
+                    return _client.set("/access/roles/" + _roleid + "", parameters);
                 }
 
                 /**
                  * Create new role.
                  *
                  * @param privs
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param append
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result updateRole(String privs) throws JSONException {
+                public Result updateRole(String privs, Boolean append) throws JSONException {
+                    return setRest(privs, append);
+                }
+
+                /**
+                 * Create new role.
+                 *
+                 * @param privs
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result setRest(String privs) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("privs", privs);
-                    return _client.put("/access/roles/" + _roleid + "", parameters);
+                    return _client.set("/access/roles/" + _roleid + "", parameters);
+                }
+
+                /**
+                 * Create new role.
+                 *
+                 * @param privs
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result updateRole(String privs) throws JSONException {
+                    return setRest(privs);
                 }
             }
 
             /**
              * Role index.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/access/roles", null);
+            }
+
+            /**
+             * Role index.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result index() throws JSONException {
-                return _client.get("/access/roles", null);
+                return getRest();
             }
 
             /**
@@ -12217,27 +19183,50 @@ public class Client {
              *
              * @param roleid
              * @param privs
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result createRole(String roleid, String privs) throws JSONException {
+            public Result createRest(String roleid, String privs) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("roleid", roleid);
                 parameters.put("privs", privs);
-                return _client.post("/access/roles", parameters);
+                return _client.create("/access/roles", parameters);
             }
 
             /**
              * Create new role.
              *
              * @param roleid
-             * @return
-             * @throws org.json.JSONException
+             * @param privs
+             * @return Result
+             * @throws JSONException
              */
-            public Result createRole(String roleid) throws JSONException {
+            public Result createRole(String roleid, String privs) throws JSONException {
+                return createRest(roleid, privs);
+            }
+
+            /**
+             * Create new role.
+             *
+             * @param roleid
+             * @return Result
+             * @throws JSONException
+             */
+            public Result createRest(String roleid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("roleid", roleid);
-                return _client.post("/access/roles", parameters);
+                return _client.create("/access/roles", parameters);
+            }
+
+            /**
+             * Create new role.
+             *
+             * @param roleid
+             * @return Result
+             * @throws JSONException
+             */
+            public Result createRole(String roleid) throws JSONException {
+                return createRest(roleid);
             }
         }
 
@@ -12250,11 +19239,21 @@ public class Client {
             /**
              * Get Access Control List (ACLs).
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/access/acl", null);
+            }
+
+            /**
+             * Get Access Control List (ACLs).
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result readAcl() throws JSONException {
-                return _client.get("/access/acl", null);
+                return getRest();
             }
 
             /**
@@ -12266,10 +19265,10 @@ public class Client {
              * @param groups List of groups.
              * @param propagate Allow to propagate (inherit) permissions.
              * @param users List of users.
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result updateAcl(String path, String roles, Boolean delete, String groups, Boolean propagate, String users) throws JSONException {
+            public Result setRest(String path, String roles, Boolean delete, String groups, Boolean propagate, String users) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("path", path);
                 parameters.put("roles", roles);
@@ -12277,7 +19276,7 @@ public class Client {
                 parameters.put("groups", groups);
                 parameters.put("propagate", propagate);
                 parameters.put("users", users);
-                return _client.put("/access/acl", parameters);
+                return _client.set("/access/acl", parameters);
             }
 
             /**
@@ -12285,14 +19284,42 @@ public class Client {
              *
              * @param path Access control path
              * @param roles List of roles.
-             * @return
-             * @throws org.json.JSONException
+             * @param delete Remove permissions (instead of adding it).
+             * @param groups List of groups.
+             * @param propagate Allow to propagate (inherit) permissions.
+             * @param users List of users.
+             * @return Result
+             * @throws JSONException
              */
-            public Result updateAcl(String path, String roles) throws JSONException {
+            public Result updateAcl(String path, String roles, Boolean delete, String groups, Boolean propagate, String users) throws JSONException {
+                return setRest(path, roles, delete, groups, propagate, users);
+            }
+
+            /**
+             * Update Access Control List (add or remove permissions).
+             *
+             * @param path Access control path
+             * @param roles List of roles.
+             * @return Result
+             * @throws JSONException
+             */
+            public Result setRest(String path, String roles) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("path", path);
                 parameters.put("roles", roles);
-                return _client.put("/access/acl", parameters);
+                return _client.set("/access/acl", parameters);
+            }
+
+            /**
+             * Update Access Control List (add or remove permissions).
+             *
+             * @param path Access control path
+             * @param roles List of roles.
+             * @return Result
+             * @throws JSONException
+             */
+            public Result updateAcl(String path, String roles) throws JSONException {
+                return setRest(path, roles);
             }
         }
 
@@ -12318,21 +19345,41 @@ public class Client {
                 /**
                  * Delete an authentication server.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result deleteRest() throws JSONException {
+                    return _client.delete("/access/domains/" + _realm + "", null);
+                }
+
+                /**
+                 * Delete an authentication server.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result delete() throws JSONException {
-                    return _client.delete("/access/domains/" + _realm + "", null);
+                    return deleteRest();
                 }
 
                 /**
                  * Get auth server configuration.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/access/domains/" + _realm + "", null);
+                }
+
+                /**
+                 * Get auth server configuration.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result read() throws JSONException {
-                    return _client.get("/access/domains/" + _realm + "", null);
+                    return getRest();
                 }
 
                 /**
@@ -12340,6 +19387,9 @@ public class Client {
                  *
                  * @param base_dn LDAP base domain name
                  * @param bind_dn LDAP bind domain name
+                 * @param capath Path to the CA certificate store
+                 * @param cert Path to the client certificate
+                 * @param certkey Path to the client certificate key
                  * @param comment Description.
                  * @param default_ Use this as default realm
                  * @param delete A list of settings you want to delete.
@@ -12353,13 +19403,17 @@ public class Client {
                  * @param server2 Fallback Server IP address (or DNS name)
                  * @param tfa Use Two-factor authentication.
                  * @param user_attr LDAP user attribute name
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param verify Verify the server's SSL certificate
+                 * @return Result
+                 * @throws JSONException
                  */
-                public Result update(String base_dn, String bind_dn, String comment, Boolean default_, String delete, String digest, String domain, Integer port, Boolean secure, String server1, String server2, String tfa, String user_attr) throws JSONException {
+                public Result setRest(String base_dn, String bind_dn, String capath, String cert, String certkey, String comment, Boolean default_, String delete, String digest, String domain, Integer port, Boolean secure, String server1, String server2, String tfa, String user_attr, Boolean verify) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("base_dn", base_dn);
                     parameters.put("bind_dn", bind_dn);
+                    parameters.put("capath", capath);
+                    parameters.put("cert", cert);
+                    parameters.put("certkey", certkey);
                     parameters.put("comment", comment);
                     parameters.put("default", default_);
                     parameters.put("delete", delete);
@@ -12371,28 +19425,78 @@ public class Client {
                     parameters.put("server2", server2);
                     parameters.put("tfa", tfa);
                     parameters.put("user_attr", user_attr);
-                    return _client.put("/access/domains/" + _realm + "", parameters);
+                    parameters.put("verify", verify);
+                    return _client.set("/access/domains/" + _realm + "", parameters);
                 }
 
                 /**
                  * Update authentication server settings.
                  *
-                 * @return
-                 * @throws org.json.JSONException
+                 * @param base_dn LDAP base domain name
+                 * @param bind_dn LDAP bind domain name
+                 * @param capath Path to the CA certificate store
+                 * @param cert Path to the client certificate
+                 * @param certkey Path to the client certificate key
+                 * @param comment Description.
+                 * @param default_ Use this as default realm
+                 * @param delete A list of settings you want to delete.
+                 * @param digest Prevent changes if current configuration file
+                 * has different SHA1 digest. This can be used to prevent
+                 * concurrent modifications.
+                 * @param domain AD domain name
+                 * @param port Server port.
+                 * @param secure Use secure LDAPS protocol.
+                 * @param server1 Server IP address (or DNS name)
+                 * @param server2 Fallback Server IP address (or DNS name)
+                 * @param tfa Use Two-factor authentication.
+                 * @param user_attr LDAP user attribute name
+                 * @param verify Verify the server's SSL certificate
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result update(String base_dn, String bind_dn, String capath, String cert, String certkey, String comment, Boolean default_, String delete, String digest, String domain, Integer port, Boolean secure, String server1, String server2, String tfa, String user_attr, Boolean verify) throws JSONException {
+                    return setRest(base_dn, bind_dn, capath, cert, certkey, comment, default_, delete, digest, domain, port, secure, server1, server2, tfa, user_attr, verify);
+                }
+
+                /**
+                 * Update authentication server settings.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result setRest() throws JSONException {
+                    return _client.set("/access/domains/" + _realm + "", null);
+                }
+
+                /**
+                 * Update authentication server settings.
+                 *
+                 * @return Result
+                 * @throws JSONException
                  */
                 public Result update() throws JSONException {
-                    return _client.put("/access/domains/" + _realm + "", null);
+                    return setRest();
                 }
             }
 
             /**
              * Authentication domain index.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/access/domains", null);
+            }
+
+            /**
+             * Authentication domain index.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result index() throws JSONException {
-                return _client.get("/access/domains", null);
+                return getRest();
             }
 
             /**
@@ -12402,6 +19506,9 @@ public class Client {
              * @param type Realm type. Enum: ad,ldap,pam,pve
              * @param base_dn LDAP base domain name
              * @param bind_dn LDAP bind domain name
+             * @param capath Path to the CA certificate store
+             * @param cert Path to the client certificate
+             * @param certkey Path to the client certificate key
              * @param comment Description.
              * @param default_ Use this as default realm
              * @param domain AD domain name
@@ -12411,15 +19518,19 @@ public class Client {
              * @param server2 Fallback Server IP address (or DNS name)
              * @param tfa Use Two-factor authentication.
              * @param user_attr LDAP user attribute name
-             * @return
-             * @throws org.json.JSONException
+             * @param verify Verify the server's SSL certificate
+             * @return Result
+             * @throws JSONException
              */
-            public Result create(String realm, String type, String base_dn, String bind_dn, String comment, Boolean default_, String domain, Integer port, Boolean secure, String server1, String server2, String tfa, String user_attr) throws JSONException {
+            public Result createRest(String realm, String type, String base_dn, String bind_dn, String capath, String cert, String certkey, String comment, Boolean default_, String domain, Integer port, Boolean secure, String server1, String server2, String tfa, String user_attr, Boolean verify) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("realm", realm);
                 parameters.put("type", type);
                 parameters.put("base_dn", base_dn);
                 parameters.put("bind_dn", bind_dn);
+                parameters.put("capath", capath);
+                parameters.put("cert", cert);
+                parameters.put("certkey", certkey);
                 parameters.put("comment", comment);
                 parameters.put("default", default_);
                 parameters.put("domain", domain);
@@ -12429,7 +19540,8 @@ public class Client {
                 parameters.put("server2", server2);
                 parameters.put("tfa", tfa);
                 parameters.put("user_attr", user_attr);
-                return _client.post("/access/domains", parameters);
+                parameters.put("verify", verify);
+                return _client.create("/access/domains", parameters);
             }
 
             /**
@@ -12437,14 +19549,53 @@ public class Client {
              *
              * @param realm Authentication domain ID
              * @param type Realm type. Enum: ad,ldap,pam,pve
-             * @return
-             * @throws org.json.JSONException
+             * @param base_dn LDAP base domain name
+             * @param bind_dn LDAP bind domain name
+             * @param capath Path to the CA certificate store
+             * @param cert Path to the client certificate
+             * @param certkey Path to the client certificate key
+             * @param comment Description.
+             * @param default_ Use this as default realm
+             * @param domain AD domain name
+             * @param port Server port.
+             * @param secure Use secure LDAPS protocol.
+             * @param server1 Server IP address (or DNS name)
+             * @param server2 Fallback Server IP address (or DNS name)
+             * @param tfa Use Two-factor authentication.
+             * @param user_attr LDAP user attribute name
+             * @param verify Verify the server's SSL certificate
+             * @return Result
+             * @throws JSONException
              */
-            public Result create(String realm, String type) throws JSONException {
+            public Result create(String realm, String type, String base_dn, String bind_dn, String capath, String cert, String certkey, String comment, Boolean default_, String domain, Integer port, Boolean secure, String server1, String server2, String tfa, String user_attr, Boolean verify) throws JSONException {
+                return createRest(realm, type, base_dn, bind_dn, capath, cert, certkey, comment, default_, domain, port, secure, server1, server2, tfa, user_attr, verify);
+            }
+
+            /**
+             * Add an authentication server.
+             *
+             * @param realm Authentication domain ID
+             * @param type Realm type. Enum: ad,ldap,pam,pve
+             * @return Result
+             * @throws JSONException
+             */
+            public Result createRest(String realm, String type) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("realm", realm);
                 parameters.put("type", type);
-                return _client.post("/access/domains", parameters);
+                return _client.create("/access/domains", parameters);
+            }
+
+            /**
+             * Add an authentication server.
+             *
+             * @param realm Authentication domain ID
+             * @param type Realm type. Enum: ad,ldap,pam,pve
+             * @return Result
+             * @throws JSONException
+             */
+            public Result create(String realm, String type) throws JSONException {
+                return createRest(realm, type);
             }
         }
 
@@ -12455,13 +19606,23 @@ public class Client {
             }
 
             /**
-             * Dummy. Useful for formaters which want to priovde a login page.
+             * Dummy. Useful for formatters which want to provide a login page.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/access/ticket", null);
+            }
+
+            /**
+             * Dummy. Useful for formatters which want to provide a login page.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result getTicket() throws JSONException {
-                return _client.get("/access/ticket", null);
+                return getRest();
             }
 
             /**
@@ -12478,10 +19639,10 @@ public class Client {
              * @param realm You can optionally pass the realm using this
              * parameter. Normally the realm is simply added to the username
              * &amp;lt;username&amp;gt;@&amp;lt;relam&amp;gt;.
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result createTicket(String password, String username, String otp, String path, String privs, String realm) throws JSONException {
+            public Result createRest(String password, String username, String otp, String path, String privs, String realm) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("password", password);
                 parameters.put("username", username);
@@ -12489,7 +19650,7 @@ public class Client {
                 parameters.put("path", path);
                 parameters.put("privs", privs);
                 parameters.put("realm", realm);
-                return _client.post("/access/ticket", parameters);
+                return _client.create("/access/ticket", parameters);
             }
 
             /**
@@ -12498,14 +19659,48 @@ public class Client {
              * @param password The secret password. This can also be a valid
              * ticket.
              * @param username User name
-             * @return
-             * @throws org.json.JSONException
+             * @param otp One-time password for Two-factor authentication.
+             * @param path Verify ticket, and check if user have access 'privs'
+             * on 'path'
+             * @param privs Verify ticket, and check if user have access 'privs'
+             * on 'path'
+             * @param realm You can optionally pass the realm using this
+             * parameter. Normally the realm is simply added to the username
+             * &amp;lt;username&amp;gt;@&amp;lt;relam&amp;gt;.
+             * @return Result
+             * @throws JSONException
              */
-            public Result createTicket(String password, String username) throws JSONException {
+            public Result createTicket(String password, String username, String otp, String path, String privs, String realm) throws JSONException {
+                return createRest(password, username, otp, path, privs, realm);
+            }
+
+            /**
+             * Create or verify authentication ticket.
+             *
+             * @param password The secret password. This can also be a valid
+             * ticket.
+             * @param username User name
+             * @return Result
+             * @throws JSONException
+             */
+            public Result createRest(String password, String username) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("password", password);
                 parameters.put("username", username);
-                return _client.post("/access/ticket", parameters);
+                return _client.create("/access/ticket", parameters);
+            }
+
+            /**
+             * Create or verify authentication ticket.
+             *
+             * @param password The secret password. This can also be a valid
+             * ticket.
+             * @param username User name
+             * @return Result
+             * @throws JSONException
+             */
+            public Result createTicket(String password, String username) throws JSONException {
+                return createRest(password, username);
             }
         }
 
@@ -12520,25 +19715,47 @@ public class Client {
              *
              * @param password The new password.
              * @param userid User ID
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result changePasssword(String password, String userid) throws JSONException {
+            public Result setRest(String password, String userid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("password", password);
                 parameters.put("userid", userid);
-                return _client.put("/access/password", parameters);
+                return _client.set("/access/password", parameters);
+            }
+
+            /**
+             * Change user password.
+             *
+             * @param password The new password.
+             * @param userid User ID
+             * @return Result
+             * @throws JSONException
+             */
+            public Result changePasssword(String password, String userid) throws JSONException {
+                return setRest(password, userid);
             }
         }
 
         /**
          * Directory index.
          *
-         * @return
-         * @throws org.json.JSONException
+         * @return Result
+         * @throws JSONException
+         */
+        public Result getRest() throws JSONException {
+            return _client.get("/access", null);
+        }
+
+        /**
+         * Directory index.
+         *
+         * @return Result
+         * @throws JSONException
          */
         public Result index() throws JSONException {
-            return _client.get("/access", null);
+            return getRest();
         }
     }
 
@@ -12564,21 +19781,41 @@ public class Client {
             /**
              * Delete pool.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result deleteRest() throws JSONException {
+                return _client.delete("/pools/" + _poolid + "", null);
+            }
+
+            /**
+             * Delete pool.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result deletePool() throws JSONException {
-                return _client.delete("/pools/" + _poolid + "", null);
+                return deleteRest();
             }
 
             /**
              * Get pool configuration.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/pools/" + _poolid + "", null);
+            }
+
+            /**
+             * Get pool configuration.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result readPool() throws JSONException {
-                return _client.get("/pools/" + _poolid + "", null);
+                return getRest();
             }
 
             /**
@@ -12588,37 +19825,71 @@ public class Client {
              * @param delete Remove vms/storage (instead of adding it).
              * @param storage List of storage IDs.
              * @param vms List of virtual machines.
-             * @return
-             * @throws org.json.JSONException
+             * @return Result
+             * @throws JSONException
              */
-            public Result updatePool(String comment, Boolean delete, String storage, String vms) throws JSONException {
+            public Result setRest(String comment, Boolean delete, String storage, String vms) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("comment", comment);
                 parameters.put("delete", delete);
                 parameters.put("storage", storage);
                 parameters.put("vms", vms);
-                return _client.put("/pools/" + _poolid + "", parameters);
+                return _client.set("/pools/" + _poolid + "", parameters);
             }
 
             /**
              * Update pool data.
              *
-             * @return
-             * @throws org.json.JSONException
+             * @param comment
+             * @param delete Remove vms/storage (instead of adding it).
+             * @param storage List of storage IDs.
+             * @param vms List of virtual machines.
+             * @return Result
+             * @throws JSONException
+             */
+            public Result updatePool(String comment, Boolean delete, String storage, String vms) throws JSONException {
+                return setRest(comment, delete, storage, vms);
+            }
+
+            /**
+             * Update pool data.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result setRest() throws JSONException {
+                return _client.set("/pools/" + _poolid + "", null);
+            }
+
+            /**
+             * Update pool data.
+             *
+             * @return Result
+             * @throws JSONException
              */
             public Result updatePool() throws JSONException {
-                return _client.put("/pools/" + _poolid + "", null);
+                return setRest();
             }
         }
 
         /**
          * Pool index.
          *
-         * @return
-         * @throws org.json.JSONException
+         * @return Result
+         * @throws JSONException
+         */
+        public Result getRest() throws JSONException {
+            return _client.get("/pools", null);
+        }
+
+        /**
+         * Pool index.
+         *
+         * @return Result
+         * @throws JSONException
          */
         public Result index() throws JSONException {
-            return _client.get("/pools", null);
+            return getRest();
         }
 
         /**
@@ -12626,27 +19897,50 @@ public class Client {
          *
          * @param poolid
          * @param comment
-         * @return
-         * @throws org.json.JSONException
+         * @return Result
+         * @throws JSONException
          */
-        public Result createPool(String poolid, String comment) throws JSONException {
+        public Result createRest(String poolid, String comment) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("poolid", poolid);
             parameters.put("comment", comment);
-            return _client.post("/pools", parameters);
+            return _client.create("/pools", parameters);
         }
 
         /**
          * Create new pool.
          *
          * @param poolid
-         * @return
-         * @throws org.json.JSONException
+         * @param comment
+         * @return Result
+         * @throws JSONException
          */
-        public Result createPool(String poolid) throws JSONException {
+        public Result createPool(String poolid, String comment) throws JSONException {
+            return createRest(poolid, comment);
+        }
+
+        /**
+         * Create new pool.
+         *
+         * @param poolid
+         * @return Result
+         * @throws JSONException
+         */
+        public Result createRest(String poolid) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("poolid", poolid);
-            return _client.post("/pools", parameters);
+            return _client.create("/pools", parameters);
+        }
+
+        /**
+         * Create new pool.
+         *
+         * @param poolid
+         * @return Result
+         * @throws JSONException
+         */
+        public Result createPool(String poolid) throws JSONException {
+            return createRest(poolid);
         }
     }
 
@@ -12660,11 +19954,22 @@ public class Client {
          * API version details. The result also includes the global datacenter
          * confguration.
          *
-         * @return
-         * @throws org.json.JSONException
+         * @return Result
+         * @throws JSONException
+         */
+        public Result getRest() throws JSONException {
+            return _client.get("/version", null);
+        }
+
+        /**
+         * API version details. The result also includes the global datacenter
+         * confguration.
+         *
+         * @return Result
+         * @throws JSONException
          */
         public Result version() throws JSONException {
-            return _client.get("/version", null);
+            return getRest();
         }
     }
 }
