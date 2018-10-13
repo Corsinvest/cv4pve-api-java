@@ -2817,16 +2817,18 @@ public class Client {
                  * @param digest Prevent changes if current configuration file
                  * has different SHA1 digest. This can be used to prevent
                  * concurrent modifications.
+                 * @param ebtables Enable ebtables rules cluster wide.
                  * @param enable Enable or disable the firewall cluster wide.
                  * @param policy_in Input policy. Enum: ACCEPT,REJECT,DROP
                  * @param policy_out Output policy. Enum: ACCEPT,REJECT,DROP
                  * @return Result
                  * @throws JSONException
                  */
-                public Result setRest(String delete, String digest, Integer enable, String policy_in, String policy_out) throws JSONException {
+                public Result setRest(String delete, String digest, Boolean ebtables, Integer enable, String policy_in, String policy_out) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("delete", delete);
                     parameters.put("digest", digest);
+                    parameters.put("ebtables", ebtables);
                     parameters.put("enable", enable);
                     parameters.put("policy_in", policy_in);
                     parameters.put("policy_out", policy_out);
@@ -2840,14 +2842,15 @@ public class Client {
                  * @param digest Prevent changes if current configuration file
                  * has different SHA1 digest. This can be used to prevent
                  * concurrent modifications.
+                 * @param ebtables Enable ebtables rules cluster wide.
                  * @param enable Enable or disable the firewall cluster wide.
                  * @param policy_in Input policy. Enum: ACCEPT,REJECT,DROP
                  * @param policy_out Output policy. Enum: ACCEPT,REJECT,DROP
                  * @return Result
                  * @throws JSONException
                  */
-                public Result setOptions(String delete, String digest, Integer enable, String policy_in, String policy_out) throws JSONException {
-                    return setRest(delete, digest, enable, policy_in, policy_out);
+                public Result setOptions(String delete, String digest, Boolean ebtables, Integer enable, String policy_in, String policy_out) throws JSONException {
+                    return setRest(delete, digest, ebtables, enable, policy_in, policy_out);
                 }
 
                 /**
@@ -7786,7 +7789,7 @@ public class Client {
                          * address is specified, it defaults to using dhcp on
                          * IPv4.
                          * @param keyboard Keybord layout for vnc server.
-                         * Default is read from the '/etc/pve/datacenter.conf'
+                         * Default is read from the '/etc/pve/datacenter.cfg'
                          * configuration file.It should not be necessary to set
                          * it. Enum:
                          * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
@@ -7842,7 +7845,7 @@ public class Client {
                          * auto-ballooning. The larger the number is, the more
                          * memory this VM gets. Number is relative to weights of
                          * all other running VMs. Using zero disables
-                         * auto-ballooning
+                         * auto-ballooning. Auto-ballooning is done by pvestatd.
                          * @param skiplock Ignore locks - only root is allowed
                          * to use this option.
                          * @param smbios1 Specify SMBIOS type 1 fields.
@@ -8023,7 +8026,7 @@ public class Client {
                          * address is specified, it defaults to using dhcp on
                          * IPv4.
                          * @param keyboard Keybord layout for vnc server.
-                         * Default is read from the '/etc/pve/datacenter.conf'
+                         * Default is read from the '/etc/pve/datacenter.cfg'
                          * configuration file.It should not be necessary to set
                          * it. Enum:
                          * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
@@ -8079,7 +8082,7 @@ public class Client {
                          * auto-ballooning. The larger the number is, the more
                          * memory this VM gets. Number is relative to weights of
                          * all other running VMs. Using zero disables
-                         * auto-ballooning
+                         * auto-ballooning. Auto-ballooning is done by pvestatd.
                          * @param skiplock Ignore locks - only root is allowed
                          * to use this option.
                          * @param smbios1 Specify SMBIOS type 1 fields.
@@ -8209,7 +8212,7 @@ public class Client {
                          * address is specified, it defaults to using dhcp on
                          * IPv4.
                          * @param keyboard Keybord layout for vnc server.
-                         * Default is read from the '/etc/pve/datacenter.conf'
+                         * Default is read from the '/etc/pve/datacenter.cfg'
                          * configuration file.It should not be necessary to set
                          * it. Enum:
                          * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
@@ -8265,7 +8268,7 @@ public class Client {
                          * auto-ballooning. The larger the number is, the more
                          * memory this VM gets. Number is relative to weights of
                          * all other running VMs. Using zero disables
-                         * auto-ballooning
+                         * auto-ballooning. Auto-ballooning is done by pvestatd.
                          * @param skiplock Ignore locks - only root is allowed
                          * to use this option.
                          * @param smbios1 Specify SMBIOS type 1 fields.
@@ -8444,7 +8447,7 @@ public class Client {
                          * address is specified, it defaults to using dhcp on
                          * IPv4.
                          * @param keyboard Keybord layout for vnc server.
-                         * Default is read from the '/etc/pve/datacenter.conf'
+                         * Default is read from the '/etc/pve/datacenter.cfg'
                          * configuration file.It should not be necessary to set
                          * it. Enum:
                          * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
@@ -8500,7 +8503,7 @@ public class Client {
                          * auto-ballooning. The larger the number is, the more
                          * memory this VM gets. Number is relative to weights of
                          * all other running VMs. Using zero disables
-                         * auto-ballooning
+                         * auto-ballooning. Auto-ballooning is done by pvestatd.
                          * @param skiplock Ignore locks - only root is allowed
                          * to use this option.
                          * @param smbios1 Specify SMBIOS type 1 fields.
@@ -10518,8 +10521,8 @@ public class Client {
                  * cloud-init is enabled and neither an IPv4 nor an IPv6 address
                  * is specified, it defaults to using dhcp on IPv4.
                  * @param keyboard Keybord layout for vnc server. Default is
-                 * read from the '/etc/pve/datacenter.conf' configuration
-                 * file.It should not be necessary to set it. Enum:
+                 * read from the '/etc/pve/datacenter.cfg' configuration file.It
+                 * should not be necessary to set it. Enum:
                  * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
                  * @param kvm Enable/disable KVM hardware virtualization.
                  * @param localtime Set the real time clock to local time. This
@@ -10565,13 +10568,15 @@ public class Client {
                  * @param shares Amount of memory shares for auto-ballooning.
                  * The larger the number is, the more memory this VM gets.
                  * Number is relative to weights of all other running VMs. Using
-                 * zero disables auto-ballooning
+                 * zero disables auto-ballooning. Auto-ballooning is done by
+                 * pvestatd.
                  * @param smbios1 Specify SMBIOS type 1 fields.
                  * @param smp The number of CPUs. Please use option -sockets
                  * instead.
                  * @param sockets The number of CPU sockets.
                  * @param sshkeys cloud-init: Setup public SSH keys (one key per
                  * line, OpenSSH format).
+                 * @param start Start VM after it was created successfully.
                  * @param startdate Set the initial date of the real time clock.
                  * Valid format for date are: 'now' or '2006-06-17T16:01:21' or
                  * '2006-06-17'.
@@ -10598,7 +10603,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createRest(int vmid, Boolean acpi, Boolean agent, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String sshkeys, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmstatestorage, String watchdog) throws JSONException {
+                public Result createRest(int vmid, Boolean acpi, Boolean agent, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmstatestorage, String watchdog) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vmid", vmid);
                     parameters.put("acpi", acpi);
@@ -10647,6 +10652,7 @@ public class Client {
                     parameters.put("smp", smp);
                     parameters.put("sockets", sockets);
                     parameters.put("sshkeys", sshkeys);
+                    parameters.put("start", start);
                     parameters.put("startdate", startdate);
                     parameters.put("startup", startup);
                     parameters.put("storage", storage);
@@ -10731,8 +10737,8 @@ public class Client {
                  * cloud-init is enabled and neither an IPv4 nor an IPv6 address
                  * is specified, it defaults to using dhcp on IPv4.
                  * @param keyboard Keybord layout for vnc server. Default is
-                 * read from the '/etc/pve/datacenter.conf' configuration
-                 * file.It should not be necessary to set it. Enum:
+                 * read from the '/etc/pve/datacenter.cfg' configuration file.It
+                 * should not be necessary to set it. Enum:
                  * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
                  * @param kvm Enable/disable KVM hardware virtualization.
                  * @param localtime Set the real time clock to local time. This
@@ -10778,13 +10784,15 @@ public class Client {
                  * @param shares Amount of memory shares for auto-ballooning.
                  * The larger the number is, the more memory this VM gets.
                  * Number is relative to weights of all other running VMs. Using
-                 * zero disables auto-ballooning
+                 * zero disables auto-ballooning. Auto-ballooning is done by
+                 * pvestatd.
                  * @param smbios1 Specify SMBIOS type 1 fields.
                  * @param smp The number of CPUs. Please use option -sockets
                  * instead.
                  * @param sockets The number of CPU sockets.
                  * @param sshkeys cloud-init: Setup public SSH keys (one key per
                  * line, OpenSSH format).
+                 * @param start Start VM after it was created successfully.
                  * @param startdate Set the initial date of the real time clock.
                  * Valid format for date are: 'now' or '2006-06-17T16:01:21' or
                  * '2006-06-17'.
@@ -10811,8 +10819,8 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createVm(int vmid, Boolean acpi, Boolean agent, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String sshkeys, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmstatestorage, String watchdog) throws JSONException {
-                    return createRest(vmid, acpi, agent, archive, args, autostart, balloon, bios, boot, bootdisk, bwlimit, cdrom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, description, force, freeze, hostpciN, hotplug, hugepages, ideN, ipconfigN, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, pool, protection, reboot, sataN, scsiN, scsihw, searchdomain, serialN, shares, smbios1, smp, sockets, sshkeys, startdate, startup, storage, tablet, tdf, template, unique, unusedN, usbN, vcpus, vga, virtioN, vmstatestorage, watchdog);
+                public Result createVm(int vmid, Boolean acpi, Boolean agent, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmstatestorage, String watchdog) throws JSONException {
+                    return createRest(vmid, acpi, agent, archive, args, autostart, balloon, bios, boot, bootdisk, bwlimit, cdrom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, description, force, freeze, hostpciN, hotplug, hugepages, ideN, ipconfigN, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, pool, protection, reboot, sataN, scsiN, scsihw, searchdomain, serialN, shares, smbios1, smp, sockets, sshkeys, start, startdate, startup, storage, tablet, tdf, template, unique, unusedN, usbN, vcpus, vga, virtioN, vmstatestorage, watchdog);
                 }
 
                 /**
@@ -14204,6 +14212,8 @@ public class Client {
                  * you neither set searchdomain nor nameserver.
                  * @param ssh_public_keys Setup public SSH keys (one key per
                  * line, OpenSSH format).
+                 * @param start Start the CT after its creation finished
+                 * successfully.
                  * @param startup Startup and shutdown behavior. Order is a
                  * non-negative number defining the general startup order.
                  * Shutdown in done with reverse ordering. Additionally you can
@@ -14221,7 +14231,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createRest(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, Boolean force, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                public Result createRest(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, Boolean force, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ostemplate", ostemplate);
                     parameters.put("vmid", vmid);
@@ -14248,6 +14258,7 @@ public class Client {
                     parameters.put("rootfs", rootfs);
                     parameters.put("searchdomain", searchdomain);
                     parameters.put("ssh-public-keys", ssh_public_keys);
+                    parameters.put("start", start);
                     parameters.put("startup", startup);
                     parameters.put("storage", storage);
                     parameters.put("swap", swap);
@@ -14319,6 +14330,8 @@ public class Client {
                  * you neither set searchdomain nor nameserver.
                  * @param ssh_public_keys Setup public SSH keys (one key per
                  * line, OpenSSH format).
+                 * @param start Start the CT after its creation finished
+                 * successfully.
                  * @param startup Startup and shutdown behavior. Order is a
                  * non-negative number defining the general startup order.
                  * Shutdown in done with reverse ordering. Additionally you can
@@ -14336,8 +14349,8 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createVm(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, Boolean force, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
-                    return createRest(ostemplate, vmid, arch, bwlimit, cmode, console, cores, cpulimit, cpuunits, description, force, hostname, ignore_unpack_errors, lock_, memory, mpN, nameserver, netN, onboot, ostype, password, pool, protection, restore, rootfs, searchdomain, ssh_public_keys, startup, storage, swap, template, tty, unprivileged, unusedN);
+                public Result createVm(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, Boolean force, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                    return createRest(ostemplate, vmid, arch, bwlimit, cmode, console, cores, cpulimit, cpuunits, description, force, hostname, ignore_unpack_errors, lock_, memory, mpN, nameserver, netN, onboot, ostype, password, pool, protection, restore, rootfs, searchdomain, ssh_public_keys, start, startup, storage, swap, template, tty, unprivileged, unusedN);
                 }
 
                 /**
@@ -20738,6 +20751,7 @@ public class Client {
              * @param disable Flag to disable the storage.
              * @param domain CIFS domain.
              * @param format Default image format.
+             * @param fuse Mount CephFS through FUSE.
              * @param is_mountpoint Assume the given path is an externally
              * managed mountpoint and consider the storage offline if it is not
              * mounted. Using a boolean (yes/no) value serves as a shortcut to
@@ -20761,8 +20775,9 @@ public class Client {
              * @param server Server IP or DNS name.
              * @param server2 Backup volfile server IP or DNS name.
              * @param shared Mark storage as shared.
-             * @param smbversion
+             * @param smbversion SMB protocol version Enum: 2.0,2.1,3.0
              * @param sparse use sparse volumes
+             * @param subdir Subdir to mount.
              * @param tagged_only Only use logical volumes tagged with
              * 'pve-vm-ID'.
              * @param transport Gluster transport: tcp or rdma Enum:
@@ -20771,7 +20786,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
-            public Result setRest(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String format, String is_mountpoint, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String password, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, Boolean tagged_only, String transport, String username) throws JSONException {
+            public Result setRest(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String format, Boolean fuse, String is_mountpoint, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String password, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("blocksize", blocksize);
                 parameters.put("bwlimit", bwlimit);
@@ -20783,6 +20798,7 @@ public class Client {
                 parameters.put("disable", disable);
                 parameters.put("domain", domain);
                 parameters.put("format", format);
+                parameters.put("fuse", fuse);
                 parameters.put("is_mountpoint", is_mountpoint);
                 parameters.put("krbd", krbd);
                 parameters.put("maxfiles", maxfiles);
@@ -20801,6 +20817,7 @@ public class Client {
                 parameters.put("shared", shared);
                 parameters.put("smbversion", smbversion);
                 parameters.put("sparse", sparse);
+                parameters.put("subdir", subdir);
                 parameters.put("tagged_only", tagged_only);
                 parameters.put("transport", transport);
                 parameters.put("username", username);
@@ -20823,6 +20840,7 @@ public class Client {
              * @param disable Flag to disable the storage.
              * @param domain CIFS domain.
              * @param format Default image format.
+             * @param fuse Mount CephFS through FUSE.
              * @param is_mountpoint Assume the given path is an externally
              * managed mountpoint and consider the storage offline if it is not
              * mounted. Using a boolean (yes/no) value serves as a shortcut to
@@ -20846,8 +20864,9 @@ public class Client {
              * @param server Server IP or DNS name.
              * @param server2 Backup volfile server IP or DNS name.
              * @param shared Mark storage as shared.
-             * @param smbversion
+             * @param smbversion SMB protocol version Enum: 2.0,2.1,3.0
              * @param sparse use sparse volumes
+             * @param subdir Subdir to mount.
              * @param tagged_only Only use logical volumes tagged with
              * 'pve-vm-ID'.
              * @param transport Gluster transport: tcp or rdma Enum:
@@ -20856,8 +20875,8 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
-            public Result update(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String format, String is_mountpoint, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String password, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, Boolean tagged_only, String transport, String username) throws JSONException {
-                return setRest(blocksize, bwlimit, comstar_hg, comstar_tg, content, delete, digest, disable, domain, format, is_mountpoint, krbd, maxfiles, mkdir, monhost, nodes, nowritecache, options, password, pool, redundancy, saferemove, saferemove_throughput, server, server2, shared, smbversion, sparse, tagged_only, transport, username);
+            public Result update(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String format, Boolean fuse, String is_mountpoint, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String password, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
+                return setRest(blocksize, bwlimit, comstar_hg, comstar_tg, content, delete, digest, disable, domain, format, fuse, is_mountpoint, krbd, maxfiles, mkdir, monhost, nodes, nowritecache, options, password, pool, redundancy, saferemove, saferemove_throughput, server, server2, shared, smbversion, sparse, subdir, tagged_only, transport, username);
             }
 
             /**
@@ -20885,7 +20904,7 @@ public class Client {
          * Storage index.
          *
          * @param type Only list storage of specific type Enum:
-         * cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * cephfs,cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
          * @return Result
          * @throws JSONException
          */
@@ -20899,7 +20918,7 @@ public class Client {
          * Storage index.
          *
          * @param type Only list storage of specific type Enum:
-         * cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * cephfs,cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
          * @return Result
          * @throws JSONException
          */
@@ -20932,7 +20951,7 @@ public class Client {
          *
          * @param storage The storage identifier.
          * @param type Storage type. Enum:
-         * cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * cephfs,cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
          * @param authsupported Authsupported.
          * @param base_ Base volume. This volume is automatically activated.
          * @param blocksize block size
@@ -20945,6 +20964,7 @@ public class Client {
          * @param domain CIFS domain.
          * @param export NFS export path.
          * @param format Default image format.
+         * @param fuse Mount CephFS through FUSE.
          * @param is_mountpoint Assume the given path is an externally managed
          * mountpoint and consider the storage offline if it is not mounted.
          * Using a boolean (yes/no) value serves as a shortcut to using the
@@ -20972,8 +20992,9 @@ public class Client {
          * @param server2 Backup volfile server IP or DNS name.
          * @param share CIFS share.
          * @param shared Mark storage as shared.
-         * @param smbversion
+         * @param smbversion SMB protocol version Enum: 2.0,2.1,3.0
          * @param sparse use sparse volumes
+         * @param subdir Subdir to mount.
          * @param tagged_only Only use logical volumes tagged with 'pve-vm-ID'.
          * @param target iSCSI target.
          * @param thinpool LVM thin pool LV name.
@@ -20984,7 +21005,7 @@ public class Client {
          * @return Result
          * @throws JSONException
          */
-        public Result createRest(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, Boolean disable, String domain, String export, String format, String is_mountpoint, String iscsiprovider, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String password, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
+        public Result createRest(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, Boolean disable, String domain, String export, String format, Boolean fuse, String is_mountpoint, String iscsiprovider, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String password, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("storage", storage);
             parameters.put("type", type);
@@ -20999,6 +21020,7 @@ public class Client {
             parameters.put("domain", domain);
             parameters.put("export", export);
             parameters.put("format", format);
+            parameters.put("fuse", fuse);
             parameters.put("is_mountpoint", is_mountpoint);
             parameters.put("iscsiprovider", iscsiprovider);
             parameters.put("krbd", krbd);
@@ -21021,6 +21043,7 @@ public class Client {
             parameters.put("shared", shared);
             parameters.put("smbversion", smbversion);
             parameters.put("sparse", sparse);
+            parameters.put("subdir", subdir);
             parameters.put("tagged_only", tagged_only);
             parameters.put("target", target);
             parameters.put("thinpool", thinpool);
@@ -21036,7 +21059,7 @@ public class Client {
          *
          * @param storage The storage identifier.
          * @param type Storage type. Enum:
-         * cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * cephfs,cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
          * @param authsupported Authsupported.
          * @param base_ Base volume. This volume is automatically activated.
          * @param blocksize block size
@@ -21049,6 +21072,7 @@ public class Client {
          * @param domain CIFS domain.
          * @param export NFS export path.
          * @param format Default image format.
+         * @param fuse Mount CephFS through FUSE.
          * @param is_mountpoint Assume the given path is an externally managed
          * mountpoint and consider the storage offline if it is not mounted.
          * Using a boolean (yes/no) value serves as a shortcut to using the
@@ -21076,8 +21100,9 @@ public class Client {
          * @param server2 Backup volfile server IP or DNS name.
          * @param share CIFS share.
          * @param shared Mark storage as shared.
-         * @param smbversion
+         * @param smbversion SMB protocol version Enum: 2.0,2.1,3.0
          * @param sparse use sparse volumes
+         * @param subdir Subdir to mount.
          * @param tagged_only Only use logical volumes tagged with 'pve-vm-ID'.
          * @param target iSCSI target.
          * @param thinpool LVM thin pool LV name.
@@ -21088,8 +21113,8 @@ public class Client {
          * @return Result
          * @throws JSONException
          */
-        public Result create(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, Boolean disable, String domain, String export, String format, String is_mountpoint, String iscsiprovider, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String password, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
-            return createRest(storage, type, authsupported, base_, blocksize, bwlimit, comstar_hg, comstar_tg, content, disable, domain, export, format, is_mountpoint, iscsiprovider, krbd, maxfiles, mkdir, monhost, nodes, nowritecache, options, password, path, pool, portal, redundancy, saferemove, saferemove_throughput, server, server2, share, shared, smbversion, sparse, tagged_only, target, thinpool, transport, username, vgname, volume);
+        public Result create(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, Boolean disable, String domain, String export, String format, Boolean fuse, String is_mountpoint, String iscsiprovider, Boolean krbd, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String password, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
+            return createRest(storage, type, authsupported, base_, blocksize, bwlimit, comstar_hg, comstar_tg, content, disable, domain, export, format, fuse, is_mountpoint, iscsiprovider, krbd, maxfiles, mkdir, monhost, nodes, nowritecache, options, password, path, pool, portal, redundancy, saferemove, saferemove_throughput, server, server2, share, shared, smbversion, sparse, subdir, tagged_only, target, thinpool, transport, username, vgname, volume);
         }
 
         /**
@@ -21097,7 +21122,7 @@ public class Client {
          *
          * @param storage The storage identifier.
          * @param type Storage type. Enum:
-         * cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * cephfs,cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
          * @return Result
          * @throws JSONException
          */
@@ -21113,7 +21138,7 @@ public class Client {
          *
          * @param storage The storage identifier.
          * @param type Storage type. Enum:
-         * cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * cephfs,cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
          * @return Result
          * @throws JSONException
          */
