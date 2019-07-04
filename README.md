@@ -1,18 +1,20 @@
-# eve2pve-api-java
+# cv4pve-api-java
 
 ProxmoVE Client API JAVA
+
+[![License](https://img.shields.io/github/license/Corsinvest/cv4pve-api-java.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
+![GitHub release](https://img.shields.io/github/release/Corsinvest/cv4pve-api-java.svg)
 
 [ProxmoxVE Api](https://pve.proxmox.com/pve-docs/api-viewer/)
 
 ```text
-    ______      __                       _              _    ________
-   / ____/___  / /____  _________  _____(_)_______     | |  / / ____/
-  / __/ / __ \/ __/ _ \/ ___/ __ \/ ___/ / ___/ _ \    | | / / __/
- / /___/ / / / /_/  __/ /  / /_/ / /  / (__  )  __/    | |/ / /___
-/_____/_/ /_/\__/\___/_/  / .___/_/  /_/____/\___/     |___/_____/
-                         /_/
+   ______                _                      __
+  / ____/___  __________(_)___ _   _____  _____/ /_
+ / /   / __ \/ ___/ ___/ / __ \ | / / _ \/ ___/ __/
+/ /___/ /_/ / /  (__  ) / / / / |/ /  __(__  ) /_
+\____/\____/_/  /____/_/_/ /_/|___/\___/____/\__/
 
-                                                       (Made in Italy)
+Corsinvest for Proxmox VE Api Client  (Made in Italy)
 ```
 
 ## General
@@ -45,12 +47,15 @@ The result is class **Result** and contain methods:
 * Tree structure
   * client.getNodes().get("pve1").getQemu().vmlist().getResponse().getJSONArray("data")
 * Return data Proxmox VE
+* Debug Level show to console information
 * Return result status
   * getStatusCode
   * getReasonPhrase
   * isSuccessStatusCode
 * Wait task finish task
   * waitForTaskToFinish
+  * taskIsRunning
+  * getExitStatusTask
 * Method directry access
   * get
   * set
@@ -58,53 +63,52 @@ The result is class **Result** and contain methods:
   * delete
 * Login return bool if access
 * Return Result class more information
+* Minimal dependency library
 
 ## Usage
 
 ```java
+Client client = new Client("10.92.90.91", 8006);
+if (client.login("root", "password", "pam")) {
+        //version
+        System.out.println(client.getVersion().version().getResponse().get("data"));
 
-Client client = new Client("192.168.22", 8006);
-client.login("root", "password", "pam");
+        // same for put/post/delete
+        //loop nodes for
+        JSONArray nodes = client.getNodes().index().getResponse().getJSONArray("data");
+        for (int i = 0; i < nodes.length(); i++) {
+                System.out.println(nodes.get(i));
+        }
 
-System.out.println(client->get('/version'));
-// same for put/post/delete
+        //loop nodes for each
+        Client.<JSONObject>JSONArrayToList(client.getNodes().index().getResponse().getJSONArray("data")).forEach((node) -> {
+                System.out.println(node);
+        });
 
-//loop nodes for
-JSONArray nodes = client.getNodes().index().getResponse().getJSONArray("data");
-for (int i = 0; i < nodes.length(); i++) {
-    System.out.println(nodes.get(i));
+        //loops vms qemu
+        JSONArray vms = client.getNodes().get("pve1").getQemu().vmlist().getResponse().getJSONArray("data");
+        for (int i = 0; i < vms.length(); i++) {
+                System.out.println(vms.get(i));
+        }
+
+        //loop snashots
+        JSONArray snapshots = client.getNodes().get("pve1")
+                .getQemu().get(100).getSnapshot().snapshotList().getResponse().getJSONArray("data");
+        for (int i = 0; i < snapshots.length(); i++) {
+                System.out.println(snapshots.get(i));
+        }
+
+        //create snapshot
+        JSONObject retCreateSnap = client.getNodes().get("pve1").getQemu().get(100).getSnapshot().snapshot("pippo").getResponse();
+
+        //print UPID
+        System.out.println(retCreateSnap.get("data"));
+
+        //wait creation
+        client.waitForTaskToFinish("pve1", retCreateSnap.getString("data"), 500, 10000);
+
+        //delete snapshot
+        Client.Result retDeleSnap = client.getNodes().get("pve1").getQemu().get(100).getSnapshot().get("pippo").delsnapshot();
+        System.out.println(retDeleSnap.getResponse().get("data"));
 }
-
-//loop nodes for each
-for (JSONObject node : Client.<JSONObject>JSONArrayToList(client.getNodes().index().getResponse().getJSONArray("data"))) {
-    System.out.println(node);
-}
-
- //loops vms qemu
-JSONArray vms = client.getNodes().get("pve1").getQemu().vmlist().getResponse().getJSONArray("data");
-for (int i = 0; i < vms.length(); i++) {
-    System.out.println(vms.get(i));
-}
-
- //loop snashots
-JSONArray snapshots = client.getNodes().get("pve1")
-    .getQemu().get(100).getSnapshot().snapshotList().getResponse().getJSONArray("data");
-for (int i = 0; i < snapshots.length(); i++) {
-    System.out.println(snapshots.get(i));
-}
-
-//create snapshot
-JSONObject retCreateSnap = client.getNodes().get("pve1")
-    .getQemu().get(100).getSnapshot().snapshot("pippo").getResponse();
-
-//print UPID
-System.out.println(retCreateSnap.get("data"));
-
-//wait creation
-client.waitForTaskToFinish("pve1", retCreateSnap.getString("data"), 500, 10000);
-
-//delete snapshot
-Client.Result retDeleSnap = client.getNodes().get("pve1")
-    .getQemu().get(100).getSnapshot().get("pippo").delsnapshot();
-System.out.println(retDeleSnap.getResponse().get("data"));
 ```

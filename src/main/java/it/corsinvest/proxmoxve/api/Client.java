@@ -1,38 +1,28 @@
-package com.enterpriseve.proxmoxve.api;
+package it.corsinvest.proxmoxve.api;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.security.KeyManagementException;
-import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.conn.scheme.Scheme;
-import org.apache.http.conn.ssl.AllowAllHostnameVerifier;
-import org.apache.http.conn.ssl.SSLSocketFactory;
-import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicNameValuePair;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.security.cert.X509Certificate;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONException;
@@ -44,9 +34,10 @@ public class Client {
 
     private String _ticketCSRFPreventionToken;
     private String _ticketPVEAuthCookie;
-    private Client _client;
+    private final Client _client;
     private final String _hostname;
     private final int _port;
+    private int _debugLevel;
 
     public Client(String hostname, int port) {
         _client = this;
@@ -76,7 +67,7 @@ public class Client {
      * Creation ticket from login.
      *
      * @param userName user name or &lt;username&gt;@&lt;realm&gt;
-     * @param password
+     * @param password password connection
      * @return
      * @throws JSONException
      */
@@ -87,7 +78,6 @@ public class Client {
             userName = uData[0];
             realm = uData[1];
         }
-
         return login(userName, password, realm);
     }
 
@@ -95,7 +85,7 @@ public class Client {
      * Creation ticket from login.
      *
      * @param userName user name
-     * @param password
+     * @param password password connection
      * @param realm pam/pve or custom
      * @return
      * @throws JSONException
@@ -163,10 +153,27 @@ public class Client {
         return executeAction(resource, HttpMethod.DELETE, parameters);
     }
 
+    /**
+     * Set debug level
+     *
+     * @param value 0 - nothing 1 - Url and method 2 - Url and method and result
+     */
+    public void setDebugLevel(int value) {
+        _debugLevel = value;
+    }
+
+    /**
+     * Return debug level.
+     *
+     * @return
+     */
+    public int getDebugLevel() {
+        return _debugLevel;
+    }
+
     private Result executeAction(String resource, HttpMethod method, Map<String, Object> parameters) throws JSONException {
-        String url = "https://" + _hostname + ":" + _port + "/api2/json" + resource;
-        //fix params
-        ArrayList<NameValuePair> params = new ArrayList<>();
+        String url = "https://" + getHostname() + ":" + getPort() + "/api2/json" + resource;
+        Map params = new LinkedHashMap<>();
         if (parameters != null) {
             parameters.entrySet().stream().filter((entry) -> (entry.getValue() != null)).forEachOrdered((entry) -> {
                 String value = entry.getValue().toString();
@@ -174,89 +181,126 @@ public class Client {
                     value = ((Boolean) entry.getValue()) ? "1" : "0";
                 }
                 try {
-                    params.add(new BasicNameValuePair(entry.getKey(), URLEncoder.encode(value, "UTF-8")));
+                    params.put(entry.getKey(), URLEncoder.encode(value, "UTF-8"));
                 } catch (UnsupportedEncodingException ex) {
                     Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
                 }
             });
         }
-        HttpRequestBase request = null;
-        switch (method) {
-            case GET: {
-                if (!params.isEmpty()) {
-                    StringBuilder urlParams = new StringBuilder();
-                    params.forEach((param) -> {
-                        urlParams.append(urlParams.length() > 1 ? "&" : "")
-                                .append(param.getName())
-                                .append("=")
-                                .append(param.getValue());
-                    });
-                    url += "?" + urlParams.toString();
-                }
-                request = new HttpGet(url);
-                break;
+        // Create a trust manager that does not validate certificate chains
+        TrustManager[] trustAllCerts;
+        trustAllCerts = new TrustManager[]{new X509TrustManager() {
+            @Override
+            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                return null;
             }
-            case POST: {
-                request = new HttpPost(url);
-                try {
-                    ((HttpPost) request).setEntity(new UrlEncodedFormEntity(params));
-                } catch (UnsupportedEncodingException ex) {
-                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-                }
-                break;
+
+            @Override
+            public void checkClientTrusted(X509Certificate[] certs, String authType) {
             }
-            case PUT: {
-                request = new HttpPut(url);
-                try {
-                    ((HttpPut) request).setEntity(new UrlEncodedFormEntity(params));
-                } catch (UnsupportedEncodingException ex) {
-                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-                }
-                break;
-            }
-            case DELETE: {
-                request = new HttpDelete(url);
-                break;
+
+            @Override
+            public void checkServerTrusted(X509Certificate[] certs, String authType) {
             }
         }
-        if (_ticketCSRFPreventionToken != null) {
-            request.addHeader("CSRFPreventionToken", _ticketCSRFPreventionToken);
-            request.addHeader("Cookie", "PVEAuthCookie=" + _ticketPVEAuthCookie);
-        }
-        HttpClient client = new DefaultHttpClient();
+        };
+        // Install the all-trusting trust manager
         try {
-            SSLSocketFactory sslsf = new SSLSocketFactory(new TrustSelfSignedStrategy(),
-                    new AllowAllHostnameVerifier());
-            Scheme https = new Scheme("https", _port, sslsf);
-            client.getConnectionManager().getSchemeRegistry().register(https);
-        } catch (KeyManagementException | KeyStoreException
-                | NoSuchAlgorithmException | UnrecoverableKeyException e) {
-            e.printStackTrace();
+            SSLContext sc = SSLContext.getInstance("SSL");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+        } catch (NoSuchAlgorithmException | KeyManagementException ex) {
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
-        HttpResponse httpResponse;
-        JSONObject response = new JSONObject();
+        // Create all-trusting host name verifier
+        // Create all-trusting host name verifier
+        HostnameVerifier allHostsValid = (String hostname, SSLSession session) -> true;
+        // Install the all-trusting host verifier
+        HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
         int statusCode = 0;
         String reasonPhrase = "";
+        JSONObject response = new JSONObject();
+        HttpURLConnection httpCon = null;
         try {
-            httpResponse = client.execute(request);
-            statusCode = httpResponse.getStatusLine().getStatusCode();
-            reasonPhrase = httpResponse.getStatusLine().getReasonPhrase();
-            HttpEntity entity = httpResponse.getEntity();
-            if (entity != null) {
-                try (InputStream instream = entity.getContent()) {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(instream));
-                    StringBuilder sb = new StringBuilder();
-                    String line = null;
-                    while ((line = reader.readLine()) != null) {
-                        sb.append(line).append("\n");
+            switch (method) {
+                case GET: {
+                    if (params.isEmpty()) {
+                    } else {
+                        StringBuilder urlParams = new StringBuilder();
+                        params.forEach((key, value) -> {
+                            urlParams.append(urlParams.length() > 0 ? "&" : "")
+                                    .append(key)
+                                    .append("=")
+                                    .append(value);
+                        });
+                        url += "?" + urlParams.toString();
                     }
-                    response = new JSONObject(sb.toString());
+                    httpCon = (HttpURLConnection) new URL(url).openConnection();
+                    httpCon.setRequestMethod("GET");
+                    break;
                 }
+                case PUT:
+                case POST: {
+                    StringBuilder postData = new StringBuilder();
+                    params.forEach((key, value) -> {
+                        postData.append(postData.length() > 0 ? "&" : "")
+                                .append(key)
+                                .append("=")
+                                .append(value);
+                    });
+                    byte[] postDataBytes = postData.toString().getBytes("UTF-8");
+                    httpCon = (HttpURLConnection) new URL(url).openConnection();
+                    httpCon.setRequestMethod(method + "");
+                    httpCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                    httpCon.setRequestProperty("Content-Length", String.valueOf(postDataBytes.length));
+                    httpCon.setDoOutput(true);
+                    httpCon.getOutputStream().write(postDataBytes);
+                    break;
+                }
+                case DELETE: {
+                    httpCon = (HttpURLConnection) new URL(url).openConnection();
+                    httpCon.setRequestMethod("DELETE");
+                    break;
+                }
+            }
+            //httpCon.setRequestProperty("User-Agent", "Mozilla/5.0");
+            if (getDebugLevel() >= 1) {
+                System.out.println("Method: " + method + " , Url: " + url);
+                if (method != HttpMethod.GET) {
+                    System.out.println("Parameters:");
+                    params.forEach((key, value) -> {
+                        System.out.println(key + " : " + value);
+                    });
+                }
+            }
+            if (_ticketCSRFPreventionToken != null) {
+                httpCon.setRequestProperty("CSRFPreventionToken", _ticketCSRFPreventionToken);
+                httpCon.setRequestProperty("Cookie", "PVEAuthCookie=" + _ticketPVEAuthCookie);
+            }
+            statusCode = httpCon.getResponseCode();
+            reasonPhrase = httpCon.getResponseMessage();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpCon.getInputStream()))) {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line).append("\n");
+                }
+                response = new JSONObject(sb.toString());
             }
         } catch (IOException ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return new Result(response, statusCode, reasonPhrase);
+        Result result = new Result(response, statusCode, reasonPhrase);
+        if (getDebugLevel() >= 2) {
+            System.out.println(response.toString(2));
+            System.out.println("StatusCode:          " + result.getStatusCode());
+            System.out.println("ReasonPhrase:        " + result.getReasonPhrase());
+            System.out.println("IsSuccessStatusCode: " + result.isSuccessStatusCode());
+        }
+        if (getDebugLevel() > 0) {
+            System.out.println("=============================");
+        }
+        return result;
     }
 
     protected static void addIndexedParameter(Map<String, Object> parameters, String name, Map<Integer, String> value) {
@@ -287,11 +331,37 @@ public class Client {
         while (isRunning && (timeStart - System.currentTimeMillis()) < timeOut) {
             if ((System.currentTimeMillis() - waitTime) >= wait) {
                 waitTime = System.currentTimeMillis();
-                isRunning = getNodes().get(node).getTasks().get(task)
-                        .getStatus().getRest().getResponse()
-                        .getJSONObject("data").getString("status").equals("running");
+                isRunning = taskIsRunning(node, task);
             }
         }
+    }
+
+    /**
+     * Cherck task is running
+     *
+     * @param node Node identifier
+     * @param task Task identifier
+     * @return
+     * @throws JSONException
+     */
+    public boolean taskIsRunning(String node, String task) throws JSONException {
+        return getNodes().get(node).getTasks().get(task)
+                .getStatus().getRest().getResponse()
+                .getJSONObject("data").getString("status").equals("running");
+    }
+
+    /**
+     * Return exit status code task
+     *
+     * @param node Node identifier
+     * @param task Task identifier
+     * @return
+     * @throws JSONException
+     */
+    public String getExitStatusTask(String node, String task) throws JSONException {
+        return getNodes().get(node).getTasks().get(task)
+                .getStatus().getRest().getResponse()
+                .getJSONObject("data").getString("exitstatus");
     }
 
     public static <T> List<T> JSONArrayToList(JSONArray array) throws JSONException {
@@ -302,11 +372,6 @@ public class Client {
             }
         }
         return ret;
-    }
-
-    public abstract class Base {
-
-        private Client _client;
     }
 
     /**
@@ -385,7 +450,6 @@ public class Client {
                     if (ret.length() > 0) {
                         ret.append("\n");
                     }
-
                     String name = errors.names().getString(i);
                     ret.append(name)
                             .append(" : ")
@@ -444,7 +508,9 @@ public class Client {
         return _version;
     }
 
-    public class PVECluster extends Base {
+    public class PVECluster {
+
+        private final Client _client;
 
         protected PVECluster(Client client) {
             _client = client;
@@ -546,7 +612,9 @@ public class Client {
             return _nextid;
         }
 
-        public class PVEReplication extends Base {
+        public class PVEReplication {
+
+            private final Client _client;
 
             protected PVEReplication(Client client) {
                 _client = client;
@@ -556,8 +624,9 @@ public class Client {
                 return new PVEItemId(_client, id);
             }
 
-            public class PVEItemId extends Base {
+            public class PVEItemId {
 
+                private final Client _client;
                 private final Object _id;
 
                 protected PVEItemId(Client client, Object id) {
@@ -833,7 +902,9 @@ public class Client {
             }
         }
 
-        public class PVEConfig extends Base {
+        public class PVEConfig {
+
+            private final Client _client;
 
             protected PVEConfig(Client client) {
                 _client = client;
@@ -863,7 +934,9 @@ public class Client {
                 return _totem;
             }
 
-            public class PVENodes extends Base {
+            public class PVENodes {
+
+                private final Client _client;
 
                 protected PVENodes(Client client) {
                     _client = client;
@@ -873,8 +946,9 @@ public class Client {
                     return new PVEItemNode(_client, node);
                 }
 
-                public class PVEItemNode extends Base {
+                public class PVEItemNode {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEItemNode(Client client, Object node) {
@@ -990,7 +1064,9 @@ public class Client {
                 }
             }
 
-            public class PVEJoin extends Base {
+            public class PVEJoin {
+
+                private final Client _client;
 
                 protected PVEJoin(Client client) {
                     _client = client;
@@ -1130,7 +1206,9 @@ public class Client {
                 }
             }
 
-            public class PVETotem extends Base {
+            public class PVETotem {
+
+                private final Client _client;
 
                 protected PVETotem(Client client) {
                     _client = client;
@@ -1256,7 +1334,9 @@ public class Client {
             }
         }
 
-        public class PVEFirewall extends Base {
+        public class PVEFirewall {
+
+            private final Client _client;
 
             protected PVEFirewall(Client client) {
                 _client = client;
@@ -1318,7 +1398,9 @@ public class Client {
                 return _refs;
             }
 
-            public class PVEGroups extends Base {
+            public class PVEGroups {
+
+                private final Client _client;
 
                 protected PVEGroups(Client client) {
                     _client = client;
@@ -1328,8 +1410,9 @@ public class Client {
                     return new PVEItemGroup(_client, group);
                 }
 
-                public class PVEItemGroup extends Base {
+                public class PVEItemGroup {
 
+                    private final Client _client;
                     private final Object _group;
 
                     protected PVEItemGroup(Client client, Object group) {
@@ -1341,8 +1424,9 @@ public class Client {
                         return new PVEItemPos(_client, _group, pos);
                     }
 
-                    public class PVEItemPos extends Base {
+                    public class PVEItemPos {
 
+                        private final Client _client;
                         private final Object _group;
                         private final Object _pos;
 
@@ -1448,6 +1532,8 @@ public class Client {
                          * network configuration key names for VMs and
                          * containers ('net\d+'). Host related rules can use
                          * arbitrary strings.
+                         * @param log Log level for firewall rule. Enum:
+                         * emerg,alert,crit,err,warning,notice,info,debug,nolog
                          * @param macro Use predefined standard macro.
                          * @param moveto Move rule to new position
                          * &amp;lt;moveto&amp;gt;. Other arguments are ignored.
@@ -1471,7 +1557,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                        public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("action", action);
                             parameters.put("comment", comment);
@@ -1481,6 +1567,7 @@ public class Client {
                             parameters.put("dport", dport);
                             parameters.put("enable", enable);
                             parameters.put("iface", iface);
+                            parameters.put("log", log);
                             parameters.put("macro", macro);
                             parameters.put("moveto", moveto);
                             parameters.put("proto", proto);
@@ -1518,6 +1605,8 @@ public class Client {
                          * network configuration key names for VMs and
                          * containers ('net\d+'). Host related rules can use
                          * arbitrary strings.
+                         * @param log Log level for firewall rule. Enum:
+                         * emerg,alert,crit,err,warning,notice,info,debug,nolog
                          * @param macro Use predefined standard macro.
                          * @param moveto Move rule to new position
                          * &amp;lt;moveto&amp;gt;. Other arguments are ignored.
@@ -1541,8 +1630,8 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
-                            return setRest(action, comment, delete, dest, digest, dport, enable, iface, macro, moveto, proto, source, sport, type);
+                        public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                            return setRest(action, comment, delete, dest, digest, dport, enable, iface, log, macro, moveto, proto, source, sport, type);
                         }
 
                         /**
@@ -1632,6 +1721,8 @@ public class Client {
                      * @param iface Network interface name. You have to use
                      * network configuration key names for VMs and containers
                      * ('net\d+'). Host related rules can use arbitrary strings.
+                     * @param log Log level for firewall rule. Enum:
+                     * emerg,alert,crit,err,warning,notice,info,debug,nolog
                      * @param macro Use predefined standard macro.
                      * @param pos Update rule at position &amp;lt;pos&amp;gt;.
                      * @param proto IP protocol. You can use protocol names
@@ -1652,7 +1743,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                    public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
                         parameters.put("type", type);
@@ -1662,6 +1753,7 @@ public class Client {
                         parameters.put("dport", dport);
                         parameters.put("enable", enable);
                         parameters.put("iface", iface);
+                        parameters.put("log", log);
                         parameters.put("macro", macro);
                         parameters.put("pos", pos);
                         parameters.put("proto", proto);
@@ -1696,6 +1788,8 @@ public class Client {
                      * @param iface Network interface name. You have to use
                      * network configuration key names for VMs and containers
                      * ('net\d+'). Host related rules can use arbitrary strings.
+                     * @param log Log level for firewall rule. Enum:
+                     * emerg,alert,crit,err,warning,notice,info,debug,nolog
                      * @param macro Use predefined standard macro.
                      * @param pos Update rule at position &amp;lt;pos&amp;gt;.
                      * @param proto IP protocol. You can use protocol names
@@ -1716,8 +1810,8 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
-                        return createRest(action, type, comment, dest, digest, dport, enable, iface, macro, pos, proto, source, sport);
+                    public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                        return createRest(action, type, comment, dest, digest, dport, enable, iface, log, macro, pos, proto, source, sport);
                     }
 
                     /**
@@ -1836,7 +1930,9 @@ public class Client {
                 }
             }
 
-            public class PVERules extends Base {
+            public class PVERules {
+
+                private final Client _client;
 
                 protected PVERules(Client client) {
                     _client = client;
@@ -1846,8 +1942,9 @@ public class Client {
                     return new PVEItemPos(_client, pos);
                 }
 
-                public class PVEItemPos extends Base {
+                public class PVEItemPos {
 
+                    private final Client _client;
                     private final Object _pos;
 
                     protected PVEItemPos(Client client, Object pos) {
@@ -1949,6 +2046,8 @@ public class Client {
                      * @param iface Network interface name. You have to use
                      * network configuration key names for VMs and containers
                      * ('net\d+'). Host related rules can use arbitrary strings.
+                     * @param log Log level for firewall rule. Enum:
+                     * emerg,alert,crit,err,warning,notice,info,debug,nolog
                      * @param macro Use predefined standard macro.
                      * @param moveto Move rule to new position
                      * &amp;lt;moveto&amp;gt;. Other arguments are ignored.
@@ -1971,7 +2070,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                    public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
                         parameters.put("comment", comment);
@@ -1981,6 +2080,7 @@ public class Client {
                         parameters.put("dport", dport);
                         parameters.put("enable", enable);
                         parameters.put("iface", iface);
+                        parameters.put("log", log);
                         parameters.put("macro", macro);
                         parameters.put("moveto", moveto);
                         parameters.put("proto", proto);
@@ -2016,6 +2116,8 @@ public class Client {
                      * @param iface Network interface name. You have to use
                      * network configuration key names for VMs and containers
                      * ('net\d+'). Host related rules can use arbitrary strings.
+                     * @param log Log level for firewall rule. Enum:
+                     * emerg,alert,crit,err,warning,notice,info,debug,nolog
                      * @param macro Use predefined standard macro.
                      * @param moveto Move rule to new position
                      * &amp;lt;moveto&amp;gt;. Other arguments are ignored.
@@ -2038,8 +2140,8 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
-                        return setRest(action, comment, delete, dest, digest, dport, enable, iface, macro, moveto, proto, source, sport, type);
+                    public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                        return setRest(action, comment, delete, dest, digest, dport, enable, iface, log, macro, moveto, proto, source, sport, type);
                     }
 
                     /**
@@ -2108,6 +2210,8 @@ public class Client {
                  * @param iface Network interface name. You have to use network
                  * configuration key names for VMs and containers ('net\d+').
                  * Host related rules can use arbitrary strings.
+                 * @param log Log level for firewall rule. Enum:
+                 * emerg,alert,crit,err,warning,notice,info,debug,nolog
                  * @param macro Use predefined standard macro.
                  * @param pos Update rule at position &amp;lt;pos&amp;gt;.
                  * @param proto IP protocol. You can use protocol names
@@ -2127,7 +2231,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("action", action);
                     parameters.put("type", type);
@@ -2137,6 +2241,7 @@ public class Client {
                     parameters.put("dport", dport);
                     parameters.put("enable", enable);
                     parameters.put("iface", iface);
+                    parameters.put("log", log);
                     parameters.put("macro", macro);
                     parameters.put("pos", pos);
                     parameters.put("proto", proto);
@@ -2170,6 +2275,8 @@ public class Client {
                  * @param iface Network interface name. You have to use network
                  * configuration key names for VMs and containers ('net\d+').
                  * Host related rules can use arbitrary strings.
+                 * @param log Log level for firewall rule. Enum:
+                 * emerg,alert,crit,err,warning,notice,info,debug,nolog
                  * @param macro Use predefined standard macro.
                  * @param pos Update rule at position &amp;lt;pos&amp;gt;.
                  * @param proto IP protocol. You can use protocol names
@@ -2189,8 +2296,8 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
-                    return createRest(action, type, comment, dest, digest, dport, enable, iface, macro, pos, proto, source, sport);
+                public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                    return createRest(action, type, comment, dest, digest, dport, enable, iface, log, macro, pos, proto, source, sport);
                 }
 
                 /**
@@ -2223,7 +2330,9 @@ public class Client {
                 }
             }
 
-            public class PVEIpset extends Base {
+            public class PVEIpset {
+
+                private final Client _client;
 
                 protected PVEIpset(Client client) {
                     _client = client;
@@ -2233,8 +2342,9 @@ public class Client {
                     return new PVEItemName(_client, name);
                 }
 
-                public class PVEItemName extends Base {
+                public class PVEItemName {
 
+                    private final Client _client;
                     private final Object _name;
 
                     protected PVEItemName(Client client, Object name) {
@@ -2246,8 +2356,9 @@ public class Client {
                         return new PVEItemCidr(_client, _name, cidr);
                     }
 
-                    public class PVEItemCidr extends Base {
+                    public class PVEItemCidr {
 
+                        private final Client _client;
                         private final Object _name;
                         private final Object _cidr;
 
@@ -2561,7 +2672,9 @@ public class Client {
                 }
             }
 
-            public class PVEAliases extends Base {
+            public class PVEAliases {
+
+                private final Client _client;
 
                 protected PVEAliases(Client client) {
                     _client = client;
@@ -2571,8 +2684,9 @@ public class Client {
                     return new PVEItemName(_client, name);
                 }
 
-                public class PVEItemName extends Base {
+                public class PVEItemName {
 
+                    private final Client _client;
                     private final Object _name;
 
                     protected PVEItemName(Client client, Object name) {
@@ -2788,7 +2902,9 @@ public class Client {
                 }
             }
 
-            public class PVEOptions extends Base {
+            public class PVEOptions {
+
+                private final Client _client;
 
                 protected PVEOptions(Client client) {
                     _client = client;
@@ -2823,17 +2939,19 @@ public class Client {
                  * concurrent modifications.
                  * @param ebtables Enable ebtables rules cluster wide.
                  * @param enable Enable or disable the firewall cluster wide.
+                 * @param log_ratelimit Log ratelimiting settings
                  * @param policy_in Input policy. Enum: ACCEPT,REJECT,DROP
                  * @param policy_out Output policy. Enum: ACCEPT,REJECT,DROP
                  * @return Result
                  * @throws JSONException
                  */
-                public Result setRest(String delete, String digest, Boolean ebtables, Integer enable, String policy_in, String policy_out) throws JSONException {
+                public Result setRest(String delete, String digest, Boolean ebtables, Integer enable, String log_ratelimit, String policy_in, String policy_out) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("delete", delete);
                     parameters.put("digest", digest);
                     parameters.put("ebtables", ebtables);
                     parameters.put("enable", enable);
+                    parameters.put("log_ratelimit", log_ratelimit);
                     parameters.put("policy_in", policy_in);
                     parameters.put("policy_out", policy_out);
                     return _client.set("/cluster/firewall/options", parameters);
@@ -2848,13 +2966,14 @@ public class Client {
                  * concurrent modifications.
                  * @param ebtables Enable ebtables rules cluster wide.
                  * @param enable Enable or disable the firewall cluster wide.
+                 * @param log_ratelimit Log ratelimiting settings
                  * @param policy_in Input policy. Enum: ACCEPT,REJECT,DROP
                  * @param policy_out Output policy. Enum: ACCEPT,REJECT,DROP
                  * @return Result
                  * @throws JSONException
                  */
-                public Result setOptions(String delete, String digest, Boolean ebtables, Integer enable, String policy_in, String policy_out) throws JSONException {
-                    return setRest(delete, digest, ebtables, enable, policy_in, policy_out);
+                public Result setOptions(String delete, String digest, Boolean ebtables, Integer enable, String log_ratelimit, String policy_in, String policy_out) throws JSONException {
+                    return setRest(delete, digest, ebtables, enable, log_ratelimit, policy_in, policy_out);
                 }
 
                 /**
@@ -2878,7 +2997,9 @@ public class Client {
                 }
             }
 
-            public class PVEMacros extends Base {
+            public class PVEMacros {
+
+                private final Client _client;
 
                 protected PVEMacros(Client client) {
                     _client = client;
@@ -2905,7 +3026,9 @@ public class Client {
                 }
             }
 
-            public class PVERefs extends Base {
+            public class PVERefs {
+
+                private final Client _client;
 
                 protected PVERefs(Client client) {
                     _client = client;
@@ -2983,7 +3106,9 @@ public class Client {
             }
         }
 
-        public class PVEBackup extends Base {
+        public class PVEBackup {
+
+            private final Client _client;
 
             protected PVEBackup(Client client) {
                 _client = client;
@@ -2993,8 +3118,9 @@ public class Client {
                 return new PVEItemId(_client, id);
             }
 
-            public class PVEItemId extends Base {
+            public class PVEItemId {
 
+                private final Client _client;
                 private final Object _id;
 
                 protected PVEItemId(Client client, Object id) {
@@ -3351,7 +3477,9 @@ public class Client {
             }
         }
 
-        public class PVEHa extends Base {
+        public class PVEHa {
+
+            private final Client _client;
 
             protected PVEHa(Client client) {
                 _client = client;
@@ -3381,7 +3509,9 @@ public class Client {
                 return _status;
             }
 
-            public class PVEResources extends Base {
+            public class PVEResources {
+
+                private final Client _client;
 
                 protected PVEResources(Client client) {
                     _client = client;
@@ -3391,8 +3521,9 @@ public class Client {
                     return new PVEItemSid(_client, sid);
                 }
 
-                public class PVEItemSid extends Base {
+                public class PVEItemSid {
 
+                    private final Client _client;
                     private final Object _sid;
 
                     protected PVEItemSid(Client client, Object sid) {
@@ -3416,8 +3547,9 @@ public class Client {
                         return _relocate;
                     }
 
-                    public class PVEMigrate extends Base {
+                    public class PVEMigrate {
 
+                        private final Client _client;
                         private final Object _sid;
 
                         protected PVEMigrate(Client client, Object sid) {
@@ -3428,7 +3560,7 @@ public class Client {
                         /**
                          * Request resource migration (online) to another node.
                          *
-                         * @param node The cluster node name.
+                         * @param node Target node.
                          * @return Result
                          * @throws JSONException
                          */
@@ -3441,7 +3573,7 @@ public class Client {
                         /**
                          * Request resource migration (online) to another node.
                          *
-                         * @param node The cluster node name.
+                         * @param node Target node.
                          * @return Result
                          * @throws JSONException
                          */
@@ -3450,8 +3582,9 @@ public class Client {
                         }
                     }
 
-                    public class PVERelocate extends Base {
+                    public class PVERelocate {
 
+                        private final Client _client;
                         private final Object _sid;
 
                         protected PVERelocate(Client client, Object sid) {
@@ -3464,7 +3597,7 @@ public class Client {
                          * stops the service on the old node, and restarts it on
                          * the target node.
                          *
-                         * @param node The cluster node name.
+                         * @param node Target node.
                          * @return Result
                          * @throws JSONException
                          */
@@ -3479,7 +3612,7 @@ public class Client {
                          * stops the service on the old node, and restarts it on
                          * the target node.
                          *
-                         * @param node The cluster node name.
+                         * @param node Target node.
                          * @return Result
                          * @throws JSONException
                          */
@@ -3734,7 +3867,9 @@ public class Client {
                 }
             }
 
-            public class PVEGroups extends Base {
+            public class PVEGroups {
+
+                private final Client _client;
 
                 protected PVEGroups(Client client) {
                     _client = client;
@@ -3744,8 +3879,9 @@ public class Client {
                     return new PVEItemGroup(_client, group);
                 }
 
-                public class PVEItemGroup extends Base {
+                public class PVEItemGroup {
 
+                    private final Client _client;
                     private final Object _group;
 
                     protected PVEItemGroup(Client client, Object group) {
@@ -3966,7 +4102,9 @@ public class Client {
                 }
             }
 
-            public class PVEStatus extends Base {
+            public class PVEStatus {
+
+                private final Client _client;
 
                 protected PVEStatus(Client client) {
                     _client = client;
@@ -3988,7 +4126,9 @@ public class Client {
                     return _managerStatus;
                 }
 
-                public class PVECurrent extends Base {
+                public class PVECurrent {
+
+                    private final Client _client;
 
                     protected PVECurrent(Client client) {
                         _client = client;
@@ -4015,7 +4155,9 @@ public class Client {
                     }
                 }
 
-                public class PVEManagerStatus extends Base {
+                public class PVEManagerStatus {
+
+                    private final Client _client;
 
                     protected PVEManagerStatus(Client client) {
                         _client = client;
@@ -4084,7 +4226,9 @@ public class Client {
             }
         }
 
-        public class PVEAcme extends Base {
+        public class PVEAcme {
+
+            private final Client _client;
 
             protected PVEAcme(Client client) {
                 _client = client;
@@ -4114,7 +4258,9 @@ public class Client {
                 return _directories;
             }
 
-            public class PVEAccount extends Base {
+            public class PVEAccount {
+
+                private final Client _client;
 
                 protected PVEAccount(Client client) {
                     _client = client;
@@ -4124,8 +4270,9 @@ public class Client {
                     return new PVEItemName(_client, name);
                 }
 
-                public class PVEItemName extends Base {
+                public class PVEItemName {
 
+                    private final Client _client;
                     private final Object _name;
 
                     protected PVEItemName(Client client, Object name) {
@@ -4306,7 +4453,9 @@ public class Client {
                 }
             }
 
-            public class PVETos extends Base {
+            public class PVETos {
+
+                private final Client _client;
 
                 protected PVETos(Client client) {
                     _client = client;
@@ -4357,7 +4506,9 @@ public class Client {
                 }
             }
 
-            public class PVEDirectories extends Base {
+            public class PVEDirectories {
+
+                private final Client _client;
 
                 protected PVEDirectories(Client client) {
                     _client = client;
@@ -4405,7 +4556,9 @@ public class Client {
             }
         }
 
-        public class PVELog extends Base {
+        public class PVELog {
+
+            private final Client _client;
 
             protected PVELog(Client client) {
                 _client = client;
@@ -4456,7 +4609,9 @@ public class Client {
             }
         }
 
-        public class PVEResources extends Base {
+        public class PVEResources {
+
+            private final Client _client;
 
             protected PVEResources(Client client) {
                 _client = client;
@@ -4507,7 +4662,9 @@ public class Client {
             }
         }
 
-        public class PVETasks extends Base {
+        public class PVETasks {
+
+            private final Client _client;
 
             protected PVETasks(Client client) {
                 _client = client;
@@ -4534,7 +4691,9 @@ public class Client {
             }
         }
 
-        public class PVEOptions extends Base {
+        public class PVEOptions {
+
+            private final Client _client;
 
             protected PVEOptions(Client client) {
                 _client = client;
@@ -4579,6 +4738,7 @@ public class Client {
              * /etc/pve/ha/fence.cfg. With both all two modes are used. WARNING:
              * 'hardware' and 'both' are EXPERIMENTAL &amp; WIP Enum:
              * watchdog,hardware,both
+             * @param ha Cluster wide HA settings.
              * @param http_proxy Specify external http proxy which is used for
              * downloads (example: 'http://username:password@host:port/')
              * @param keyboard Default keybord layout for vnc server. Enum:
@@ -4593,16 +4753,18 @@ public class Client {
              * @param migration_unsecure Migration is secure using SSH tunnel by
              * default. For secure private networks you can disable it to speed
              * up migration. Deprecated, use the 'migration' property instead!
+             * @param u2f u2f
              * @return Result
              * @throws JSONException
              */
-            public Result setRest(String bwlimit, String console, String delete, String email_from, String fencing, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure) throws JSONException {
+            public Result setRest(String bwlimit, String console, String delete, String email_from, String fencing, String ha, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure, String u2f) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("bwlimit", bwlimit);
                 parameters.put("console", console);
                 parameters.put("delete", delete);
                 parameters.put("email_from", email_from);
                 parameters.put("fencing", fencing);
+                parameters.put("ha", ha);
                 parameters.put("http_proxy", http_proxy);
                 parameters.put("keyboard", keyboard);
                 parameters.put("language", language);
@@ -4610,6 +4772,7 @@ public class Client {
                 parameters.put("max_workers", max_workers);
                 parameters.put("migration", migration);
                 parameters.put("migration_unsecure", migration_unsecure);
+                parameters.put("u2f", u2f);
                 return _client.set("/cluster/options", parameters);
             }
 
@@ -4632,6 +4795,7 @@ public class Client {
              * /etc/pve/ha/fence.cfg. With both all two modes are used. WARNING:
              * 'hardware' and 'both' are EXPERIMENTAL &amp; WIP Enum:
              * watchdog,hardware,both
+             * @param ha Cluster wide HA settings.
              * @param http_proxy Specify external http proxy which is used for
              * downloads (example: 'http://username:password@host:port/')
              * @param keyboard Default keybord layout for vnc server. Enum:
@@ -4646,11 +4810,12 @@ public class Client {
              * @param migration_unsecure Migration is secure using SSH tunnel by
              * default. For secure private networks you can disable it to speed
              * up migration. Deprecated, use the 'migration' property instead!
+             * @param u2f u2f
              * @return Result
              * @throws JSONException
              */
-            public Result setOptions(String bwlimit, String console, String delete, String email_from, String fencing, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure) throws JSONException {
-                return setRest(bwlimit, console, delete, email_from, fencing, http_proxy, keyboard, language, mac_prefix, max_workers, migration, migration_unsecure);
+            public Result setOptions(String bwlimit, String console, String delete, String email_from, String fencing, String ha, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure, String u2f) throws JSONException {
+                return setRest(bwlimit, console, delete, email_from, fencing, ha, http_proxy, keyboard, language, mac_prefix, max_workers, migration, migration_unsecure, u2f);
             }
 
             /**
@@ -4674,7 +4839,9 @@ public class Client {
             }
         }
 
-        public class PVEStatus extends Base {
+        public class PVEStatus {
+
+            private final Client _client;
 
             protected PVEStatus(Client client) {
                 _client = client;
@@ -4701,7 +4868,9 @@ public class Client {
             }
         }
 
-        public class PVENextid extends Base {
+        public class PVENextid {
+
+            private final Client _client;
 
             protected PVENextid(Client client) {
                 _client = client;
@@ -4777,7 +4946,9 @@ public class Client {
         }
     }
 
-    public class PVENodes extends Base {
+    public class PVENodes {
+
+        private final Client _client;
 
         protected PVENodes(Client client) {
             _client = client;
@@ -4787,8 +4958,9 @@ public class Client {
             return new PVEItemNode(_client, node);
         }
 
-        public class PVEItemNode extends Base {
+        public class PVEItemNode {
 
+            private final Client _client;
             private final Object _node;
 
             protected PVEItemNode(Client client, Object node) {
@@ -4963,6 +5135,14 @@ public class Client {
                 }
                 return _execute;
             }
+            private PVEWakeonlan _wakeonlan;
+
+            public PVEWakeonlan getWakeonlan() {
+                if (_wakeonlan == null) {
+                    _wakeonlan = new PVEWakeonlan(_client, _node);
+                }
+                return _wakeonlan;
+            }
             private PVERrd _rrd;
 
             public PVERrd getRrd() {
@@ -5084,8 +5264,9 @@ public class Client {
                 return _hosts;
             }
 
-            public class PVEQemu extends Base {
+            public class PVEQemu {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEQemu(Client client, Object node) {
@@ -5097,8 +5278,9 @@ public class Client {
                     return new PVEItemVmid(_client, _node, vmid);
                 }
 
-                public class PVEItemVmid extends Base {
+                public class PVEItemVmid {
 
+                    private final Client _client;
                     private final Object _node;
                     private final Object _vmid;
 
@@ -5276,8 +5458,9 @@ public class Client {
                         return _template;
                     }
 
-                    public class PVEFirewall extends Base {
+                    public class PVEFirewall {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -5335,8 +5518,9 @@ public class Client {
                             return _refs;
                         }
 
-                        public class PVERules extends Base {
+                        public class PVERules {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -5350,8 +5534,9 @@ public class Client {
                                 return new PVEItemPos(_client, _node, _vmid, pos);
                             }
 
-                            public class PVEItemPos extends Base {
+                            public class PVEItemPos {
 
+                                private final Client _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _pos;
@@ -5466,6 +5651,8 @@ public class Client {
                                  * to use network configuration key names for
                                  * VMs and containers ('net\d+'). Host related
                                  * rules can use arbitrary strings.
+                                 * @param log Log level for firewall rule. Enum:
+                                 * emerg,alert,crit,err,warning,notice,info,debug,nolog
                                  * @param macro Use predefined standard macro.
                                  * @param moveto Move rule to new position
                                  * &amp;lt;moveto&amp;gt;. Other arguments are
@@ -5492,7 +5679,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
-                                public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                                public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("action", action);
                                     parameters.put("comment", comment);
@@ -5502,6 +5689,7 @@ public class Client {
                                     parameters.put("dport", dport);
                                     parameters.put("enable", enable);
                                     parameters.put("iface", iface);
+                                    parameters.put("log", log);
                                     parameters.put("macro", macro);
                                     parameters.put("moveto", moveto);
                                     parameters.put("proto", proto);
@@ -5544,6 +5732,8 @@ public class Client {
                                  * to use network configuration key names for
                                  * VMs and containers ('net\d+'). Host related
                                  * rules can use arbitrary strings.
+                                 * @param log Log level for firewall rule. Enum:
+                                 * emerg,alert,crit,err,warning,notice,info,debug,nolog
                                  * @param macro Use predefined standard macro.
                                  * @param moveto Move rule to new position
                                  * &amp;lt;moveto&amp;gt;. Other arguments are
@@ -5570,8 +5760,8 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
-                                public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
-                                    return setRest(action, comment, delete, dest, digest, dport, enable, iface, macro, moveto, proto, source, sport, type);
+                                public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                                    return setRest(action, comment, delete, dest, digest, dport, enable, iface, log, macro, moveto, proto, source, sport, type);
                                 }
 
                                 /**
@@ -5645,6 +5835,8 @@ public class Client {
                              * use network configuration key names for VMs and
                              * containers ('net\d+'). Host related rules can use
                              * arbitrary strings.
+                             * @param log Log level for firewall rule. Enum:
+                             * emerg,alert,crit,err,warning,notice,info,debug,nolog
                              * @param macro Use predefined standard macro.
                              * @param pos Update rule at position
                              * &amp;lt;pos&amp;gt;.
@@ -5668,7 +5860,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
-                            public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                            public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
@@ -5678,6 +5870,7 @@ public class Client {
                                 parameters.put("dport", dport);
                                 parameters.put("enable", enable);
                                 parameters.put("iface", iface);
+                                parameters.put("log", log);
                                 parameters.put("macro", macro);
                                 parameters.put("pos", pos);
                                 parameters.put("proto", proto);
@@ -5716,6 +5909,8 @@ public class Client {
                              * use network configuration key names for VMs and
                              * containers ('net\d+'). Host related rules can use
                              * arbitrary strings.
+                             * @param log Log level for firewall rule. Enum:
+                             * emerg,alert,crit,err,warning,notice,info,debug,nolog
                              * @param macro Use predefined standard macro.
                              * @param pos Update rule at position
                              * &amp;lt;pos&amp;gt;.
@@ -5739,8 +5934,8 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
-                            public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
-                                return createRest(action, type, comment, dest, digest, dport, enable, iface, macro, pos, proto, source, sport);
+                            public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                                return createRest(action, type, comment, dest, digest, dport, enable, iface, log, macro, pos, proto, source, sport);
                             }
 
                             /**
@@ -5773,8 +5968,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEAliases extends Base {
+                        public class PVEAliases {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -5788,8 +5984,9 @@ public class Client {
                                 return new PVEItemName(_client, _node, _vmid, name);
                             }
 
-                            public class PVEItemName extends Base {
+                            public class PVEItemName {
 
+                                private final Client _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _name;
@@ -6021,8 +6218,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEIpset extends Base {
+                        public class PVEIpset {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -6036,8 +6234,9 @@ public class Client {
                                 return new PVEItemName(_client, _node, _vmid, name);
                             }
 
-                            public class PVEItemName extends Base {
+                            public class PVEItemName {
 
+                                private final Client _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _name;
@@ -6053,8 +6252,9 @@ public class Client {
                                     return new PVEItemCidr(_client, _node, _vmid, _name, cidr);
                                 }
 
-                                public class PVEItemCidr extends Base {
+                                public class PVEItemCidr {
 
+                                    private final Client _client;
                                     private final Object _node;
                                     private final Object _vmid;
                                     private final Object _name;
@@ -6382,8 +6582,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEOptions extends Base {
+                        public class PVEOptions {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -6527,8 +6728,9 @@ public class Client {
                             }
                         }
 
-                        public class PVELog extends Base {
+                        public class PVELog {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -6586,8 +6788,9 @@ public class Client {
                             }
                         }
 
-                        public class PVERefs extends Base {
+                        public class PVERefs {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -6669,8 +6872,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEAgent extends Base {
+                    public class PVEAgent {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -6880,8 +7084,9 @@ public class Client {
                             return _file_Write;
                         }
 
-                        public class PVEFsfreeze_Freeze extends Base {
+                        public class PVEFsfreeze_Freeze {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -6912,8 +7117,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEFsfreeze_Status extends Base {
+                        public class PVEFsfreeze_Status {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -6944,8 +7150,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEFsfreeze_Thaw extends Base {
+                        public class PVEFsfreeze_Thaw {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -6976,8 +7183,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEFstrim extends Base {
+                        public class PVEFstrim {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7008,8 +7216,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEGet_Fsinfo extends Base {
+                        public class PVEGet_Fsinfo {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7040,8 +7249,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEGet_Host_Name extends Base {
+                        public class PVEGet_Host_Name {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7072,8 +7282,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEGet_Memory_Block_Info extends Base {
+                        public class PVEGet_Memory_Block_Info {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7104,8 +7315,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEGet_Memory_Blocks extends Base {
+                        public class PVEGet_Memory_Blocks {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7136,8 +7348,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEGet_Osinfo extends Base {
+                        public class PVEGet_Osinfo {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7168,8 +7381,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEGet_Time extends Base {
+                        public class PVEGet_Time {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7200,8 +7414,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEGet_Timezone extends Base {
+                        public class PVEGet_Timezone {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7232,8 +7447,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEGet_Users extends Base {
+                        public class PVEGet_Users {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7264,8 +7480,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEGet_Vcpus extends Base {
+                        public class PVEGet_Vcpus {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7296,8 +7513,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEInfo extends Base {
+                        public class PVEInfo {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7328,8 +7546,9 @@ public class Client {
                             }
                         }
 
-                        public class PVENetwork_Get_Interfaces extends Base {
+                        public class PVENetwork_Get_Interfaces {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7360,8 +7579,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEPing extends Base {
+                        public class PVEPing {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7392,8 +7612,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEShutdown extends Base {
+                        public class PVEShutdown {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7424,8 +7645,9 @@ public class Client {
                             }
                         }
 
-                        public class PVESuspend_Disk extends Base {
+                        public class PVESuspend_Disk {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7456,8 +7678,9 @@ public class Client {
                             }
                         }
 
-                        public class PVESuspend_Hybrid extends Base {
+                        public class PVESuspend_Hybrid {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7488,8 +7711,9 @@ public class Client {
                             }
                         }
 
-                        public class PVESuspend_Ram extends Base {
+                        public class PVESuspend_Ram {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7520,8 +7744,9 @@ public class Client {
                             }
                         }
 
-                        public class PVESet_User_Password extends Base {
+                        public class PVESet_User_Password {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7595,8 +7820,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEExec extends Base {
+                        public class PVEExec {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7635,8 +7861,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEExec_Status extends Base {
+                        public class PVEExec_Status {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7673,8 +7900,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEFile_Read extends Base {
+                        public class PVEFile_Read {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7711,8 +7939,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEFile_Write extends Base {
+                        public class PVEFile_Write {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -7799,8 +8028,9 @@ public class Client {
                         }
                     }
 
-                    public class PVERrd extends Base {
+                    public class PVERrd {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -7878,8 +8108,9 @@ public class Client {
                         }
                     }
 
-                    public class PVERrddata extends Base {
+                    public class PVERrddata {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -7947,8 +8178,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEConfig extends Base {
+                    public class PVEConfig {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -7965,12 +8197,15 @@ public class Client {
                          *
                          * @param current Get current values (instead of pending
                          * values).
+                         * @param snapshot Fetch config values from given
+                         * snapshot.
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result getRest(Boolean current) throws JSONException {
+                        public Result getRest(Boolean current, String snapshot) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("current", current);
+                            parameters.put("snapshot", snapshot);
                             return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/config", parameters);
                         }
 
@@ -7981,11 +8216,13 @@ public class Client {
                          *
                          * @param current Get current values (instead of pending
                          * values).
+                         * @param snapshot Fetch config values from given
+                         * snapshot.
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result vmConfig(Boolean current) throws JSONException {
-                            return getRest(current);
+                        public Result vmConfig(Boolean current, String snapshot) throws JSONException {
+                            return getRest(current, snapshot);
                         }
 
                         /**
@@ -8034,6 +8271,8 @@ public class Client {
                          * (d), or network (n).
                          * @param bootdisk Enable booting from specified disk.
                          * @param cdrom This is an alias for option -ide2
+                         * @param cicustom cloud-init: Specify custom files to
+                         * replace the automatically generated ones at start.
                          * @param cipassword cloud-init: Password to assign the
                          * user. Using this is generally not recommended. Use
                          * ssh keys instead. Also note that older cloud-init
@@ -8065,6 +8304,8 @@ public class Client {
                          * unused[n] always cause physical removal.
                          * @param freeze Freeze CPU at startup (use 'c' monitor
                          * command to start execution).
+                         * @param hookscript Script that will be executed during
+                         * various steps in the vms lifetime.
                          * @param hostpciN Map host PCI devices into guest.
                          * @param hotplug Selectively enable hotplug features.
                          * This is a comma separated list of hotplug features:
@@ -8086,6 +8327,8 @@ public class Client {
                          * cloud-init is enabled and neither an IPv4 nor an IPv6
                          * address is specified, it defaults to using dhcp on
                          * IPv4.
+                         * @param ivshmem Inter-VM shared memory. Useful for
+                         * direct communication between VMs, or to the host.
                          * @param keyboard Keybord layout for vnc server.
                          * Default is read from the '/etc/pve/datacenter.cfg'
                          * configuration file.It should not be necessary to set
@@ -8097,7 +8340,7 @@ public class Client {
                          * time. This is enabled by default if ostype indicates
                          * a Microsoft OS.
                          * @param lock_ Lock/unlock the VM. Enum:
-                         * migrate,backup,snapshot,rollback
+                         * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
                          * @param machine Specifies the Qemu machine type.
                          * @param memory Amount of RAM for the VM in MB. This is
                          * the maximum available memory when you use the balloon
@@ -8181,7 +8424,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest(Boolean acpi, String agent, String arch, String args, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String sshkeys, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                        public Result createRest(Boolean acpi, String agent, String arch, String args, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String sshkeys, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
                             parameters.put("agent", agent);
@@ -8194,6 +8437,7 @@ public class Client {
                             parameters.put("boot", boot);
                             parameters.put("bootdisk", bootdisk);
                             parameters.put("cdrom", cdrom);
+                            parameters.put("cicustom", cicustom);
                             parameters.put("cipassword", cipassword);
                             parameters.put("citype", citype);
                             parameters.put("ciuser", ciuser);
@@ -8207,8 +8451,10 @@ public class Client {
                             parameters.put("efidisk0", efidisk0);
                             parameters.put("force", force);
                             parameters.put("freeze", freeze);
+                            parameters.put("hookscript", hookscript);
                             parameters.put("hotplug", hotplug);
                             parameters.put("hugepages", hugepages);
+                            parameters.put("ivshmem", ivshmem);
                             parameters.put("keyboard", keyboard);
                             parameters.put("kvm", kvm);
                             parameters.put("localtime", localtime);
@@ -8280,6 +8526,8 @@ public class Client {
                          * (d), or network (n).
                          * @param bootdisk Enable booting from specified disk.
                          * @param cdrom This is an alias for option -ide2
+                         * @param cicustom cloud-init: Specify custom files to
+                         * replace the automatically generated ones at start.
                          * @param cipassword cloud-init: Password to assign the
                          * user. Using this is generally not recommended. Use
                          * ssh keys instead. Also note that older cloud-init
@@ -8311,6 +8559,8 @@ public class Client {
                          * unused[n] always cause physical removal.
                          * @param freeze Freeze CPU at startup (use 'c' monitor
                          * command to start execution).
+                         * @param hookscript Script that will be executed during
+                         * various steps in the vms lifetime.
                          * @param hostpciN Map host PCI devices into guest.
                          * @param hotplug Selectively enable hotplug features.
                          * This is a comma separated list of hotplug features:
@@ -8332,6 +8582,8 @@ public class Client {
                          * cloud-init is enabled and neither an IPv4 nor an IPv6
                          * address is specified, it defaults to using dhcp on
                          * IPv4.
+                         * @param ivshmem Inter-VM shared memory. Useful for
+                         * direct communication between VMs, or to the host.
                          * @param keyboard Keybord layout for vnc server.
                          * Default is read from the '/etc/pve/datacenter.cfg'
                          * configuration file.It should not be necessary to set
@@ -8343,7 +8595,7 @@ public class Client {
                          * time. This is enabled by default if ostype indicates
                          * a Microsoft OS.
                          * @param lock_ Lock/unlock the VM. Enum:
-                         * migrate,backup,snapshot,rollback
+                         * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
                          * @param machine Specifies the Qemu machine type.
                          * @param memory Amount of RAM for the VM in MB. This is
                          * the maximum available memory when you use the balloon
@@ -8427,8 +8679,8 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result updateVmAsync(Boolean acpi, String agent, String arch, String args, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String sshkeys, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
-                            return createRest(acpi, agent, arch, args, autostart, background_delay, balloon, bios, boot, bootdisk, cdrom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, delete, description, digest, efidisk0, force, freeze, hostpciN, hotplug, hugepages, ideN, ipconfigN, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, protection, reboot, revert, sataN, scsiN, scsihw, searchdomain, serialN, shares, skiplock, smbios1, smp, sockets, sshkeys, startdate, startup, tablet, tdf, template, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
+                        public Result updateVmAsync(Boolean acpi, String agent, String arch, String args, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String sshkeys, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                            return createRest(acpi, agent, arch, args, autostart, background_delay, balloon, bios, boot, bootdisk, cdrom, cicustom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, delete, description, digest, efidisk0, force, freeze, hookscript, hostpciN, hotplug, hugepages, ideN, ipconfigN, ivshmem, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, protection, reboot, revert, sataN, scsiN, scsihw, searchdomain, serialN, shares, skiplock, smbios1, smp, sockets, sshkeys, startdate, startup, tablet, tdf, template, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
                         }
 
                         /**
@@ -8472,6 +8724,8 @@ public class Client {
                          * (d), or network (n).
                          * @param bootdisk Enable booting from specified disk.
                          * @param cdrom This is an alias for option -ide2
+                         * @param cicustom cloud-init: Specify custom files to
+                         * replace the automatically generated ones at start.
                          * @param cipassword cloud-init: Password to assign the
                          * user. Using this is generally not recommended. Use
                          * ssh keys instead. Also note that older cloud-init
@@ -8503,6 +8757,8 @@ public class Client {
                          * unused[n] always cause physical removal.
                          * @param freeze Freeze CPU at startup (use 'c' monitor
                          * command to start execution).
+                         * @param hookscript Script that will be executed during
+                         * various steps in the vms lifetime.
                          * @param hostpciN Map host PCI devices into guest.
                          * @param hotplug Selectively enable hotplug features.
                          * This is a comma separated list of hotplug features:
@@ -8524,6 +8780,8 @@ public class Client {
                          * cloud-init is enabled and neither an IPv4 nor an IPv6
                          * address is specified, it defaults to using dhcp on
                          * IPv4.
+                         * @param ivshmem Inter-VM shared memory. Useful for
+                         * direct communication between VMs, or to the host.
                          * @param keyboard Keybord layout for vnc server.
                          * Default is read from the '/etc/pve/datacenter.cfg'
                          * configuration file.It should not be necessary to set
@@ -8535,7 +8793,7 @@ public class Client {
                          * time. This is enabled by default if ostype indicates
                          * a Microsoft OS.
                          * @param lock_ Lock/unlock the VM. Enum:
-                         * migrate,backup,snapshot,rollback
+                         * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
                          * @param machine Specifies the Qemu machine type.
                          * @param memory Amount of RAM for the VM in MB. This is
                          * the maximum available memory when you use the balloon
@@ -8619,7 +8877,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result setRest(Boolean acpi, String agent, String arch, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String sshkeys, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                        public Result setRest(Boolean acpi, String agent, String arch, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String sshkeys, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
                             parameters.put("agent", agent);
@@ -8631,6 +8889,7 @@ public class Client {
                             parameters.put("boot", boot);
                             parameters.put("bootdisk", bootdisk);
                             parameters.put("cdrom", cdrom);
+                            parameters.put("cicustom", cicustom);
                             parameters.put("cipassword", cipassword);
                             parameters.put("citype", citype);
                             parameters.put("ciuser", ciuser);
@@ -8644,8 +8903,10 @@ public class Client {
                             parameters.put("efidisk0", efidisk0);
                             parameters.put("force", force);
                             parameters.put("freeze", freeze);
+                            parameters.put("hookscript", hookscript);
                             parameters.put("hotplug", hotplug);
                             parameters.put("hugepages", hugepages);
+                            parameters.put("ivshmem", ivshmem);
                             parameters.put("keyboard", keyboard);
                             parameters.put("kvm", kvm);
                             parameters.put("localtime", localtime);
@@ -8716,6 +8977,8 @@ public class Client {
                          * (d), or network (n).
                          * @param bootdisk Enable booting from specified disk.
                          * @param cdrom This is an alias for option -ide2
+                         * @param cicustom cloud-init: Specify custom files to
+                         * replace the automatically generated ones at start.
                          * @param cipassword cloud-init: Password to assign the
                          * user. Using this is generally not recommended. Use
                          * ssh keys instead. Also note that older cloud-init
@@ -8747,6 +9010,8 @@ public class Client {
                          * unused[n] always cause physical removal.
                          * @param freeze Freeze CPU at startup (use 'c' monitor
                          * command to start execution).
+                         * @param hookscript Script that will be executed during
+                         * various steps in the vms lifetime.
                          * @param hostpciN Map host PCI devices into guest.
                          * @param hotplug Selectively enable hotplug features.
                          * This is a comma separated list of hotplug features:
@@ -8768,6 +9033,8 @@ public class Client {
                          * cloud-init is enabled and neither an IPv4 nor an IPv6
                          * address is specified, it defaults to using dhcp on
                          * IPv4.
+                         * @param ivshmem Inter-VM shared memory. Useful for
+                         * direct communication between VMs, or to the host.
                          * @param keyboard Keybord layout for vnc server.
                          * Default is read from the '/etc/pve/datacenter.cfg'
                          * configuration file.It should not be necessary to set
@@ -8779,7 +9046,7 @@ public class Client {
                          * time. This is enabled by default if ostype indicates
                          * a Microsoft OS.
                          * @param lock_ Lock/unlock the VM. Enum:
-                         * migrate,backup,snapshot,rollback
+                         * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
                          * @param machine Specifies the Qemu machine type.
                          * @param memory Amount of RAM for the VM in MB. This is
                          * the maximum available memory when you use the balloon
@@ -8863,8 +9130,8 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result updateVm(Boolean acpi, String agent, String arch, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String sshkeys, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
-                            return setRest(acpi, agent, arch, args, autostart, balloon, bios, boot, bootdisk, cdrom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, delete, description, digest, efidisk0, force, freeze, hostpciN, hotplug, hugepages, ideN, ipconfigN, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, protection, reboot, revert, sataN, scsiN, scsihw, searchdomain, serialN, shares, skiplock, smbios1, smp, sockets, sshkeys, startdate, startup, tablet, tdf, template, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
+                        public Result updateVm(Boolean acpi, String agent, String arch, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String sshkeys, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                            return setRest(acpi, agent, arch, args, autostart, balloon, bios, boot, bootdisk, cdrom, cicustom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, delete, description, digest, efidisk0, force, freeze, hookscript, hostpciN, hotplug, hugepages, ideN, ipconfigN, ivshmem, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, protection, reboot, revert, sataN, scsiN, scsihw, searchdomain, serialN, shares, skiplock, smbios1, smp, sockets, sshkeys, startdate, startup, tablet, tdf, template, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
                         }
 
                         /**
@@ -8892,8 +9159,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEPending extends Base {
+                    public class PVEPending {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -8926,8 +9194,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEUnlink extends Base {
+                    public class PVEUnlink {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -8997,8 +9266,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEVncproxy extends Base {
+                    public class PVEVncproxy {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -9055,8 +9325,9 @@ public class Client {
                         }
                     }
 
-                    public class PVETermproxy extends Base {
+                    public class PVETermproxy {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -9113,8 +9384,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEVncwebsocket extends Base {
+                    public class PVEVncwebsocket {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -9156,8 +9428,9 @@ public class Client {
                         }
                     }
 
-                    public class PVESpiceproxy extends Base {
+                    public class PVESpiceproxy {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -9226,8 +9499,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEStatus extends Base {
+                    public class PVEStatus {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -9293,8 +9567,9 @@ public class Client {
                             return _resume;
                         }
 
-                        public class PVECurrent extends Base {
+                        public class PVECurrent {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -9325,8 +9600,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEStart extends Base {
+                        public class PVEStart {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -9417,8 +9693,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEStop extends Base {
+                        public class PVEStop {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -9498,8 +9775,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEReset extends Base {
+                        public class PVEReset {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -9556,8 +9834,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEShutdown extends Base {
+                        public class PVEShutdown {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -9641,8 +9920,9 @@ public class Client {
                             }
                         }
 
-                        public class PVESuspend extends Base {
+                        public class PVESuspend {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -9657,12 +9937,17 @@ public class Client {
                              *
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
+                             * @param statestorage The storage for the VM state
+                             * @param todisk If set, suspends the VM to disk.
+                             * Will be resumed on next VM start.
                              * @return Result
                              * @throws JSONException
                              */
-                            public Result createRest(Boolean skiplock) throws JSONException {
+                            public Result createRest(Boolean skiplock, String statestorage, Boolean todisk) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("skiplock", skiplock);
+                                parameters.put("statestorage", statestorage);
+                                parameters.put("todisk", todisk);
                                 return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/suspend", parameters);
                             }
 
@@ -9671,11 +9956,14 @@ public class Client {
                              *
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
+                             * @param statestorage The storage for the VM state
+                             * @param todisk If set, suspends the VM to disk.
+                             * Will be resumed on next VM start.
                              * @return Result
                              * @throws JSONException
                              */
-                            public Result vmSuspend(Boolean skiplock) throws JSONException {
-                                return createRest(skiplock);
+                            public Result vmSuspend(Boolean skiplock, String statestorage, Boolean todisk) throws JSONException {
+                                return createRest(skiplock, statestorage, todisk);
                             }
 
                             /**
@@ -9699,8 +9987,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEResume extends Base {
+                        public class PVEResume {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -9781,8 +10070,9 @@ public class Client {
                         }
                     }
 
-                    public class PVESendkey extends Base {
+                    public class PVESendkey {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -9846,8 +10136,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEFeature extends Base {
+                    public class PVEFeature {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -9913,8 +10204,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEClone extends Base {
+                    public class PVEClone {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -9928,6 +10220,8 @@ public class Client {
                          * Create a copy of virtual machine/template.
                          *
                          * @param newid VMID for the clone.
+                         * @param bwlimit Override I/O bandwidth limit (in
+                         * KiB/s).
                          * @param description Description for the new VM.
                          * @param format Target format for file storage. Only
                          * valid for full clone. Enum: raw,qcow2,vmdk
@@ -9944,9 +10238,10 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest(int newid, String description, String format, Boolean full, String name, String pool, String snapname, String storage, String target) throws JSONException {
+                        public Result createRest(int newid, Integer bwlimit, String description, String format, Boolean full, String name, String pool, String snapname, String storage, String target) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("newid", newid);
+                            parameters.put("bwlimit", bwlimit);
                             parameters.put("description", description);
                             parameters.put("format", format);
                             parameters.put("full", full);
@@ -9962,6 +10257,8 @@ public class Client {
                          * Create a copy of virtual machine/template.
                          *
                          * @param newid VMID for the clone.
+                         * @param bwlimit Override I/O bandwidth limit (in
+                         * KiB/s).
                          * @param description Description for the new VM.
                          * @param format Target format for file storage. Only
                          * valid for full clone. Enum: raw,qcow2,vmdk
@@ -9978,8 +10275,8 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result cloneVm(int newid, String description, String format, Boolean full, String name, String pool, String snapname, String storage, String target) throws JSONException {
-                            return createRest(newid, description, format, full, name, pool, snapname, storage, target);
+                        public Result cloneVm(int newid, Integer bwlimit, String description, String format, Boolean full, String name, String pool, String snapname, String storage, String target) throws JSONException {
+                            return createRest(newid, bwlimit, description, format, full, name, pool, snapname, storage, target);
                         }
 
                         /**
@@ -10007,8 +10304,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEMoveDisk extends Base {
+                    public class PVEMoveDisk {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -10024,6 +10322,8 @@ public class Client {
                          * @param disk The disk you want to move. Enum:
                          * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          * @param storage Target storage.
+                         * @param bwlimit Override I/O bandwidth limit (in
+                         * KiB/s).
                          * @param delete Delete the original disk after
                          * successful copy. By default the original disk is kept
                          * as unused disk.
@@ -10034,10 +10334,11 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest(String disk, String storage, Boolean delete, String digest, String format) throws JSONException {
+                        public Result createRest(String disk, String storage, Integer bwlimit, Boolean delete, String digest, String format) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
                             parameters.put("storage", storage);
+                            parameters.put("bwlimit", bwlimit);
                             parameters.put("delete", delete);
                             parameters.put("digest", digest);
                             parameters.put("format", format);
@@ -10050,6 +10351,8 @@ public class Client {
                          * @param disk The disk you want to move. Enum:
                          * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          * @param storage Target storage.
+                         * @param bwlimit Override I/O bandwidth limit (in
+                         * KiB/s).
                          * @param delete Delete the original disk after
                          * successful copy. By default the original disk is kept
                          * as unused disk.
@@ -10060,8 +10363,8 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result moveVmDisk(String disk, String storage, Boolean delete, String digest, String format) throws JSONException {
-                            return createRest(disk, storage, delete, digest, format);
+                        public Result moveVmDisk(String disk, String storage, Integer bwlimit, Boolean delete, String digest, String format) throws JSONException {
+                            return createRest(disk, storage, bwlimit, delete, digest, format);
                         }
 
                         /**
@@ -10094,8 +10397,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEMigrate extends Base {
+                    public class PVEMigrate {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -10110,6 +10414,8 @@ public class Client {
                          * task.
                          *
                          * @param target Target node.
+                         * @param bwlimit Override I/O bandwidth limit (in
+                         * KiB/s).
                          * @param force Allow to migrate VMs which use local
                          * devices. Only root may use this option.
                          * @param migration_network CIDR of the (sub) network
@@ -10125,9 +10431,10 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest(String target, Boolean force, String migration_network, String migration_type, Boolean online, String targetstorage, Boolean with_local_disks) throws JSONException {
+                        public Result createRest(String target, Integer bwlimit, Boolean force, String migration_network, String migration_type, Boolean online, String targetstorage, Boolean with_local_disks) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
+                            parameters.put("bwlimit", bwlimit);
                             parameters.put("force", force);
                             parameters.put("migration_network", migration_network);
                             parameters.put("migration_type", migration_type);
@@ -10142,6 +10449,8 @@ public class Client {
                          * task.
                          *
                          * @param target Target node.
+                         * @param bwlimit Override I/O bandwidth limit (in
+                         * KiB/s).
                          * @param force Allow to migrate VMs which use local
                          * devices. Only root may use this option.
                          * @param migration_network CIDR of the (sub) network
@@ -10157,8 +10466,8 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result migrateVm(String target, Boolean force, String migration_network, String migration_type, Boolean online, String targetstorage, Boolean with_local_disks) throws JSONException {
-                            return createRest(target, force, migration_network, migration_type, online, targetstorage, with_local_disks);
+                        public Result migrateVm(String target, Integer bwlimit, Boolean force, String migration_network, String migration_type, Boolean online, String targetstorage, Boolean with_local_disks) throws JSONException {
+                            return createRest(target, bwlimit, force, migration_network, migration_type, online, targetstorage, with_local_disks);
                         }
 
                         /**
@@ -10188,8 +10497,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEMonitor extends Base {
+                    public class PVEMonitor {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -10224,8 +10534,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEResize extends Base {
+                    public class PVEResize {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -10318,8 +10629,9 @@ public class Client {
                         }
                     }
 
-                    public class PVESnapshot extends Base {
+                    public class PVESnapshot {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -10333,8 +10645,9 @@ public class Client {
                             return new PVEItemSnapname(_client, _node, _vmid, snapname);
                         }
 
-                        public class PVEItemSnapname extends Base {
+                        public class PVEItemSnapname {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
                             private final Object _snapname;
@@ -10362,8 +10675,9 @@ public class Client {
                                 return _rollback;
                             }
 
-                            public class PVEConfig extends Base {
+                            public class PVEConfig {
 
+                                private final Client _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _snapname;
@@ -10442,8 +10756,9 @@ public class Client {
                                 }
                             }
 
-                            public class PVERollback extends Base {
+                            public class PVERollback {
 
+                                private final Client _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _snapname;
@@ -10616,8 +10931,9 @@ public class Client {
                         }
                     }
 
-                    public class PVETemplate extends Base {
+                    public class PVETemplate {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -10806,8 +11122,10 @@ public class Client {
                  * @param boot Boot on floppy (a), hard disk (c), CD-ROM (d), or
                  * network (n).
                  * @param bootdisk Enable booting from specified disk.
-                 * @param bwlimit Override i/o bandwidth limit (in KiB/s).
+                 * @param bwlimit Override I/O bandwidth limit (in KiB/s).
                  * @param cdrom This is an alias for option -ide2
+                 * @param cicustom cloud-init: Specify custom files to replace
+                 * the automatically generated ones at start.
                  * @param cipassword cloud-init: Password to assign the user.
                  * Using this is generally not recommended. Use ssh keys
                  * instead. Also note that older cloud-init versions do not
@@ -10829,6 +11147,8 @@ public class Client {
                  * @param force Allow to overwrite existing VM.
                  * @param freeze Freeze CPU at startup (use 'c' monitor command
                  * to start execution).
+                 * @param hookscript Script that will be executed during various
+                 * steps in the vms lifetime.
                  * @param hostpciN Map host PCI devices into guest.
                  * @param hotplug Selectively enable hotplug features. This is a
                  * comma separated list of hotplug features: 'network', 'disk',
@@ -10848,6 +11168,8 @@ public class Client {
                  * 'auto' can be used to use stateless autoconfiguration. If
                  * cloud-init is enabled and neither an IPv4 nor an IPv6 address
                  * is specified, it defaults to using dhcp on IPv4.
+                 * @param ivshmem Inter-VM shared memory. Useful for direct
+                 * communication between VMs, or to the host.
                  * @param keyboard Keybord layout for vnc server. Default is
                  * read from the '/etc/pve/datacenter.cfg' configuration file.It
                  * should not be necessary to set it. Enum:
@@ -10856,7 +11178,7 @@ public class Client {
                  * @param localtime Set the real time clock to local time. This
                  * is enabled by default if ostype indicates a Microsoft OS.
                  * @param lock_ Lock/unlock the VM. Enum:
-                 * migrate,backup,snapshot,rollback
+                 * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
                  * @param machine Specifies the Qemu machine type.
                  * @param memory Amount of RAM for the VM in MB. This is the
                  * maximum available memory when you use the balloon device.
@@ -10932,7 +11254,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createRest(int vmid, Boolean acpi, String agent, String arch, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                public Result createRest(int vmid, Boolean acpi, String agent, String arch, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vmid", vmid);
                     parameters.put("acpi", acpi);
@@ -10947,6 +11269,7 @@ public class Client {
                     parameters.put("bootdisk", bootdisk);
                     parameters.put("bwlimit", bwlimit);
                     parameters.put("cdrom", cdrom);
+                    parameters.put("cicustom", cicustom);
                     parameters.put("cipassword", cipassword);
                     parameters.put("citype", citype);
                     parameters.put("ciuser", ciuser);
@@ -10958,8 +11281,10 @@ public class Client {
                     parameters.put("efidisk0", efidisk0);
                     parameters.put("force", force);
                     parameters.put("freeze", freeze);
+                    parameters.put("hookscript", hookscript);
                     parameters.put("hotplug", hotplug);
                     parameters.put("hugepages", hugepages);
+                    parameters.put("ivshmem", ivshmem);
                     parameters.put("keyboard", keyboard);
                     parameters.put("kvm", kvm);
                     parameters.put("localtime", localtime);
@@ -11030,8 +11355,10 @@ public class Client {
                  * @param boot Boot on floppy (a), hard disk (c), CD-ROM (d), or
                  * network (n).
                  * @param bootdisk Enable booting from specified disk.
-                 * @param bwlimit Override i/o bandwidth limit (in KiB/s).
+                 * @param bwlimit Override I/O bandwidth limit (in KiB/s).
                  * @param cdrom This is an alias for option -ide2
+                 * @param cicustom cloud-init: Specify custom files to replace
+                 * the automatically generated ones at start.
                  * @param cipassword cloud-init: Password to assign the user.
                  * Using this is generally not recommended. Use ssh keys
                  * instead. Also note that older cloud-init versions do not
@@ -11053,6 +11380,8 @@ public class Client {
                  * @param force Allow to overwrite existing VM.
                  * @param freeze Freeze CPU at startup (use 'c' monitor command
                  * to start execution).
+                 * @param hookscript Script that will be executed during various
+                 * steps in the vms lifetime.
                  * @param hostpciN Map host PCI devices into guest.
                  * @param hotplug Selectively enable hotplug features. This is a
                  * comma separated list of hotplug features: 'network', 'disk',
@@ -11072,6 +11401,8 @@ public class Client {
                  * 'auto' can be used to use stateless autoconfiguration. If
                  * cloud-init is enabled and neither an IPv4 nor an IPv6 address
                  * is specified, it defaults to using dhcp on IPv4.
+                 * @param ivshmem Inter-VM shared memory. Useful for direct
+                 * communication between VMs, or to the host.
                  * @param keyboard Keybord layout for vnc server. Default is
                  * read from the '/etc/pve/datacenter.cfg' configuration file.It
                  * should not be necessary to set it. Enum:
@@ -11080,7 +11411,7 @@ public class Client {
                  * @param localtime Set the real time clock to local time. This
                  * is enabled by default if ostype indicates a Microsoft OS.
                  * @param lock_ Lock/unlock the VM. Enum:
-                 * migrate,backup,snapshot,rollback
+                 * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
                  * @param machine Specifies the Qemu machine type.
                  * @param memory Amount of RAM for the VM in MB. This is the
                  * maximum available memory when you use the balloon device.
@@ -11156,8 +11487,8 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createVm(int vmid, Boolean acpi, String agent, String arch, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
-                    return createRest(vmid, acpi, agent, arch, archive, args, autostart, balloon, bios, boot, bootdisk, bwlimit, cdrom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, description, efidisk0, force, freeze, hostpciN, hotplug, hugepages, ideN, ipconfigN, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, pool, protection, reboot, sataN, scsiN, scsihw, searchdomain, serialN, shares, smbios1, smp, sockets, sshkeys, start, startdate, startup, storage, tablet, tdf, template, unique, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
+                public Result createVm(int vmid, Boolean acpi, String agent, String arch, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                    return createRest(vmid, acpi, agent, arch, archive, args, autostart, balloon, bios, boot, bootdisk, bwlimit, cdrom, cicustom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, description, efidisk0, force, freeze, hookscript, hostpciN, hotplug, hugepages, ideN, ipconfigN, ivshmem, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, pool, protection, reboot, sataN, scsiN, scsihw, searchdomain, serialN, shares, smbios1, smp, sockets, sshkeys, start, startdate, startup, storage, tablet, tdf, template, unique, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
                 }
 
                 /**
@@ -11185,8 +11516,9 @@ public class Client {
                 }
             }
 
-            public class PVELxc extends Base {
+            public class PVELxc {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVELxc(Client client, Object node) {
@@ -11198,8 +11530,9 @@ public class Client {
                     return new PVEItemVmid(_client, _node, vmid);
                 }
 
-                public class PVEItemVmid extends Base {
+                public class PVEItemVmid {
 
+                    private final Client _client;
                     private final Object _node;
                     private final Object _vmid;
 
@@ -11337,8 +11670,9 @@ public class Client {
                         return _moveVolume;
                     }
 
-                    public class PVEConfig extends Base {
+                    public class PVEConfig {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -11346,6 +11680,32 @@ public class Client {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
+                        }
+
+                        /**
+                         * Get container configuration.
+                         *
+                         * @param snapshot Fetch config values from given
+                         * snapshot.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest(String snapshot) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("snapshot", snapshot);
+                            return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/config", parameters);
+                        }
+
+                        /**
+                         * Get container configuration.
+                         *
+                         * @param snapshot Fetch config values from given
+                         * snapshot.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result vmConfig(String snapshot) throws JSONException {
+                            return getRest(snapshot);
                         }
 
                         /**
@@ -11402,6 +11762,8 @@ public class Client {
                          * can be used to prevent concurrent modifications.
                          * @param features Allow containers access to advanced
                          * features.
+                         * @param hookscript Script that will be exectued during
+                         * various steps in the containers lifetime.
                          * @param hostname Set a host name for the container.
                          * @param lock_ Lock/unlock the VM. Enum:
                          * backup,disk,migrate,mounted,rollback,snapshot,snapshot-delete
@@ -11447,7 +11809,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result setRest(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String features, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String rootfs, String searchdomain, String startup, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                        public Result setRest(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String rootfs, String searchdomain, String startup, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("arch", arch);
                             parameters.put("cmode", cmode);
@@ -11459,6 +11821,7 @@ public class Client {
                             parameters.put("description", description);
                             parameters.put("digest", digest);
                             parameters.put("features", features);
+                            parameters.put("hookscript", hookscript);
                             parameters.put("hostname", hostname);
                             parameters.put("lock", lock_);
                             parameters.put("memory", memory);
@@ -11513,6 +11876,8 @@ public class Client {
                          * can be used to prevent concurrent modifications.
                          * @param features Allow containers access to advanced
                          * features.
+                         * @param hookscript Script that will be exectued during
+                         * various steps in the containers lifetime.
                          * @param hostname Set a host name for the container.
                          * @param lock_ Lock/unlock the VM. Enum:
                          * backup,disk,migrate,mounted,rollback,snapshot,snapshot-delete
@@ -11558,8 +11923,8 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result updateVm(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String features, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String rootfs, String searchdomain, String startup, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
-                            return setRest(arch, cmode, console, cores, cpulimit, cpuunits, delete, description, digest, features, hostname, lock_, memory, mpN, nameserver, netN, onboot, ostype, protection, rootfs, searchdomain, startup, swap, template, tty, unprivileged, unusedN);
+                        public Result updateVm(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String rootfs, String searchdomain, String startup, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                            return setRest(arch, cmode, console, cores, cpulimit, cpuunits, delete, description, digest, features, hookscript, hostname, lock_, memory, mpN, nameserver, netN, onboot, ostype, protection, rootfs, searchdomain, startup, swap, template, tty, unprivileged, unusedN);
                         }
 
                         /**
@@ -11583,8 +11948,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEStatus extends Base {
+                    public class PVEStatus {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -11642,8 +12008,9 @@ public class Client {
                             return _resume;
                         }
 
-                        public class PVECurrent extends Base {
+                        public class PVECurrent {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -11674,8 +12041,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEStart extends Base {
+                        public class PVEStart {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -11732,8 +12100,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEStop extends Base {
+                        public class PVEStop {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -11794,8 +12163,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEShutdown extends Base {
+                        public class PVEShutdown {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -11861,8 +12231,9 @@ public class Client {
                             }
                         }
 
-                        public class PVESuspend extends Base {
+                        public class PVESuspend {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -11893,8 +12264,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEResume extends Base {
+                        public class PVEResume {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -11946,8 +12318,9 @@ public class Client {
                         }
                     }
 
-                    public class PVESnapshot extends Base {
+                    public class PVESnapshot {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -11961,8 +12334,9 @@ public class Client {
                             return new PVEItemSnapname(_client, _node, _vmid, snapname);
                         }
 
-                        public class PVEItemSnapname extends Base {
+                        public class PVEItemSnapname {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
                             private final Object _snapname;
@@ -11990,8 +12364,9 @@ public class Client {
                                 return _config;
                             }
 
-                            public class PVERollback extends Base {
+                            public class PVERollback {
 
+                                private final Client _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _snapname;
@@ -12024,8 +12399,9 @@ public class Client {
                                 }
                             }
 
-                            public class PVEConfig extends Base {
+                            public class PVEConfig {
 
+                                private final Client _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _snapname;
@@ -12241,8 +12617,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEFirewall extends Base {
+                    public class PVEFirewall {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -12300,8 +12677,9 @@ public class Client {
                             return _refs;
                         }
 
-                        public class PVERules extends Base {
+                        public class PVERules {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -12315,8 +12693,9 @@ public class Client {
                                 return new PVEItemPos(_client, _node, _vmid, pos);
                             }
 
-                            public class PVEItemPos extends Base {
+                            public class PVEItemPos {
 
+                                private final Client _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _pos;
@@ -12431,6 +12810,8 @@ public class Client {
                                  * to use network configuration key names for
                                  * VMs and containers ('net\d+'). Host related
                                  * rules can use arbitrary strings.
+                                 * @param log Log level for firewall rule. Enum:
+                                 * emerg,alert,crit,err,warning,notice,info,debug,nolog
                                  * @param macro Use predefined standard macro.
                                  * @param moveto Move rule to new position
                                  * &amp;lt;moveto&amp;gt;. Other arguments are
@@ -12457,7 +12838,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
-                                public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                                public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("action", action);
                                     parameters.put("comment", comment);
@@ -12467,6 +12848,7 @@ public class Client {
                                     parameters.put("dport", dport);
                                     parameters.put("enable", enable);
                                     parameters.put("iface", iface);
+                                    parameters.put("log", log);
                                     parameters.put("macro", macro);
                                     parameters.put("moveto", moveto);
                                     parameters.put("proto", proto);
@@ -12509,6 +12891,8 @@ public class Client {
                                  * to use network configuration key names for
                                  * VMs and containers ('net\d+'). Host related
                                  * rules can use arbitrary strings.
+                                 * @param log Log level for firewall rule. Enum:
+                                 * emerg,alert,crit,err,warning,notice,info,debug,nolog
                                  * @param macro Use predefined standard macro.
                                  * @param moveto Move rule to new position
                                  * &amp;lt;moveto&amp;gt;. Other arguments are
@@ -12535,8 +12919,8 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
-                                public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
-                                    return setRest(action, comment, delete, dest, digest, dport, enable, iface, macro, moveto, proto, source, sport, type);
+                                public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                                    return setRest(action, comment, delete, dest, digest, dport, enable, iface, log, macro, moveto, proto, source, sport, type);
                                 }
 
                                 /**
@@ -12610,6 +12994,8 @@ public class Client {
                              * use network configuration key names for VMs and
                              * containers ('net\d+'). Host related rules can use
                              * arbitrary strings.
+                             * @param log Log level for firewall rule. Enum:
+                             * emerg,alert,crit,err,warning,notice,info,debug,nolog
                              * @param macro Use predefined standard macro.
                              * @param pos Update rule at position
                              * &amp;lt;pos&amp;gt;.
@@ -12633,7 +13019,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
-                            public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                            public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
@@ -12643,6 +13029,7 @@ public class Client {
                                 parameters.put("dport", dport);
                                 parameters.put("enable", enable);
                                 parameters.put("iface", iface);
+                                parameters.put("log", log);
                                 parameters.put("macro", macro);
                                 parameters.put("pos", pos);
                                 parameters.put("proto", proto);
@@ -12681,6 +13068,8 @@ public class Client {
                              * use network configuration key names for VMs and
                              * containers ('net\d+'). Host related rules can use
                              * arbitrary strings.
+                             * @param log Log level for firewall rule. Enum:
+                             * emerg,alert,crit,err,warning,notice,info,debug,nolog
                              * @param macro Use predefined standard macro.
                              * @param pos Update rule at position
                              * &amp;lt;pos&amp;gt;.
@@ -12704,8 +13093,8 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
-                            public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
-                                return createRest(action, type, comment, dest, digest, dport, enable, iface, macro, pos, proto, source, sport);
+                            public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                                return createRest(action, type, comment, dest, digest, dport, enable, iface, log, macro, pos, proto, source, sport);
                             }
 
                             /**
@@ -12738,8 +13127,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEAliases extends Base {
+                        public class PVEAliases {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -12753,8 +13143,9 @@ public class Client {
                                 return new PVEItemName(_client, _node, _vmid, name);
                             }
 
-                            public class PVEItemName extends Base {
+                            public class PVEItemName {
 
+                                private final Client _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _name;
@@ -12986,8 +13377,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEIpset extends Base {
+                        public class PVEIpset {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -13001,8 +13393,9 @@ public class Client {
                                 return new PVEItemName(_client, _node, _vmid, name);
                             }
 
-                            public class PVEItemName extends Base {
+                            public class PVEItemName {
 
+                                private final Client _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _name;
@@ -13018,8 +13411,9 @@ public class Client {
                                     return new PVEItemCidr(_client, _node, _vmid, _name, cidr);
                                 }
 
-                                public class PVEItemCidr extends Base {
+                                public class PVEItemCidr {
 
+                                    private final Client _client;
                                     private final Object _node;
                                     private final Object _vmid;
                                     private final Object _name;
@@ -13347,8 +13741,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEOptions extends Base {
+                        public class PVEOptions {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -13492,8 +13887,9 @@ public class Client {
                             }
                         }
 
-                        public class PVELog extends Base {
+                        public class PVELog {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -13551,8 +13947,9 @@ public class Client {
                             }
                         }
 
-                        public class PVERefs extends Base {
+                        public class PVERefs {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _vmid;
 
@@ -13634,8 +14031,9 @@ public class Client {
                         }
                     }
 
-                    public class PVERrd extends Base {
+                    public class PVERrd {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -13713,8 +14111,9 @@ public class Client {
                         }
                     }
 
-                    public class PVERrddata extends Base {
+                    public class PVERrddata {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -13782,8 +14181,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEVncproxy extends Base {
+                    public class PVEVncproxy {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -13848,8 +14248,9 @@ public class Client {
                         }
                     }
 
-                    public class PVETermproxy extends Base {
+                    public class PVETermproxy {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -13880,8 +14281,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEVncwebsocket extends Base {
+                    public class PVEVncwebsocket {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -13923,8 +14325,9 @@ public class Client {
                         }
                     }
 
-                    public class PVESpiceproxy extends Base {
+                    public class PVESpiceproxy {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -13993,8 +14396,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEMigrate extends Base {
+                    public class PVEMigrate {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -14009,6 +14413,8 @@ public class Client {
                          * migration task.
                          *
                          * @param target Target node.
+                         * @param bwlimit Override I/O bandwidth limit (in
+                         * KiB/s).
                          * @param force Force migration despite local bind /
                          * device mounts. NOTE: deprecated, use 'shared'
                          * property of mount point instead.
@@ -14019,9 +14425,10 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest(String target, Boolean force, Boolean online, Boolean restart, Integer timeout) throws JSONException {
+                        public Result createRest(String target, Integer bwlimit, Boolean force, Boolean online, Boolean restart, Integer timeout) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
+                            parameters.put("bwlimit", bwlimit);
                             parameters.put("force", force);
                             parameters.put("online", online);
                             parameters.put("restart", restart);
@@ -14034,6 +14441,8 @@ public class Client {
                          * migration task.
                          *
                          * @param target Target node.
+                         * @param bwlimit Override I/O bandwidth limit (in
+                         * KiB/s).
                          * @param force Force migration despite local bind /
                          * device mounts. NOTE: deprecated, use 'shared'
                          * property of mount point instead.
@@ -14044,8 +14453,8 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result migrateVm(String target, Boolean force, Boolean online, Boolean restart, Integer timeout) throws JSONException {
-                            return createRest(target, force, online, restart, timeout);
+                        public Result migrateVm(String target, Integer bwlimit, Boolean force, Boolean online, Boolean restart, Integer timeout) throws JSONException {
+                            return createRest(target, bwlimit, force, online, restart, timeout);
                         }
 
                         /**
@@ -14075,8 +14484,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEFeature extends Base {
+                    public class PVEFeature {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -14142,8 +14552,9 @@ public class Client {
                         }
                     }
 
-                    public class PVETemplate extends Base {
+                    public class PVETemplate {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -14174,8 +14585,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEClone extends Base {
+                    public class PVEClone {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -14189,6 +14601,8 @@ public class Client {
                          * Create a container clone/copy
                          *
                          * @param newid VMID for the clone.
+                         * @param bwlimit Override I/O bandwidth limit (in
+                         * KiB/s).
                          * @param description Description for the new CT.
                          * @param full Create a full copy of all disks. This is
                          * always done when you clone a normal CT. For CT
@@ -14203,9 +14617,10 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest(int newid, String description, Boolean full, String hostname, String pool, String snapname, String storage, String target) throws JSONException {
+                        public Result createRest(int newid, Integer bwlimit, String description, Boolean full, String hostname, String pool, String snapname, String storage, String target) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("newid", newid);
+                            parameters.put("bwlimit", bwlimit);
                             parameters.put("description", description);
                             parameters.put("full", full);
                             parameters.put("hostname", hostname);
@@ -14220,6 +14635,8 @@ public class Client {
                          * Create a container clone/copy
                          *
                          * @param newid VMID for the clone.
+                         * @param bwlimit Override I/O bandwidth limit (in
+                         * KiB/s).
                          * @param description Description for the new CT.
                          * @param full Create a full copy of all disks. This is
                          * always done when you clone a normal CT. For CT
@@ -14234,8 +14651,8 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result cloneVm(int newid, String description, Boolean full, String hostname, String pool, String snapname, String storage, String target) throws JSONException {
-                            return createRest(newid, description, full, hostname, pool, snapname, storage, target);
+                        public Result cloneVm(int newid, Integer bwlimit, String description, Boolean full, String hostname, String pool, String snapname, String storage, String target) throws JSONException {
+                            return createRest(newid, bwlimit, description, full, hostname, pool, snapname, storage, target);
                         }
 
                         /**
@@ -14263,8 +14680,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEResize extends Base {
+                    public class PVEResize {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -14352,8 +14770,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEMoveVolume extends Base {
+                    public class PVEMoveVolume {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _vmid;
 
@@ -14369,6 +14788,8 @@ public class Client {
                          * @param storage Target Storage.
                          * @param volume Volume which will be moved. Enum:
                          * rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9,mp10,mp11,mp12,mp13,mp14,mp15,mp16,mp17,mp18,mp19,mp20,mp21,mp22,mp23,mp24,mp25,mp26,mp27,mp28,mp29,mp30,mp31,mp32,mp33,mp34,mp35,mp36,mp37,mp38,mp39,mp40,mp41,mp42,mp43,mp44,mp45,mp46,mp47,mp48,mp49,mp50,mp51,mp52,mp53,mp54,mp55,mp56,mp57,mp58,mp59,mp60,mp61,mp62,mp63,mp64,mp65,mp66,mp67,mp68,mp69,mp70,mp71,mp72,mp73,mp74,mp75,mp76,mp77,mp78,mp79,mp80,mp81,mp82,mp83,mp84,mp85,mp86,mp87,mp88,mp89,mp90,mp91,mp92,mp93,mp94,mp95,mp96,mp97,mp98,mp99,mp100,mp101,mp102,mp103,mp104,mp105,mp106,mp107,mp108,mp109,mp110,mp111,mp112,mp113,mp114,mp115,mp116,mp117,mp118,mp119,mp120,mp121,mp122,mp123,mp124,mp125,mp126,mp127,mp128,mp129,mp130,mp131,mp132,mp133,mp134,mp135,mp136,mp137,mp138,mp139,mp140,mp141,mp142,mp143,mp144,mp145,mp146,mp147,mp148,mp149,mp150,mp151,mp152,mp153,mp154,mp155,mp156,mp157,mp158,mp159,mp160,mp161,mp162,mp163,mp164,mp165,mp166,mp167,mp168,mp169,mp170,mp171,mp172,mp173,mp174,mp175,mp176,mp177,mp178,mp179,mp180,mp181,mp182,mp183,mp184,mp185,mp186,mp187,mp188,mp189,mp190,mp191,mp192,mp193,mp194,mp195,mp196,mp197,mp198,mp199,mp200,mp201,mp202,mp203,mp204,mp205,mp206,mp207,mp208,mp209,mp210,mp211,mp212,mp213,mp214,mp215,mp216,mp217,mp218,mp219,mp220,mp221,mp222,mp223,mp224,mp225,mp226,mp227,mp228,mp229,mp230,mp231,mp232,mp233,mp234,mp235,mp236,mp237,mp238,mp239,mp240,mp241,mp242,mp243,mp244,mp245,mp246,mp247,mp248,mp249,mp250,mp251,mp252,mp253,mp254,mp255
+                         * @param bwlimit Override I/O bandwidth limit (in
+                         * KiB/s).
                          * @param delete Delete the original volume after
                          * successful copy. By default the original is kept as
                          * an unused volume entry.
@@ -14378,10 +14799,11 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest(String storage, String volume, Boolean delete, String digest) throws JSONException {
+                        public Result createRest(String storage, String volume, Integer bwlimit, Boolean delete, String digest) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("storage", storage);
                             parameters.put("volume", volume);
+                            parameters.put("bwlimit", bwlimit);
                             parameters.put("delete", delete);
                             parameters.put("digest", digest);
                             return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/move_volume", parameters);
@@ -14393,6 +14815,8 @@ public class Client {
                          * @param storage Target Storage.
                          * @param volume Volume which will be moved. Enum:
                          * rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9,mp10,mp11,mp12,mp13,mp14,mp15,mp16,mp17,mp18,mp19,mp20,mp21,mp22,mp23,mp24,mp25,mp26,mp27,mp28,mp29,mp30,mp31,mp32,mp33,mp34,mp35,mp36,mp37,mp38,mp39,mp40,mp41,mp42,mp43,mp44,mp45,mp46,mp47,mp48,mp49,mp50,mp51,mp52,mp53,mp54,mp55,mp56,mp57,mp58,mp59,mp60,mp61,mp62,mp63,mp64,mp65,mp66,mp67,mp68,mp69,mp70,mp71,mp72,mp73,mp74,mp75,mp76,mp77,mp78,mp79,mp80,mp81,mp82,mp83,mp84,mp85,mp86,mp87,mp88,mp89,mp90,mp91,mp92,mp93,mp94,mp95,mp96,mp97,mp98,mp99,mp100,mp101,mp102,mp103,mp104,mp105,mp106,mp107,mp108,mp109,mp110,mp111,mp112,mp113,mp114,mp115,mp116,mp117,mp118,mp119,mp120,mp121,mp122,mp123,mp124,mp125,mp126,mp127,mp128,mp129,mp130,mp131,mp132,mp133,mp134,mp135,mp136,mp137,mp138,mp139,mp140,mp141,mp142,mp143,mp144,mp145,mp146,mp147,mp148,mp149,mp150,mp151,mp152,mp153,mp154,mp155,mp156,mp157,mp158,mp159,mp160,mp161,mp162,mp163,mp164,mp165,mp166,mp167,mp168,mp169,mp170,mp171,mp172,mp173,mp174,mp175,mp176,mp177,mp178,mp179,mp180,mp181,mp182,mp183,mp184,mp185,mp186,mp187,mp188,mp189,mp190,mp191,mp192,mp193,mp194,mp195,mp196,mp197,mp198,mp199,mp200,mp201,mp202,mp203,mp204,mp205,mp206,mp207,mp208,mp209,mp210,mp211,mp212,mp213,mp214,mp215,mp216,mp217,mp218,mp219,mp220,mp221,mp222,mp223,mp224,mp225,mp226,mp227,mp228,mp229,mp230,mp231,mp232,mp233,mp234,mp235,mp236,mp237,mp238,mp239,mp240,mp241,mp242,mp243,mp244,mp245,mp246,mp247,mp248,mp249,mp250,mp251,mp252,mp253,mp254,mp255
+                         * @param bwlimit Override I/O bandwidth limit (in
+                         * KiB/s).
                          * @param delete Delete the original volume after
                          * successful copy. By default the original is kept as
                          * an unused volume entry.
@@ -14402,8 +14826,8 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result moveVolume(String storage, String volume, Boolean delete, String digest) throws JSONException {
-                            return createRest(storage, volume, delete, digest);
+                        public Result moveVolume(String storage, String volume, Integer bwlimit, Boolean delete, String digest) throws JSONException {
+                            return createRest(storage, volume, bwlimit, delete, digest);
                         }
 
                         /**
@@ -14504,7 +14928,7 @@ public class Client {
                  * @param vmid The (unique) ID of the VM.
                  * @param arch OS architecture type. Enum:
                  * amd64,i386,arm64,armhf
-                 * @param bwlimit Override i/o bandwidth limit (in KiB/s).
+                 * @param bwlimit Override I/O bandwidth limit (in KiB/s).
                  * @param cmode Console mode. By default, the console command
                  * tries to open a connection to one of the available tty
                  * devices. By setting cmode to 'console' it tries to attach to
@@ -14527,6 +14951,8 @@ public class Client {
                  * configuration web interface.
                  * @param features Allow containers access to advanced features.
                  * @param force Allow to overwrite existing container.
+                 * @param hookscript Script that will be exectued during various
+                 * steps in the containers lifetime.
                  * @param hostname Set a host name for the container.
                  * @param ignore_unpack_errors Ignore errors when extracting the
                  * template.
@@ -14570,6 +14996,7 @@ public class Client {
                  * @param template Enable/disable Template.
                  * @param tty Specify the number of tty available to the
                  * container
+                 * @param unique Assign a unique random ethernet address.
                  * @param unprivileged Makes the container run as unprivileged
                  * user. (Should not be modified manually.)
                  * @param unusedN Reference to unused volumes. This is used
@@ -14577,7 +15004,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createRest(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, String features, Boolean force, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                public Result createRest(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ostemplate", ostemplate);
                     parameters.put("vmid", vmid);
@@ -14591,6 +15018,7 @@ public class Client {
                     parameters.put("description", description);
                     parameters.put("features", features);
                     parameters.put("force", force);
+                    parameters.put("hookscript", hookscript);
                     parameters.put("hostname", hostname);
                     parameters.put("ignore-unpack-errors", ignore_unpack_errors);
                     parameters.put("lock", lock_);
@@ -14611,6 +15039,7 @@ public class Client {
                     parameters.put("swap", swap);
                     parameters.put("template", template);
                     parameters.put("tty", tty);
+                    parameters.put("unique", unique);
                     parameters.put("unprivileged", unprivileged);
                     addIndexedParameter(parameters, "mp", mpN);
                     addIndexedParameter(parameters, "net", netN);
@@ -14625,7 +15054,7 @@ public class Client {
                  * @param vmid The (unique) ID of the VM.
                  * @param arch OS architecture type. Enum:
                  * amd64,i386,arm64,armhf
-                 * @param bwlimit Override i/o bandwidth limit (in KiB/s).
+                 * @param bwlimit Override I/O bandwidth limit (in KiB/s).
                  * @param cmode Console mode. By default, the console command
                  * tries to open a connection to one of the available tty
                  * devices. By setting cmode to 'console' it tries to attach to
@@ -14648,6 +15077,8 @@ public class Client {
                  * configuration web interface.
                  * @param features Allow containers access to advanced features.
                  * @param force Allow to overwrite existing container.
+                 * @param hookscript Script that will be exectued during various
+                 * steps in the containers lifetime.
                  * @param hostname Set a host name for the container.
                  * @param ignore_unpack_errors Ignore errors when extracting the
                  * template.
@@ -14691,6 +15122,7 @@ public class Client {
                  * @param template Enable/disable Template.
                  * @param tty Specify the number of tty available to the
                  * container
+                 * @param unique Assign a unique random ethernet address.
                  * @param unprivileged Makes the container run as unprivileged
                  * user. (Should not be modified manually.)
                  * @param unusedN Reference to unused volumes. This is used
@@ -14698,8 +15130,8 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createVm(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, String features, Boolean force, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
-                    return createRest(ostemplate, vmid, arch, bwlimit, cmode, console, cores, cpulimit, cpuunits, description, features, force, hostname, ignore_unpack_errors, lock_, memory, mpN, nameserver, netN, onboot, ostype, password, pool, protection, restore, rootfs, searchdomain, ssh_public_keys, start, startup, storage, swap, template, tty, unprivileged, unusedN);
+                public Result createVm(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                    return createRest(ostemplate, vmid, arch, bwlimit, cmode, console, cores, cpulimit, cpuunits, description, features, force, hookscript, hostname, ignore_unpack_errors, lock_, memory, mpN, nameserver, netN, onboot, ostype, password, pool, protection, restore, rootfs, searchdomain, ssh_public_keys, start, startup, storage, swap, template, tty, unique, unprivileged, unusedN);
                 }
 
                 /**
@@ -14730,8 +15162,9 @@ public class Client {
                 }
             }
 
-            public class PVECeph extends Base {
+            public class PVECeph {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVECeph(Client client, Object node) {
@@ -14753,6 +15186,22 @@ public class Client {
                         _mds = new PVEMds(_client, _node);
                     }
                     return _mds;
+                }
+                private PVEMgr _mgr;
+
+                public PVEMgr getMgr() {
+                    if (_mgr == null) {
+                        _mgr = new PVEMgr(_client, _node);
+                    }
+                    return _mgr;
+                }
+                private PVEMon _mon;
+
+                public PVEMon getMon() {
+                    if (_mon == null) {
+                        _mon = new PVEMon(_client, _node);
+                    }
+                    return _mon;
                 }
                 private PVEFs _fs;
 
@@ -14778,14 +15227,6 @@ public class Client {
                     }
                     return _config;
                 }
-                private PVEMon _mon;
-
-                public PVEMon getMon() {
-                    if (_mon == null) {
-                        _mon = new PVEMon(_client, _node);
-                    }
-                    return _mon;
-                }
                 private PVEInit _init;
 
                 public PVEInit getInit() {
@@ -14793,14 +15234,6 @@ public class Client {
                         _init = new PVEInit(_client, _node);
                     }
                     return _init;
-                }
-                private PVEMgr _mgr;
-
-                public PVEMgr getMgr() {
-                    if (_mgr == null) {
-                        _mgr = new PVEMgr(_client, _node);
-                    }
-                    return _mgr;
                 }
                 private PVEStop _stop;
 
@@ -14875,8 +15308,9 @@ public class Client {
                     return _rules;
                 }
 
-                public class PVEOsd extends Base {
+                public class PVEOsd {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEOsd(Client client, Object node) {
@@ -14888,8 +15322,9 @@ public class Client {
                         return new PVEItemOsdid(_client, _node, osdid);
                     }
 
-                    public class PVEItemOsdid extends Base {
+                    public class PVEItemOsdid {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _osdid;
 
@@ -14915,8 +15350,9 @@ public class Client {
                             return _out;
                         }
 
-                        public class PVEIn extends Base {
+                        public class PVEIn {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _osdid;
 
@@ -14947,8 +15383,9 @@ public class Client {
                             }
                         }
 
-                        public class PVEOut extends Base {
+                        public class PVEOut {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _osdid;
 
@@ -15115,8 +15552,9 @@ public class Client {
                     }
                 }
 
-                public class PVEMds extends Base {
+                public class PVEMds {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEMds(Client client, Object node) {
@@ -15128,8 +15566,9 @@ public class Client {
                         return new PVEItemName(_client, _node, name);
                     }
 
-                    public class PVEItemName extends Base {
+                    public class PVEItemName {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _name;
 
@@ -15231,193 +15670,103 @@ public class Client {
                     }
                 }
 
-                public class PVEFs extends Base {
+                public class PVEMgr {
 
+                    private final Client _client;
                     private final Object _node;
 
-                    protected PVEFs(Client client, Object node) {
+                    protected PVEMgr(Client client, Object node) {
                         _client = client;
                         _node = node;
                     }
 
-                    public PVEItemName get(Object name) {
-                        return new PVEItemName(_client, _node, name);
+                    public PVEItemId get(Object id) {
+                        return new PVEItemId(_client, _node, id);
                     }
 
-                    public class PVEItemName extends Base {
+                    public class PVEItemId {
 
+                        private final Client _client;
                         private final Object _node;
-                        private final Object _name;
+                        private final Object _id;
 
-                        protected PVEItemName(Client client, Object node, Object name) {
+                        protected PVEItemId(Client client, Object node, Object id) {
                             _client = client;
                             _node = node;
-                            _name = name;
+                            _id = id;
                         }
 
                         /**
-                         * Create a Ceph filesystem
-                         *
-                         * @param add_storage Configure the created CephFS as
-                         * storage for this cluster.
-                         * @param pg_num Number of placement groups for the
-                         * backing data pool. The metadata pool will use a
-                         * quarter of this.
-                         * @return Result
-                         * @throws JSONException
-                         */
-                        public Result createRest(Boolean add_storage, Integer pg_num) throws JSONException {
-                            Map<String, Object> parameters = new HashMap<>();
-                            parameters.put("add-storage", add_storage);
-                            parameters.put("pg_num", pg_num);
-                            return _client.create("/nodes/" + _node + "/ceph/fs/" + _name + "", parameters);
-                        }
-
-                        /**
-                         * Create a Ceph filesystem
-                         *
-                         * @param add_storage Configure the created CephFS as
-                         * storage for this cluster.
-                         * @param pg_num Number of placement groups for the
-                         * backing data pool. The metadata pool will use a
-                         * quarter of this.
-                         * @return Result
-                         * @throws JSONException
-                         */
-                        public Result createfs(Boolean add_storage, Integer pg_num) throws JSONException {
-                            return createRest(add_storage, pg_num);
-                        }
-
-                        /**
-                         * Create a Ceph filesystem
+                         * Destroy Ceph Manager.
                          *
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest() throws JSONException {
-                            return _client.create("/nodes/" + _node + "/ceph/fs/" + _name + "", null);
+                        public Result deleteRest() throws JSONException {
+                            return _client.delete("/nodes/" + _node + "/ceph/mgr/" + _id + "", null);
                         }
 
                         /**
-                         * Create a Ceph filesystem
+                         * Destroy Ceph Manager.
                          *
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createfs() throws JSONException {
-                            return createRest();
+                        public Result destroymgr() throws JSONException {
+                            return deleteRest();
                         }
                     }
 
                     /**
-                     * Directory index.
+                     * Create Ceph Manager
                      *
+                     * @param id The ID for the manager, when omitted the same
+                     * as the nodename
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result getRest() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/ceph/fs", null);
-                    }
-
-                    /**
-                     * Directory index.
-                     *
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result index() throws JSONException {
-                        return getRest();
-                    }
-                }
-
-                public class PVEDisks extends Base {
-
-                    private final Object _node;
-
-                    protected PVEDisks(Client client, Object node) {
-                        _client = client;
-                        _node = node;
-                    }
-
-                    /**
-                     * List local disks.
-                     *
-                     * @param type Only list specific types of disks. Enum:
-                     * unused,journal_disks
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result getRest(String type) throws JSONException {
+                    public Result createRest(String id) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
-                        parameters.put("type", type);
-                        return _client.get("/nodes/" + _node + "/ceph/disks", parameters);
+                        parameters.put("id", id);
+                        return _client.create("/nodes/" + _node + "/ceph/mgr", parameters);
                     }
 
                     /**
-                     * List local disks.
+                     * Create Ceph Manager
                      *
-                     * @param type Only list specific types of disks. Enum:
-                     * unused,journal_disks
+                     * @param id The ID for the manager, when omitted the same
+                     * as the nodename
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result disks(String type) throws JSONException {
-                        return getRest(type);
+                    public Result createmgr(String id) throws JSONException {
+                        return createRest(id);
                     }
 
                     /**
-                     * List local disks.
-                     *
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result getRest() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/ceph/disks", null);
-                    }
-
-                    /**
-                     * List local disks.
+                     * Create Ceph Manager
                      *
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result disks() throws JSONException {
-                        return getRest();
+                    public Result createRest() throws JSONException {
+                        return _client.create("/nodes/" + _node + "/ceph/mgr", null);
+                    }
+
+                    /**
+                     * Create Ceph Manager
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result createmgr() throws JSONException {
+                        return createRest();
                     }
                 }
 
-                public class PVEConfig extends Base {
+                public class PVEMon {
 
-                    private final Object _node;
-
-                    protected PVEConfig(Client client, Object node) {
-                        _client = client;
-                        _node = node;
-                    }
-
-                    /**
-                     * Get Ceph configuration.
-                     *
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result getRest() throws JSONException {
-                        return _client.get("/nodes/" + _node + "/ceph/config", null);
-                    }
-
-                    /**
-                     * Get Ceph configuration.
-                     *
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result config() throws JSONException {
-                        return getRest();
-                    }
-                }
-
-                public class PVEMon extends Base {
-
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEMon(Client client, Object node) {
@@ -15429,8 +15778,9 @@ public class Client {
                         return new PVEItemMonid(_client, _node, monid);
                     }
 
-                    public class PVEItemMonid extends Base {
+                    public class PVEItemMonid {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _monid;
 
@@ -15564,8 +15914,198 @@ public class Client {
                     }
                 }
 
-                public class PVEInit extends Base {
+                public class PVEFs {
 
+                    private final Client _client;
+                    private final Object _node;
+
+                    protected PVEFs(Client client, Object node) {
+                        _client = client;
+                        _node = node;
+                    }
+
+                    public PVEItemName get(Object name) {
+                        return new PVEItemName(_client, _node, name);
+                    }
+
+                    public class PVEItemName {
+
+                        private final Client _client;
+                        private final Object _node;
+                        private final Object _name;
+
+                        protected PVEItemName(Client client, Object node, Object name) {
+                            _client = client;
+                            _node = node;
+                            _name = name;
+                        }
+
+                        /**
+                         * Create a Ceph filesystem
+                         *
+                         * @param add_storage Configure the created CephFS as
+                         * storage for this cluster.
+                         * @param pg_num Number of placement groups for the
+                         * backing data pool. The metadata pool will use a
+                         * quarter of this.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest(Boolean add_storage, Integer pg_num) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("add-storage", add_storage);
+                            parameters.put("pg_num", pg_num);
+                            return _client.create("/nodes/" + _node + "/ceph/fs/" + _name + "", parameters);
+                        }
+
+                        /**
+                         * Create a Ceph filesystem
+                         *
+                         * @param add_storage Configure the created CephFS as
+                         * storage for this cluster.
+                         * @param pg_num Number of placement groups for the
+                         * backing data pool. The metadata pool will use a
+                         * quarter of this.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createfs(Boolean add_storage, Integer pg_num) throws JSONException {
+                            return createRest(add_storage, pg_num);
+                        }
+
+                        /**
+                         * Create a Ceph filesystem
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/ceph/fs/" + _name + "", null);
+                        }
+
+                        /**
+                         * Create a Ceph filesystem
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createfs() throws JSONException {
+                            return createRest();
+                        }
+                    }
+
+                    /**
+                     * Directory index.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/fs", null);
+                    }
+
+                    /**
+                     * Directory index.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result index() throws JSONException {
+                        return getRest();
+                    }
+                }
+
+                public class PVEDisks {
+
+                    private final Client _client;
+                    private final Object _node;
+
+                    protected PVEDisks(Client client, Object node) {
+                        _client = client;
+                        _node = node;
+                    }
+
+                    /**
+                     * List local disks.
+                     *
+                     * @param type Only list specific types of disks. Enum:
+                     * unused,journal_disks
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest(String type) throws JSONException {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("type", type);
+                        return _client.get("/nodes/" + _node + "/ceph/disks", parameters);
+                    }
+
+                    /**
+                     * List local disks.
+                     *
+                     * @param type Only list specific types of disks. Enum:
+                     * unused,journal_disks
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result disks(String type) throws JSONException {
+                        return getRest(type);
+                    }
+
+                    /**
+                     * List local disks.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/disks", null);
+                    }
+
+                    /**
+                     * List local disks.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result disks() throws JSONException {
+                        return getRest();
+                    }
+                }
+
+                public class PVEConfig {
+
+                    private final Client _client;
+                    private final Object _node;
+
+                    protected PVEConfig(Client client, Object node) {
+                        _client = client;
+                        _node = node;
+                    }
+
+                    /**
+                     * Get Ceph configuration.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/config", null);
+                    }
+
+                    /**
+                     * Get Ceph configuration.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result config() throws JSONException {
+                        return getRest();
+                    }
+                }
+
+                public class PVEInit {
+
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEInit(Client client, Object node) {
@@ -15655,100 +16195,9 @@ public class Client {
                     }
                 }
 
-                public class PVEMgr extends Base {
+                public class PVEStop {
 
-                    private final Object _node;
-
-                    protected PVEMgr(Client client, Object node) {
-                        _client = client;
-                        _node = node;
-                    }
-
-                    public PVEItemId get(Object id) {
-                        return new PVEItemId(_client, _node, id);
-                    }
-
-                    public class PVEItemId extends Base {
-
-                        private final Object _node;
-                        private final Object _id;
-
-                        protected PVEItemId(Client client, Object node, Object id) {
-                            _client = client;
-                            _node = node;
-                            _id = id;
-                        }
-
-                        /**
-                         * Destroy Ceph Manager.
-                         *
-                         * @return Result
-                         * @throws JSONException
-                         */
-                        public Result deleteRest() throws JSONException {
-                            return _client.delete("/nodes/" + _node + "/ceph/mgr/" + _id + "", null);
-                        }
-
-                        /**
-                         * Destroy Ceph Manager.
-                         *
-                         * @return Result
-                         * @throws JSONException
-                         */
-                        public Result destroymgr() throws JSONException {
-                            return deleteRest();
-                        }
-                    }
-
-                    /**
-                     * Create Ceph Manager
-                     *
-                     * @param id The ID for the manager, when omitted the same
-                     * as the nodename
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result createRest(String id) throws JSONException {
-                        Map<String, Object> parameters = new HashMap<>();
-                        parameters.put("id", id);
-                        return _client.create("/nodes/" + _node + "/ceph/mgr", parameters);
-                    }
-
-                    /**
-                     * Create Ceph Manager
-                     *
-                     * @param id The ID for the manager, when omitted the same
-                     * as the nodename
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result createmgr(String id) throws JSONException {
-                        return createRest(id);
-                    }
-
-                    /**
-                     * Create Ceph Manager
-                     *
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result createRest() throws JSONException {
-                        return _client.create("/nodes/" + _node + "/ceph/mgr", null);
-                    }
-
-                    /**
-                     * Create Ceph Manager
-                     *
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result createmgr() throws JSONException {
-                        return createRest();
-                    }
-                }
-
-                public class PVEStop extends Base {
-
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEStop(Client client, Object node) {
@@ -15801,8 +16250,9 @@ public class Client {
                     }
                 }
 
-                public class PVEStart extends Base {
+                public class PVEStart {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEStart(Client client, Object node) {
@@ -15855,8 +16305,9 @@ public class Client {
                     }
                 }
 
-                public class PVERestart extends Base {
+                public class PVERestart {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVERestart(Client client, Object node) {
@@ -15909,8 +16360,9 @@ public class Client {
                     }
                 }
 
-                public class PVEStatus extends Base {
+                public class PVEStatus {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEStatus(Client client, Object node) {
@@ -15939,8 +16391,9 @@ public class Client {
                     }
                 }
 
-                public class PVEPools extends Base {
+                public class PVEPools {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEPools(Client client, Object node) {
@@ -15952,8 +16405,9 @@ public class Client {
                         return new PVEItemName(_client, _node, name);
                     }
 
-                    public class PVEItemName extends Base {
+                    public class PVEItemName {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _name;
 
@@ -16106,8 +16560,9 @@ public class Client {
                     }
                 }
 
-                public class PVEFlags extends Base {
+                public class PVEFlags {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEFlags(Client client, Object node) {
@@ -16119,8 +16574,9 @@ public class Client {
                         return new PVEItemFlag(_client, _node, flag);
                     }
 
-                    public class PVEItemFlag extends Base {
+                    public class PVEItemFlag {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _flag;
 
@@ -16192,8 +16648,9 @@ public class Client {
                     }
                 }
 
-                public class PVECrush extends Base {
+                public class PVECrush {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVECrush(Client client, Object node) {
@@ -16222,8 +16679,9 @@ public class Client {
                     }
                 }
 
-                public class PVELog extends Base {
+                public class PVELog {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVELog(Client client, Object node) {
@@ -16279,8 +16737,9 @@ public class Client {
                     }
                 }
 
-                public class PVERules extends Base {
+                public class PVERules {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVERules(Client client, Object node) {
@@ -16330,8 +16789,9 @@ public class Client {
                 }
             }
 
-            public class PVEVzdump extends Base {
+            public class PVEVzdump {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEVzdump(Client client, Object node) {
@@ -16347,8 +16807,9 @@ public class Client {
                     return _extractconfig;
                 }
 
-                public class PVEExtractconfig extends Base {
+                public class PVEExtractconfig {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEExtractconfig(Client client, Object node) {
@@ -16513,8 +16974,9 @@ public class Client {
                 }
             }
 
-            public class PVEServices extends Base {
+            public class PVEServices {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEServices(Client client, Object node) {
@@ -16526,8 +16988,9 @@ public class Client {
                     return new PVEItemService(_client, _node, service);
                 }
 
-                public class PVEItemService extends Base {
+                public class PVEItemService {
 
+                    private final Client _client;
                     private final Object _node;
                     private final Object _service;
 
@@ -16577,8 +17040,9 @@ public class Client {
                         return _reload;
                     }
 
-                    public class PVEState extends Base {
+                    public class PVEState {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _service;
 
@@ -16609,8 +17073,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEStart extends Base {
+                    public class PVEStart {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _service;
 
@@ -16641,8 +17106,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEStop extends Base {
+                    public class PVEStop {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _service;
 
@@ -16673,8 +17139,9 @@ public class Client {
                         }
                     }
 
-                    public class PVERestart extends Base {
+                    public class PVERestart {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _service;
 
@@ -16705,8 +17172,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEReload extends Base {
+                    public class PVEReload {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _service;
 
@@ -16779,8 +17247,9 @@ public class Client {
                 }
             }
 
-            public class PVESubscription extends Base {
+            public class PVESubscription {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVESubscription(Client client, Object node) {
@@ -16879,8 +17348,9 @@ public class Client {
                 }
             }
 
-            public class PVENetwork extends Base {
+            public class PVENetwork {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVENetwork(Client client, Object node) {
@@ -16892,8 +17362,9 @@ public class Client {
                     return new PVEItemIface(_client, _node, iface);
                 }
 
-                public class PVEItemIface extends Base {
+                public class PVEItemIface {
 
+                    private final Client _client;
                     private final Object _node;
                     private final Object _iface;
 
@@ -17294,8 +17765,9 @@ public class Client {
                 }
             }
 
-            public class PVETasks extends Base {
+            public class PVETasks {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVETasks(Client client, Object node) {
@@ -17307,8 +17779,9 @@ public class Client {
                     return new PVEItemUpid(_client, _node, upid);
                 }
 
-                public class PVEItemUpid extends Base {
+                public class PVEItemUpid {
 
+                    private final Client _client;
                     private final Object _node;
                     private final Object _upid;
 
@@ -17334,8 +17807,9 @@ public class Client {
                         return _status;
                     }
 
-                    public class PVELog extends Base {
+                    public class PVELog {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _upid;
 
@@ -17393,8 +17867,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEStatus extends Base {
+                    public class PVEStatus {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _upid;
 
@@ -17469,17 +17944,23 @@ public class Client {
                  *
                  * @param errors
                  * @param limit Only list this amount of tasks.
+                 * @param source List archived, active or all tasks. Enum:
+                 * archive,active,all
                  * @param start List tasks beginning from this offset.
+                 * @param typefilter Only list tasks of this type (e.g.,
+                 * vzstart, vzdump).
                  * @param userfilter Only list tasks from this user.
                  * @param vmid Only list tasks for this VM.
                  * @return Result
                  * @throws JSONException
                  */
-                public Result getRest(Boolean errors, Integer limit, Integer start, String userfilter, Integer vmid) throws JSONException {
+                public Result getRest(Boolean errors, Integer limit, String source, Integer start, String typefilter, String userfilter, Integer vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("errors", errors);
                     parameters.put("limit", limit);
+                    parameters.put("source", source);
                     parameters.put("start", start);
+                    parameters.put("typefilter", typefilter);
                     parameters.put("userfilter", userfilter);
                     parameters.put("vmid", vmid);
                     return _client.get("/nodes/" + _node + "/tasks", parameters);
@@ -17490,14 +17971,18 @@ public class Client {
                  *
                  * @param errors
                  * @param limit Only list this amount of tasks.
+                 * @param source List archived, active or all tasks. Enum:
+                 * archive,active,all
                  * @param start List tasks beginning from this offset.
+                 * @param typefilter Only list tasks of this type (e.g.,
+                 * vzstart, vzdump).
                  * @param userfilter Only list tasks from this user.
                  * @param vmid Only list tasks for this VM.
                  * @return Result
                  * @throws JSONException
                  */
-                public Result nodeTasks(Boolean errors, Integer limit, Integer start, String userfilter, Integer vmid) throws JSONException {
-                    return getRest(errors, limit, start, userfilter, vmid);
+                public Result nodeTasks(Boolean errors, Integer limit, String source, Integer start, String typefilter, String userfilter, Integer vmid) throws JSONException {
+                    return getRest(errors, limit, source, start, typefilter, userfilter, vmid);
                 }
 
                 /**
@@ -17521,8 +18006,9 @@ public class Client {
                 }
             }
 
-            public class PVEScan extends Base {
+            public class PVEScan {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEScan(Client client, Object node) {
@@ -17594,8 +18080,9 @@ public class Client {
                     return _usb;
                 }
 
-                public class PVEZfs extends Base {
+                public class PVEZfs {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEZfs(Client client, Object node) {
@@ -17624,8 +18111,9 @@ public class Client {
                     }
                 }
 
-                public class PVENfs extends Base {
+                public class PVENfs {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVENfs(Client client, Object node) {
@@ -17658,8 +18146,9 @@ public class Client {
                     }
                 }
 
-                public class PVECifs extends Base {
+                public class PVECifs {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVECifs(Client client, Object node) {
@@ -17725,8 +18214,9 @@ public class Client {
                     }
                 }
 
-                public class PVEGlusterfs extends Base {
+                public class PVEGlusterfs {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEGlusterfs(Client client, Object node) {
@@ -17759,8 +18249,9 @@ public class Client {
                     }
                 }
 
-                public class PVEIscsi extends Base {
+                public class PVEIscsi {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEIscsi(Client client, Object node) {
@@ -17795,8 +18286,9 @@ public class Client {
                     }
                 }
 
-                public class PVELvm extends Base {
+                public class PVELvm {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVELvm(Client client, Object node) {
@@ -17825,8 +18317,9 @@ public class Client {
                     }
                 }
 
-                public class PVELvmthin extends Base {
+                public class PVELvmthin {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVELvmthin(Client client, Object node) {
@@ -17859,8 +18352,9 @@ public class Client {
                     }
                 }
 
-                public class PVEUsb extends Base {
+                public class PVEUsb {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEUsb(Client client, Object node) {
@@ -17910,8 +18404,9 @@ public class Client {
                 }
             }
 
-            public class PVEHardware extends Base {
+            public class PVEHardware {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEHardware(Client client, Object node) {
@@ -17927,8 +18422,9 @@ public class Client {
                     return _pci;
                 }
 
-                public class PVEPci extends Base {
+                public class PVEPci {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEPci(Client client, Object node) {
@@ -17940,8 +18436,9 @@ public class Client {
                         return new PVEItemPciid(_client, _node, pciid);
                     }
 
-                    public class PVEItemPciid extends Base {
+                    public class PVEItemPciid {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _pciid;
 
@@ -17959,8 +18456,9 @@ public class Client {
                             return _mdev;
                         }
 
-                        public class PVEMdev extends Base {
+                        public class PVEMdev {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _pciid;
 
@@ -18091,8 +18589,9 @@ public class Client {
                 }
             }
 
-            public class PVEStorage extends Base {
+            public class PVEStorage {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEStorage(Client client, Object node) {
@@ -18104,8 +18603,9 @@ public class Client {
                     return new PVEItemStorage(_client, _node, storage);
                 }
 
-                public class PVEItemStorage extends Base {
+                public class PVEItemStorage {
 
+                    private final Client _client;
                     private final Object _node;
                     private final Object _storage;
 
@@ -18155,8 +18655,9 @@ public class Client {
                         return _upload;
                     }
 
-                    public class PVEContent extends Base {
+                    public class PVEContent {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _storage;
 
@@ -18170,8 +18671,9 @@ public class Client {
                             return new PVEItemVolume(_client, _node, _storage, volume);
                         }
 
-                        public class PVEItemVolume extends Base {
+                        public class PVEItemVolume {
 
+                            private final Client _client;
                             private final Object _node;
                             private final Object _storage;
                             private final Object _volume;
@@ -18400,8 +18902,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEStatus extends Base {
+                    public class PVEStatus {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _storage;
 
@@ -18432,8 +18935,9 @@ public class Client {
                         }
                     }
 
-                    public class PVERrd extends Base {
+                    public class PVERrd {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _storage;
 
@@ -18511,8 +19015,9 @@ public class Client {
                         }
                     }
 
-                    public class PVERrddata extends Base {
+                    public class PVERrddata {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _storage;
 
@@ -18580,8 +19085,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEUpload extends Base {
+                    public class PVEUpload {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _storage;
 
@@ -18739,8 +19245,9 @@ public class Client {
                 }
             }
 
-            public class PVEDisks extends Base {
+            public class PVEDisks {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEDisks(Client client, Object node) {
@@ -18804,8 +19311,9 @@ public class Client {
                     return _initgpt;
                 }
 
-                public class PVELvm extends Base {
+                public class PVELvm {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVELvm(Client client, Object node) {
@@ -18897,8 +19405,9 @@ public class Client {
                     }
                 }
 
-                public class PVELvmthin extends Base {
+                public class PVELvmthin {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVELvmthin(Client client, Object node) {
@@ -18988,8 +19497,9 @@ public class Client {
                     }
                 }
 
-                public class PVEDirectory extends Base {
+                public class PVEDirectory {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEDirectory(Client client, Object node) {
@@ -19086,8 +19596,9 @@ public class Client {
                     }
                 }
 
-                public class PVEZfs extends Base {
+                public class PVEZfs {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEZfs(Client client, Object node) {
@@ -19099,8 +19610,9 @@ public class Client {
                         return new PVEItemName(_client, _node, name);
                     }
 
-                    public class PVEItemName extends Base {
+                    public class PVEItemName {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _name;
 
@@ -19231,8 +19743,9 @@ public class Client {
                     }
                 }
 
-                public class PVEList extends Base {
+                public class PVEList {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEList(Client client, Object node) {
@@ -19290,8 +19803,9 @@ public class Client {
                     }
                 }
 
-                public class PVESmart extends Base {
+                public class PVESmart {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVESmart(Client client, Object node) {
@@ -19351,8 +19865,9 @@ public class Client {
                     }
                 }
 
-                public class PVEInitgpt extends Base {
+                public class PVEInitgpt {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEInitgpt(Client client, Object node) {
@@ -19433,8 +19948,9 @@ public class Client {
                 }
             }
 
-            public class PVEApt extends Base {
+            public class PVEApt {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEApt(Client client, Object node) {
@@ -19466,8 +19982,9 @@ public class Client {
                     return _versions;
                 }
 
-                public class PVEUpdate extends Base {
+                public class PVEUpdate {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEUpdate(Client client, Object node) {
@@ -19551,8 +20068,9 @@ public class Client {
                     }
                 }
 
-                public class PVEChangelog extends Base {
+                public class PVEChangelog {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEChangelog(Client client, Object node) {
@@ -19612,8 +20130,9 @@ public class Client {
                     }
                 }
 
-                public class PVEVersions extends Base {
+                public class PVEVersions {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEVersions(Client client, Object node) {
@@ -19663,8 +20182,9 @@ public class Client {
                 }
             }
 
-            public class PVEFirewall extends Base {
+            public class PVEFirewall {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEFirewall(Client client, Object node) {
@@ -19696,8 +20216,9 @@ public class Client {
                     return _log;
                 }
 
-                public class PVERules extends Base {
+                public class PVERules {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVERules(Client client, Object node) {
@@ -19709,8 +20230,9 @@ public class Client {
                         return new PVEItemPos(_client, _node, pos);
                     }
 
-                    public class PVEItemPos extends Base {
+                    public class PVEItemPos {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _pos;
 
@@ -19816,6 +20338,8 @@ public class Client {
                          * network configuration key names for VMs and
                          * containers ('net\d+'). Host related rules can use
                          * arbitrary strings.
+                         * @param log Log level for firewall rule. Enum:
+                         * emerg,alert,crit,err,warning,notice,info,debug,nolog
                          * @param macro Use predefined standard macro.
                          * @param moveto Move rule to new position
                          * &amp;lt;moveto&amp;gt;. Other arguments are ignored.
@@ -19839,7 +20363,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                        public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("action", action);
                             parameters.put("comment", comment);
@@ -19849,6 +20373,7 @@ public class Client {
                             parameters.put("dport", dport);
                             parameters.put("enable", enable);
                             parameters.put("iface", iface);
+                            parameters.put("log", log);
                             parameters.put("macro", macro);
                             parameters.put("moveto", moveto);
                             parameters.put("proto", proto);
@@ -19886,6 +20411,8 @@ public class Client {
                          * network configuration key names for VMs and
                          * containers ('net\d+'). Host related rules can use
                          * arbitrary strings.
+                         * @param log Log level for firewall rule. Enum:
+                         * emerg,alert,crit,err,warning,notice,info,debug,nolog
                          * @param macro Use predefined standard macro.
                          * @param moveto Move rule to new position
                          * &amp;lt;moveto&amp;gt;. Other arguments are ignored.
@@ -19909,8 +20436,8 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
-                            return setRest(action, comment, delete, dest, digest, dport, enable, iface, macro, moveto, proto, source, sport, type);
+                        public Result updateRule(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
+                            return setRest(action, comment, delete, dest, digest, dport, enable, iface, log, macro, moveto, proto, source, sport, type);
                         }
 
                         /**
@@ -19980,6 +20507,8 @@ public class Client {
                      * @param iface Network interface name. You have to use
                      * network configuration key names for VMs and containers
                      * ('net\d+'). Host related rules can use arbitrary strings.
+                     * @param log Log level for firewall rule. Enum:
+                     * emerg,alert,crit,err,warning,notice,info,debug,nolog
                      * @param macro Use predefined standard macro.
                      * @param pos Update rule at position &amp;lt;pos&amp;gt;.
                      * @param proto IP protocol. You can use protocol names
@@ -20000,7 +20529,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                    public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
                         parameters.put("type", type);
@@ -20010,6 +20539,7 @@ public class Client {
                         parameters.put("dport", dport);
                         parameters.put("enable", enable);
                         parameters.put("iface", iface);
+                        parameters.put("log", log);
                         parameters.put("macro", macro);
                         parameters.put("pos", pos);
                         parameters.put("proto", proto);
@@ -20044,6 +20574,8 @@ public class Client {
                      * @param iface Network interface name. You have to use
                      * network configuration key names for VMs and containers
                      * ('net\d+'). Host related rules can use arbitrary strings.
+                     * @param log Log level for firewall rule. Enum:
+                     * emerg,alert,crit,err,warning,notice,info,debug,nolog
                      * @param macro Use predefined standard macro.
                      * @param pos Update rule at position &amp;lt;pos&amp;gt;.
                      * @param proto IP protocol. You can use protocol names
@@ -20064,8 +20596,8 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
-                        return createRest(action, type, comment, dest, digest, dport, enable, iface, macro, pos, proto, source, sport);
+                    public Result createRule(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
+                        return createRest(action, type, comment, dest, digest, dport, enable, iface, log, macro, pos, proto, source, sport);
                     }
 
                     /**
@@ -20098,8 +20630,9 @@ public class Client {
                     }
                 }
 
-                public class PVEOptions extends Base {
+                public class PVEOptions {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEOptions(Client client, Object node) {
@@ -20140,7 +20673,11 @@ public class Client {
                      * @param log_level_out Log level for outgoing traffic.
                      * Enum:
                      * emerg,alert,crit,err,warning,notice,info,debug,nolog
+                     * @param log_nf_conntrack Enable logging of conntrack
+                     * information.
                      * @param ndp Enable NDP.
+                     * @param nf_conntrack_allow_invalid Allow invalid packets
+                     * on connection tracking.
                      * @param nf_conntrack_max Maximum number of tracked
                      * connections.
                      * @param nf_conntrack_tcp_timeout_established Conntrack
@@ -20155,14 +20692,16 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result setRest(String delete, String digest, Boolean enable, String log_level_in, String log_level_out, Boolean ndp, Integer nf_conntrack_max, Integer nf_conntrack_tcp_timeout_established, Boolean nosmurfs, String smurf_log_level, String tcp_flags_log_level, Boolean tcpflags) throws JSONException {
+                    public Result setRest(String delete, String digest, Boolean enable, String log_level_in, String log_level_out, Boolean log_nf_conntrack, Boolean ndp, Boolean nf_conntrack_allow_invalid, Integer nf_conntrack_max, Integer nf_conntrack_tcp_timeout_established, Boolean nosmurfs, String smurf_log_level, String tcp_flags_log_level, Boolean tcpflags) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("delete", delete);
                         parameters.put("digest", digest);
                         parameters.put("enable", enable);
                         parameters.put("log_level_in", log_level_in);
                         parameters.put("log_level_out", log_level_out);
+                        parameters.put("log_nf_conntrack", log_nf_conntrack);
                         parameters.put("ndp", ndp);
+                        parameters.put("nf_conntrack_allow_invalid", nf_conntrack_allow_invalid);
                         parameters.put("nf_conntrack_max", nf_conntrack_max);
                         parameters.put("nf_conntrack_tcp_timeout_established", nf_conntrack_tcp_timeout_established);
                         parameters.put("nosmurfs", nosmurfs);
@@ -20185,7 +20724,11 @@ public class Client {
                      * @param log_level_out Log level for outgoing traffic.
                      * Enum:
                      * emerg,alert,crit,err,warning,notice,info,debug,nolog
+                     * @param log_nf_conntrack Enable logging of conntrack
+                     * information.
                      * @param ndp Enable NDP.
+                     * @param nf_conntrack_allow_invalid Allow invalid packets
+                     * on connection tracking.
                      * @param nf_conntrack_max Maximum number of tracked
                      * connections.
                      * @param nf_conntrack_tcp_timeout_established Conntrack
@@ -20200,8 +20743,8 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result setOptions(String delete, String digest, Boolean enable, String log_level_in, String log_level_out, Boolean ndp, Integer nf_conntrack_max, Integer nf_conntrack_tcp_timeout_established, Boolean nosmurfs, String smurf_log_level, String tcp_flags_log_level, Boolean tcpflags) throws JSONException {
-                        return setRest(delete, digest, enable, log_level_in, log_level_out, ndp, nf_conntrack_max, nf_conntrack_tcp_timeout_established, nosmurfs, smurf_log_level, tcp_flags_log_level, tcpflags);
+                    public Result setOptions(String delete, String digest, Boolean enable, String log_level_in, String log_level_out, Boolean log_nf_conntrack, Boolean ndp, Boolean nf_conntrack_allow_invalid, Integer nf_conntrack_max, Integer nf_conntrack_tcp_timeout_established, Boolean nosmurfs, String smurf_log_level, String tcp_flags_log_level, Boolean tcpflags) throws JSONException {
+                        return setRest(delete, digest, enable, log_level_in, log_level_out, log_nf_conntrack, ndp, nf_conntrack_allow_invalid, nf_conntrack_max, nf_conntrack_tcp_timeout_established, nosmurfs, smurf_log_level, tcp_flags_log_level, tcpflags);
                     }
 
                     /**
@@ -20225,8 +20768,9 @@ public class Client {
                     }
                 }
 
-                public class PVELog extends Base {
+                public class PVELog {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVELog(Client client, Object node) {
@@ -20303,8 +20847,9 @@ public class Client {
                 }
             }
 
-            public class PVEReplication extends Base {
+            public class PVEReplication {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEReplication(Client client, Object node) {
@@ -20316,8 +20861,9 @@ public class Client {
                     return new PVEItemId(_client, _node, id);
                 }
 
-                public class PVEItemId extends Base {
+                public class PVEItemId {
 
+                    private final Client _client;
                     private final Object _node;
                     private final Object _id;
 
@@ -20351,8 +20897,9 @@ public class Client {
                         return _scheduleNow;
                     }
 
-                    public class PVEStatus extends Base {
+                    public class PVEStatus {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _id;
 
@@ -20383,8 +20930,9 @@ public class Client {
                         }
                     }
 
-                    public class PVELog extends Base {
+                    public class PVELog {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _id;
 
@@ -20442,8 +20990,9 @@ public class Client {
                         }
                     }
 
-                    public class PVEScheduleNow extends Base {
+                    public class PVEScheduleNow {
 
+                        private final Client _client;
                         private final Object _node;
                         private final Object _id;
 
@@ -20542,8 +21091,9 @@ public class Client {
                 }
             }
 
-            public class PVECertificates extends Base {
+            public class PVECertificates {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVECertificates(Client client, Object node) {
@@ -20575,8 +21125,9 @@ public class Client {
                     return _custom;
                 }
 
-                public class PVEAcme extends Base {
+                public class PVEAcme {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEAcme(Client client, Object node) {
@@ -20592,8 +21143,9 @@ public class Client {
                         return _certificate;
                     }
 
-                    public class PVECertificate extends Base {
+                    public class PVECertificate {
 
+                        private final Client _client;
                         private final Object _node;
 
                         protected PVECertificate(Client client, Object node) {
@@ -20733,8 +21285,9 @@ public class Client {
                     }
                 }
 
-                public class PVEInfo extends Base {
+                public class PVEInfo {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVEInfo(Client client, Object node) {
@@ -20763,8 +21316,9 @@ public class Client {
                     }
                 }
 
-                public class PVECustom extends Base {
+                public class PVECustom {
 
+                    private final Client _client;
                     private final Object _node;
 
                     protected PVECustom(Client client, Object node) {
@@ -20897,8 +21451,9 @@ public class Client {
                 }
             }
 
-            public class PVEConfig extends Base {
+            public class PVEConfig {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEConfig(Client client, Object node) {
@@ -20935,15 +21490,17 @@ public class Client {
                  * @param digest Prevent changes if current configuration file
                  * has different SHA1 digest. This can be used to prevent
                  * concurrent modifications.
+                 * @param wakeonlan MAC address for wake on LAN
                  * @return Result
                  * @throws JSONException
                  */
-                public Result setRest(String acme, String delete, String description, String digest) throws JSONException {
+                public Result setRest(String acme, String delete, String description, String digest, String wakeonlan) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("acme", acme);
                     parameters.put("delete", delete);
                     parameters.put("description", description);
                     parameters.put("digest", digest);
+                    parameters.put("wakeonlan", wakeonlan);
                     return _client.set("/nodes/" + _node + "/config", parameters);
                 }
 
@@ -20956,11 +21513,12 @@ public class Client {
                  * @param digest Prevent changes if current configuration file
                  * has different SHA1 digest. This can be used to prevent
                  * concurrent modifications.
+                 * @param wakeonlan MAC address for wake on LAN
                  * @return Result
                  * @throws JSONException
                  */
-                public Result setOptions(String acme, String delete, String description, String digest) throws JSONException {
-                    return setRest(acme, delete, description, digest);
+                public Result setOptions(String acme, String delete, String description, String digest, String wakeonlan) throws JSONException {
+                    return setRest(acme, delete, description, digest, wakeonlan);
                 }
 
                 /**
@@ -20984,8 +21542,9 @@ public class Client {
                 }
             }
 
-            public class PVEVersion extends Base {
+            public class PVEVersion {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEVersion(Client client, Object node) {
@@ -21014,8 +21573,9 @@ public class Client {
                 }
             }
 
-            public class PVEStatus extends Base {
+            public class PVEStatus {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEStatus(Client client, Object node) {
@@ -21068,8 +21628,9 @@ public class Client {
                 }
             }
 
-            public class PVENetstat extends Base {
+            public class PVENetstat {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVENetstat(Client client, Object node) {
@@ -21098,8 +21659,9 @@ public class Client {
                 }
             }
 
-            public class PVEExecute extends Base {
+            public class PVEExecute {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEExecute(Client client, Object node) {
@@ -21132,8 +21694,40 @@ public class Client {
                 }
             }
 
-            public class PVERrd extends Base {
+            public class PVEWakeonlan {
 
+                private final Client _client;
+                private final Object _node;
+
+                protected PVEWakeonlan(Client client, Object node) {
+                    _client = client;
+                    _node = node;
+                }
+
+                /**
+                 * Try to wake a node via 'wake on LAN' network packet.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result createRest() throws JSONException {
+                    return _client.create("/nodes/" + _node + "/wakeonlan", null);
+                }
+
+                /**
+                 * Try to wake a node via 'wake on LAN' network packet.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result wakeonlan() throws JSONException {
+                    return createRest();
+                }
+            }
+
+            public class PVERrd {
+
+                private final Client _client;
                 private final Object _node;
 
                 protected PVERrd(Client client, Object node) {
@@ -21203,8 +21797,9 @@ public class Client {
                 }
             }
 
-            public class PVERrddata extends Base {
+            public class PVERrddata {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVERrddata(Client client, Object node) {
@@ -21268,8 +21863,9 @@ public class Client {
                 }
             }
 
-            public class PVESyslog extends Base {
+            public class PVESyslog {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVESyslog(Client client, Object node) {
@@ -21334,8 +21930,9 @@ public class Client {
                 }
             }
 
-            public class PVEVncshell extends Base {
+            public class PVEVncshell {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEVncshell(Client client, Object node) {
@@ -21346,16 +21943,19 @@ public class Client {
                 /**
                  * Creates a VNC Shell proxy.
                  *
+                 * @param cmd Run specific command or default to login. Enum:
+                 * upgrade,ceph_install,login
                  * @param height sets the height of the console in pixels.
-                 * @param upgrade Run 'apt-get dist-upgrade' instead of normal
-                 * shell.
+                 * @param upgrade Deprecated, use the 'cmd' property instead!
+                 * Run 'apt-get dist-upgrade' instead of normal shell.
                  * @param websocket use websocket instead of standard vnc.
                  * @param width sets the width of the console in pixels.
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createRest(Integer height, Boolean upgrade, Boolean websocket, Integer width) throws JSONException {
+                public Result createRest(String cmd, Integer height, Boolean upgrade, Boolean websocket, Integer width) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("cmd", cmd);
                     parameters.put("height", height);
                     parameters.put("upgrade", upgrade);
                     parameters.put("websocket", websocket);
@@ -21366,16 +21966,18 @@ public class Client {
                 /**
                  * Creates a VNC Shell proxy.
                  *
+                 * @param cmd Run specific command or default to login. Enum:
+                 * upgrade,ceph_install,login
                  * @param height sets the height of the console in pixels.
-                 * @param upgrade Run 'apt-get dist-upgrade' instead of normal
-                 * shell.
+                 * @param upgrade Deprecated, use the 'cmd' property instead!
+                 * Run 'apt-get dist-upgrade' instead of normal shell.
                  * @param websocket use websocket instead of standard vnc.
                  * @param width sets the width of the console in pixels.
                  * @return Result
                  * @throws JSONException
                  */
-                public Result vncshell(Integer height, Boolean upgrade, Boolean websocket, Integer width) throws JSONException {
-                    return createRest(height, upgrade, websocket, width);
+                public Result vncshell(String cmd, Integer height, Boolean upgrade, Boolean websocket, Integer width) throws JSONException {
+                    return createRest(cmd, height, upgrade, websocket, width);
                 }
 
                 /**
@@ -21399,8 +22001,9 @@ public class Client {
                 }
             }
 
-            public class PVETermproxy extends Base {
+            public class PVETermproxy {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVETermproxy(Client client, Object node) {
@@ -21411,13 +22014,16 @@ public class Client {
                 /**
                  * Creates a VNC Shell proxy.
                  *
-                 * @param upgrade Run 'apt-get dist-upgrade' instead of normal
-                 * shell.
+                 * @param cmd Run specific command or default to login. Enum:
+                 * upgrade,ceph_install,login
+                 * @param upgrade Deprecated, use the 'cmd' property instead!
+                 * Run 'apt-get dist-upgrade' instead of normal shell.
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createRest(Boolean upgrade) throws JSONException {
+                public Result createRest(String cmd, Boolean upgrade) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("cmd", cmd);
                     parameters.put("upgrade", upgrade);
                     return _client.create("/nodes/" + _node + "/termproxy", parameters);
                 }
@@ -21425,13 +22031,15 @@ public class Client {
                 /**
                  * Creates a VNC Shell proxy.
                  *
-                 * @param upgrade Run 'apt-get dist-upgrade' instead of normal
-                 * shell.
+                 * @param cmd Run specific command or default to login. Enum:
+                 * upgrade,ceph_install,login
+                 * @param upgrade Deprecated, use the 'cmd' property instead!
+                 * Run 'apt-get dist-upgrade' instead of normal shell.
                  * @return Result
                  * @throws JSONException
                  */
-                public Result termproxy(Boolean upgrade) throws JSONException {
-                    return createRest(upgrade);
+                public Result termproxy(String cmd, Boolean upgrade) throws JSONException {
+                    return createRest(cmd, upgrade);
                 }
 
                 /**
@@ -21455,8 +22063,9 @@ public class Client {
                 }
             }
 
-            public class PVEVncwebsocket extends Base {
+            public class PVEVncwebsocket {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEVncwebsocket(Client client, Object node) {
@@ -21492,8 +22101,9 @@ public class Client {
                 }
             }
 
-            public class PVESpiceshell extends Base {
+            public class PVESpiceshell {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVESpiceshell(Client client, Object node) {
@@ -21504,6 +22114,8 @@ public class Client {
                 /**
                  * Creates a SPICE shell.
                  *
+                 * @param cmd Run specific command or default to login. Enum:
+                 * upgrade,ceph_install,login
                  * @param proxy SPICE proxy server. This can be used by the
                  * client to specify the proxy server. All nodes in a cluster
                  * runs 'spiceproxy', so it is up to the client to choose one.
@@ -21511,13 +22123,14 @@ public class Client {
                  * running. As reasonable setting is to use same node you use to
                  * connect to the API (This is window.location.hostname for the
                  * JS GUI).
-                 * @param upgrade Run 'apt-get dist-upgrade' instead of normal
-                 * shell.
+                 * @param upgrade Deprecated, use the 'cmd' property instead!
+                 * Run 'apt-get dist-upgrade' instead of normal shell.
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createRest(String proxy, Boolean upgrade) throws JSONException {
+                public Result createRest(String cmd, String proxy, Boolean upgrade) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("cmd", cmd);
                     parameters.put("proxy", proxy);
                     parameters.put("upgrade", upgrade);
                     return _client.create("/nodes/" + _node + "/spiceshell", parameters);
@@ -21526,6 +22139,8 @@ public class Client {
                 /**
                  * Creates a SPICE shell.
                  *
+                 * @param cmd Run specific command or default to login. Enum:
+                 * upgrade,ceph_install,login
                  * @param proxy SPICE proxy server. This can be used by the
                  * client to specify the proxy server. All nodes in a cluster
                  * runs 'spiceproxy', so it is up to the client to choose one.
@@ -21533,13 +22148,13 @@ public class Client {
                  * running. As reasonable setting is to use same node you use to
                  * connect to the API (This is window.location.hostname for the
                  * JS GUI).
-                 * @param upgrade Run 'apt-get dist-upgrade' instead of normal
-                 * shell.
+                 * @param upgrade Deprecated, use the 'cmd' property instead!
+                 * Run 'apt-get dist-upgrade' instead of normal shell.
                  * @return Result
                  * @throws JSONException
                  */
-                public Result spiceshell(String proxy, Boolean upgrade) throws JSONException {
-                    return createRest(proxy, upgrade);
+                public Result spiceshell(String cmd, String proxy, Boolean upgrade) throws JSONException {
+                    return createRest(cmd, proxy, upgrade);
                 }
 
                 /**
@@ -21563,8 +22178,9 @@ public class Client {
                 }
             }
 
-            public class PVEDns extends Base {
+            public class PVEDns {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEDns(Client client, Object node) {
@@ -21650,8 +22266,9 @@ public class Client {
                 }
             }
 
-            public class PVETime extends Base {
+            public class PVETime {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVETime(Client client, Object node) {
@@ -21708,8 +22325,9 @@ public class Client {
                 }
             }
 
-            public class PVEAplinfo extends Base {
+            public class PVEAplinfo {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEAplinfo(Client client, Object node) {
@@ -21765,8 +22383,9 @@ public class Client {
                 }
             }
 
-            public class PVEReport extends Base {
+            public class PVEReport {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEReport(Client client, Object node) {
@@ -21795,8 +22414,9 @@ public class Client {
                 }
             }
 
-            public class PVEStartall extends Base {
+            public class PVEStartall {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEStartall(Client client, Object node) {
@@ -21852,8 +22472,9 @@ public class Client {
                 }
             }
 
-            public class PVEStopall extends Base {
+            public class PVEStopall {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEStopall(Client client, Object node) {
@@ -21906,8 +22527,9 @@ public class Client {
                 }
             }
 
-            public class PVEMigrateall extends Base {
+            public class PVEMigrateall {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEMigrateall(Client client, Object node) {
@@ -21974,8 +22596,9 @@ public class Client {
                 }
             }
 
-            public class PVEHosts extends Base {
+            public class PVEHosts {
 
+                private final Client _client;
                 private final Object _node;
 
                 protected PVEHosts(Client client, Object node) {
@@ -22101,7 +22724,9 @@ public class Client {
         }
     }
 
-    public class PVEStorage extends Base {
+    public class PVEStorage {
+
+        private final Client _client;
 
         protected PVEStorage(Client client) {
             _client = client;
@@ -22111,8 +22736,9 @@ public class Client {
             return new PVEItemStorage(_client, storage);
         }
 
-        public class PVEItemStorage extends Base {
+        public class PVEItemStorage {
 
+            private final Client _client;
             private final Object _storage;
 
             protected PVEItemStorage(Client client, Object storage) {
@@ -22578,7 +23204,9 @@ public class Client {
         }
     }
 
-    public class PVEAccess extends Base {
+    public class PVEAccess {
+
+        private final Client _client;
 
         protected PVEAccess(Client client) {
             _client = client;
@@ -22639,8 +23267,18 @@ public class Client {
             }
             return _password;
         }
+        private PVETfa _tfa;
 
-        public class PVEUsers extends Base {
+        public PVETfa getTfa() {
+            if (_tfa == null) {
+                _tfa = new PVETfa(_client);
+            }
+            return _tfa;
+        }
+
+        public class PVEUsers {
+
+            private final Client _client;
 
             protected PVEUsers(Client client) {
                 _client = client;
@@ -22650,8 +23288,9 @@ public class Client {
                 return new PVEItemUserid(_client, userid);
             }
 
-            public class PVEItemUserid extends Base {
+            public class PVEItemUserid {
 
+                private final Client _client;
                 private final Object _userid;
 
                 protected PVEItemUserid(Client client, Object userid) {
@@ -22896,7 +23535,9 @@ public class Client {
             }
         }
 
-        public class PVEGroups extends Base {
+        public class PVEGroups {
+
+            private final Client _client;
 
             protected PVEGroups(Client client) {
                 _client = client;
@@ -22906,8 +23547,9 @@ public class Client {
                 return new PVEItemGroupid(_client, groupid);
             }
 
-            public class PVEItemGroupid extends Base {
+            public class PVEItemGroupid {
 
+                private final Client _client;
                 private final Object _groupid;
 
                 protected PVEItemGroupid(Client client, Object groupid) {
@@ -23072,7 +23714,9 @@ public class Client {
             }
         }
 
-        public class PVERoles extends Base {
+        public class PVERoles {
+
+            private final Client _client;
 
             protected PVERoles(Client client) {
                 _client = client;
@@ -23082,8 +23726,9 @@ public class Client {
                 return new PVEItemRoleid(_client, roleid);
             }
 
-            public class PVEItemRoleid extends Base {
+            public class PVEItemRoleid {
 
+                private final Client _client;
                 private final Object _roleid;
 
                 protected PVEItemRoleid(Client client, Object roleid) {
@@ -23251,7 +23896,9 @@ public class Client {
             }
         }
 
-        public class PVEAcl extends Base {
+        public class PVEAcl {
+
+            private final Client _client;
 
             protected PVEAcl(Client client) {
                 _client = client;
@@ -23344,7 +23991,9 @@ public class Client {
             }
         }
 
-        public class PVEDomains extends Base {
+        public class PVEDomains {
+
+            private final Client _client;
 
             protected PVEDomains(Client client) {
                 _client = client;
@@ -23354,8 +24003,9 @@ public class Client {
                 return new PVEItemRealm(_client, realm);
             }
 
-            public class PVEItemRealm extends Base {
+            public class PVEItemRealm {
 
+                private final Client _client;
                 private final Object _realm;
 
                 protected PVEItemRealm(Client client, Object realm) {
@@ -23620,7 +24270,9 @@ public class Client {
             }
         }
 
-        public class PVETicket extends Base {
+        public class PVETicket {
+
+            private final Client _client;
 
             protected PVETicket(Client client) {
                 _client = client;
@@ -23725,7 +24377,9 @@ public class Client {
             }
         }
 
-        public class PVEPassword extends Base {
+        public class PVEPassword {
+
+            private final Client _client;
 
             protected PVEPassword(Client client) {
                 _client = client;
@@ -23759,6 +24413,113 @@ public class Client {
             }
         }
 
+        public class PVETfa {
+
+            private final Client _client;
+
+            protected PVETfa(Client client) {
+                _client = client;
+            }
+
+            /**
+             * Finish a u2f challenge.
+             *
+             * @param response The response to the current authentication
+             * challenge.
+             * @return Result
+             * @throws JSONException
+             */
+            public Result createRest(String response) throws JSONException {
+                Map<String, Object> parameters = new HashMap<>();
+                parameters.put("response", response);
+                return _client.create("/access/tfa", parameters);
+            }
+
+            /**
+             * Finish a u2f challenge.
+             *
+             * @param response The response to the current authentication
+             * challenge.
+             * @return Result
+             * @throws JSONException
+             */
+            public Result verifyTfa(String response) throws JSONException {
+                return createRest(response);
+            }
+
+            /**
+             * Change user u2f authentication.
+             *
+             * @param action The action to perform Enum: delete,new,confirm
+             * @param userid User ID
+             * @param config A TFA configuration. This must currently be of type
+             * TOTP of not set at all.
+             * @param key When adding TOTP, the shared secret value.
+             * @param password The current password.
+             * @param response Either the the response to the current u2f
+             * registration challenge, or, when adding TOTP, the currently valid
+             * TOTP value.
+             * @return Result
+             * @throws JSONException
+             */
+            public Result setRest(String action, String userid, String config, String key, String password, String response) throws JSONException {
+                Map<String, Object> parameters = new HashMap<>();
+                parameters.put("action", action);
+                parameters.put("userid", userid);
+                parameters.put("config", config);
+                parameters.put("key", key);
+                parameters.put("password", password);
+                parameters.put("response", response);
+                return _client.set("/access/tfa", parameters);
+            }
+
+            /**
+             * Change user u2f authentication.
+             *
+             * @param action The action to perform Enum: delete,new,confirm
+             * @param userid User ID
+             * @param config A TFA configuration. This must currently be of type
+             * TOTP of not set at all.
+             * @param key When adding TOTP, the shared secret value.
+             * @param password The current password.
+             * @param response Either the the response to the current u2f
+             * registration challenge, or, when adding TOTP, the currently valid
+             * TOTP value.
+             * @return Result
+             * @throws JSONException
+             */
+            public Result changeTfa(String action, String userid, String config, String key, String password, String response) throws JSONException {
+                return setRest(action, userid, config, key, password, response);
+            }
+
+            /**
+             * Change user u2f authentication.
+             *
+             * @param action The action to perform Enum: delete,new,confirm
+             * @param userid User ID
+             * @return Result
+             * @throws JSONException
+             */
+            public Result setRest(String action, String userid) throws JSONException {
+                Map<String, Object> parameters = new HashMap<>();
+                parameters.put("action", action);
+                parameters.put("userid", userid);
+                return _client.set("/access/tfa", parameters);
+            }
+
+            /**
+             * Change user u2f authentication.
+             *
+             * @param action The action to perform Enum: delete,new,confirm
+             * @param userid User ID
+             * @return Result
+             * @throws JSONException
+             */
+            public Result changeTfa(String action, String userid) throws JSONException {
+                return setRest(action, userid);
+            }
+        }
+
         /**
          * Directory index.
          *
@@ -23780,7 +24541,9 @@ public class Client {
         }
     }
 
-    public class PVEPools extends Base {
+    public class PVEPools {
+
+        private final Client _client;
 
         protected PVEPools(Client client) {
             _client = client;
@@ -23790,8 +24553,9 @@ public class Client {
             return new PVEItemPoolid(_client, poolid);
         }
 
-        public class PVEItemPoolid extends Base {
+        public class PVEItemPoolid {
 
+            private final Client _client;
             private final Object _poolid;
 
             protected PVEItemPoolid(Client client, Object poolid) {
@@ -23965,7 +24729,9 @@ public class Client {
         }
     }
 
-    public class PVEVersion extends Base {
+    public class PVEVersion {
+
+        private final Client _client;
 
         protected PVEVersion(Client client) {
             _client = client;

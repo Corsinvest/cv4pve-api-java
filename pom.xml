@@ -1,27 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.enterpriseve.proxmoxve.api</groupId>
-    <artifactId>eve2pve-api-java</artifactId>
-    <version>1.0.7</version>
+    <groupId>it.corsinvest.proxmoxve.api</groupId>
+    <artifactId>cv4pve-api-java</artifactId>
+    <version>1.1.0</version>
     <packaging>jar</packaging>
+    <name>cv4pve-api-java</name>
+    <description>Corsinvest for Proxmox VE Client API JAVA</description>
+    <url>http://www.corsinvest.it</url>
+    <developers>
+        <developer>
+            <id>dc</id>
+            <name>Daniele Corsini</name>
+            <email>daniele.corsini@corsinvest.it</email>
+            <roles>
+                <role>Project Manager</role>
+                <role>Architect</role>
+            </roles>
+            <organization>Corsinvest Srl</organization>
+            <timezone>0</timezone>
+        </developer>         
+    </developers>
     <dependencies>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpcore</artifactId>
-            <version>4.4.5</version>
-            <type>jar</type>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>4.5.2</version>
-            <type>jar</type>
-        </dependency>
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20090211</version>
+            <version>20180813</version>
             <type>jar</type>
         </dependency>
     </dependencies>
@@ -30,6 +34,4 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
-    <name>eve2pve-api-java</name>
-    <description>ProxmoVE Client API JAVA </description>
 </project>
