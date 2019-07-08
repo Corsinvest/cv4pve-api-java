@@ -2,8 +2,8 @@
 
 ProxmoVE Client API JAVA
 
-[![License](https://img.shields.io/github/license/Corsinvest/cv4pve-api-java.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
-![GitHub release](https://img.shields.io/github/release/Corsinvest/cv4pve-api-java.svg)
+[![License](https://img.shields.io/github/license/Corsinvest/cv4pve-api-java.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html) ![GitHub release](https://img.shields.io/github/release/Corsinvest/cv4pve-api-java.svg) [![Donate to this project using Paypal](https://img.shields.io/badge/paypal-donate-yellow.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=PPM9JHLQLRV2S&item_name=Open+Source+Project&currency_code=EUR&source=url)
+
 
 [ProxmoxVE Api](https://pve.proxmox.com/pve-docs/api-viewer/)
 
@@ -112,3 +112,5 @@ if (client.login("root", "password", "pam")) {
         System.out.println(retDeleSnap.getResponse().get("data"));
 }
 ```
+
+[![paypal](https://www.paypalobjects.com/en_US/IT/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=PPM9JHLQLRV2S&item_name=Open+Source+Project&currency_code=EUR&source=url)
