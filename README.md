@@ -4,8 +4,13 @@ ProxmoVE Client API JAVA
 
 [![License](https://img.shields.io/github/license/Corsinvest/cv4pve-api-java.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html) ![GitHub release](https://img.shields.io/github/release/Corsinvest/cv4pve-api-java.svg) [![Donate to this project using Paypal](https://img.shields.io/badge/paypal-donate-yellow.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=PPM9JHLQLRV2S&item_name=Open+Source+Project&currency_code=EUR&source=url)
 
-
 [ProxmoxVE Api](https://pve.proxmox.com/pve-docs/api-viewer/)
+
+# **Donations**
+
+If you like my work and want to support it, then please consider to deposit a donation through **Paypal** by clicking on the next button:
+
+[![paypal](https://www.paypalobjects.com/en_US/IT/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=PPM9JHLQLRV2S&item_name=Open+Source+Project&currency_code=EUR&source=url)
 
 ```text
    ______                _                      __
@@ -52,6 +57,7 @@ The result is class **Result** and contain methods:
   * getStatusCode
   * getReasonPhrase
   * isSuccessStatusCode
+* Last result action
 * Wait task finish task
   * waitForTaskToFinish
   * taskIsRunning
@@ -64,6 +70,7 @@ The result is class **Result** and contain methods:
 * Login return bool if access
 * Return Result class more information
 * Minimal dependency library
+* ClientBase lite function
 
 ## Usage
 
@@ -112,5 +119,3 @@ if (client.login("root", "password", "pam")) {
         System.out.println(retDeleSnap.getResponse().get("data"));
 }
 ```
-
-[![paypal](https://www.paypalobjects.com/en_US/IT/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=PPM9JHLQLRV2S&item_name=Open+Source+Project&currency_code=EUR&source=url)

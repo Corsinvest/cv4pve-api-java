@@ -1,470 +1,28 @@
 package it.corsinvest.proxmoxve.api;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-import java.security.cert.X509Certificate;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.json.JSONException;
 
 /**
  * Proxmox VE Client
  */
-public class Client {
+public class Client extends ClientBase {
 
-    private String _ticketCSRFPreventionToken;
-    private String _ticketPVEAuthCookie;
     private final Client _client;
-    private final String _hostname;
-    private final int _port;
-    private int _debugLevel;
 
     public Client(String hostname, int port) {
+        super(hostname, port);
         _client = this;
-        _hostname = hostname;
-        _port = port;
     }
 
-    /**
-     * Gets the hostname configured.
-     *
-     * @return string The hostname.
-     */
-    public String getHostname() {
-        return _hostname;
-    }
-
-    /**
-     * Gets the port configured.
-     *
-     * @return int The port.
-     */
-    public int getPort() {
-        return _port;
-    }
-
-    /**
-     * Creation ticket from login.
-     *
-     * @param userName user name or &lt;username&gt;@&lt;realm&gt;
-     * @param password password connection
-     * @return
-     * @throws JSONException
-     */
-    public boolean login(String userName, String password) throws JSONException {
-        String realm = "pam";
-        String[] uData = userName.split("@");
-        if (uData.length > 1) {
-            userName = uData[0];
-            realm = uData[1];
-        }
-        return login(userName, password, realm);
-    }
-
-    /**
-     * Creation ticket from login.
-     *
-     * @param userName user name
-     * @param password password connection
-     * @param realm pam/pve or custom
-     * @return
-     * @throws JSONException
-     */
-    public boolean login(String userName, String password, String realm) throws JSONException {
-        Result result = getAccess().getTicket().createRest(password, userName, null, null, null, realm);
-        if (result.isSuccessStatusCode()) {
-            _ticketCSRFPreventionToken = result.getResponse().getJSONObject("data").getString("CSRFPreventionToken");
-            _ticketPVEAuthCookie = result.getResponse().getJSONObject("data").getString("ticket");
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    private enum HttpMethod {
-        GET, POST, PUT, DELETE
-    }
-
-    /**
-     * Execute method GET
-     *
-     * @param resource Url request
-     * @param parameters Additional parameters
-     * @return Result
-     * @throws JSONException
-     */
-    public Result get(String resource, Map<String, Object> parameters) throws JSONException {
-        return executeAction(resource, HttpMethod.GET, parameters);
-    }
-
-    /**
-     * Execute method PUT
-     *
-     * @param resource Url request
-     * @param parameters Additional parameters
-     * @return Result
-     * @throws JSONException
-     */
-    public Result set(String resource, Map<String, Object> parameters) throws JSONException {
-        return executeAction(resource, HttpMethod.PUT, parameters);
-    }
-
-    /**
-     * Execute method POST
-     *
-     * @param resource Url request
-     * @param parameters Additional parameters
-     * @return Result
-     * @throws JSONException
-     */
-    public Result create(String resource, Map<String, Object> parameters) throws JSONException {
-        return executeAction(resource, HttpMethod.POST, parameters);
-    }
-
-    /**
-     * Execute method DELETE
-     *
-     * @param resource Url request
-     * @param parameters Additional parameters
-     * @return Result
-     * @throws JSONException
-     */
-    public Result delete(String resource, Map<String, Object> parameters) throws JSONException {
-        return executeAction(resource, HttpMethod.DELETE, parameters);
-    }
-
-    /**
-     * Set debug level
-     *
-     * @param value 0 - nothing 1 - Url and method 2 - Url and method and result
-     */
-    public void setDebugLevel(int value) {
-        _debugLevel = value;
-    }
-
-    /**
-     * Return debug level.
-     *
-     * @return
-     */
-    public int getDebugLevel() {
-        return _debugLevel;
-    }
-
-    private Result executeAction(String resource, HttpMethod method, Map<String, Object> parameters) throws JSONException {
-        String url = "https://" + getHostname() + ":" + getPort() + "/api2/json" + resource;
-        Map params = new LinkedHashMap<>();
-        if (parameters != null) {
-            parameters.entrySet().stream().filter((entry) -> (entry.getValue() != null)).forEachOrdered((entry) -> {
-                String value = entry.getValue().toString();
-                if (entry.getValue() instanceof Boolean) {
-                    value = ((Boolean) entry.getValue()) ? "1" : "0";
-                }
-                try {
-                    params.put(entry.getKey(), URLEncoder.encode(value, "UTF-8"));
-                } catch (UnsupportedEncodingException ex) {
-                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            });
-        }
-        // Create a trust manager that does not validate certificate chains
-        TrustManager[] trustAllCerts;
-        trustAllCerts = new TrustManager[]{new X509TrustManager() {
-            @Override
-            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                return null;
-            }
-
-            @Override
-            public void checkClientTrusted(X509Certificate[] certs, String authType) {
-            }
-
-            @Override
-            public void checkServerTrusted(X509Certificate[] certs, String authType) {
-            }
-        }
-        };
-        // Install the all-trusting trust manager
-        try {
-            SSLContext sc = SSLContext.getInstance("SSL");
-            sc.init(null, trustAllCerts, new java.security.SecureRandom());
-            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-        } catch (NoSuchAlgorithmException | KeyManagementException ex) {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        // Create all-trusting host name verifier
-        // Create all-trusting host name verifier
-        HostnameVerifier allHostsValid = (String hostname, SSLSession session) -> true;
-        // Install the all-trusting host verifier
-        HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
-        int statusCode = 0;
-        String reasonPhrase = "";
-        JSONObject response = new JSONObject();
-        HttpURLConnection httpCon = null;
-        try {
-            switch (method) {
-                case GET: {
-                    if (params.isEmpty()) {
-                    } else {
-                        StringBuilder urlParams = new StringBuilder();
-                        params.forEach((key, value) -> {
-                            urlParams.append(urlParams.length() > 0 ? "&" : "")
-                                    .append(key)
-                                    .append("=")
-                                    .append(value);
-                        });
-                        url += "?" + urlParams.toString();
-                    }
-                    httpCon = (HttpURLConnection) new URL(url).openConnection();
-                    httpCon.setRequestMethod("GET");
-                    break;
-                }
-                case PUT:
-                case POST: {
-                    StringBuilder postData = new StringBuilder();
-                    params.forEach((key, value) -> {
-                        postData.append(postData.length() > 0 ? "&" : "")
-                                .append(key)
-                                .append("=")
-                                .append(value);
-                    });
-                    byte[] postDataBytes = postData.toString().getBytes("UTF-8");
-                    httpCon = (HttpURLConnection) new URL(url).openConnection();
-                    httpCon.setRequestMethod(method + "");
-                    httpCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-                    httpCon.setRequestProperty("Content-Length", String.valueOf(postDataBytes.length));
-                    httpCon.setDoOutput(true);
-                    httpCon.getOutputStream().write(postDataBytes);
-                    break;
-                }
-                case DELETE: {
-                    httpCon = (HttpURLConnection) new URL(url).openConnection();
-                    httpCon.setRequestMethod("DELETE");
-                    break;
-                }
-            }
-            //httpCon.setRequestProperty("User-Agent", "Mozilla/5.0");
-            if (getDebugLevel() >= 1) {
-                System.out.println("Method: " + method + " , Url: " + url);
-                if (method != HttpMethod.GET) {
-                    System.out.println("Parameters:");
-                    params.forEach((key, value) -> {
-                        System.out.println(key + " : " + value);
-                    });
-                }
-            }
-            if (_ticketCSRFPreventionToken != null) {
-                httpCon.setRequestProperty("CSRFPreventionToken", _ticketCSRFPreventionToken);
-                httpCon.setRequestProperty("Cookie", "PVEAuthCookie=" + _ticketPVEAuthCookie);
-            }
-            statusCode = httpCon.getResponseCode();
-            reasonPhrase = httpCon.getResponseMessage();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpCon.getInputStream()))) {
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line).append("\n");
-                }
-                response = new JSONObject(sb.toString());
-            }
-        } catch (IOException ex) {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        Result result = new Result(response, statusCode, reasonPhrase);
-        if (getDebugLevel() >= 2) {
-            System.out.println(response.toString(2));
-            System.out.println("StatusCode:          " + result.getStatusCode());
-            System.out.println("ReasonPhrase:        " + result.getReasonPhrase());
-            System.out.println("IsSuccessStatusCode: " + result.isSuccessStatusCode());
-        }
-        if (getDebugLevel() > 0) {
-            System.out.println("=============================");
-        }
-        return result;
-    }
-
-    protected static void addIndexedParameter(Map<String, Object> parameters, String name, Map<Integer, String> value) {
-        value.entrySet().forEach((entry) -> {
-            parameters.put(name + entry.getKey(), entry.getValue());
-        });
-    }
-
-    /**
-     * Wait for task to finish
-     *
-     * @param node Node identifier
-     * @param task Task identifier
-     * @param wait Millisecond wait next check
-     * @param timeOut Millisecond timeout
-     * @throws JSONException
-     */
-    public void waitForTaskToFinish(String node, String task, long wait, long timeOut) throws JSONException {
-        Boolean isRunning = true;
-        if (wait <= 0) {
-            wait = 500;
-        }
-        if (timeOut < wait) {
-            timeOut = wait + 5000;
-        }
-        long timeStart = System.currentTimeMillis();
-        long waitTime = System.currentTimeMillis();
-        while (isRunning && (timeStart - System.currentTimeMillis()) < timeOut) {
-            if ((System.currentTimeMillis() - waitTime) >= wait) {
-                waitTime = System.currentTimeMillis();
-                isRunning = taskIsRunning(node, task);
-            }
-        }
-    }
-
-    /**
-     * Cherck task is running
-     *
-     * @param node Node identifier
-     * @param task Task identifier
-     * @return
-     * @throws JSONException
-     */
-    public boolean taskIsRunning(String node, String task) throws JSONException {
-        return getNodes().get(node).getTasks().get(task)
-                .getStatus().getRest().getResponse()
-                .getJSONObject("data").getString("status").equals("running");
-    }
-
-    /**
-     * Return exit status code task
-     *
-     * @param node Node identifier
-     * @param task Task identifier
-     * @return
-     * @throws JSONException
-     */
-    public String getExitStatusTask(String node, String task) throws JSONException {
-        return getNodes().get(node).getTasks().get(task)
-                .getStatus().getRest().getResponse()
-                .getJSONObject("data").getString("exitstatus");
-    }
-
-    public static <T> List<T> JSONArrayToList(JSONArray array) throws JSONException {
-        List<T> ret = new ArrayList<>();
-        if (array != null) {
-            for (int i = 0; i < array.length(); i++) {
-                ret.add((T) array.get(i));
-            }
-        }
-        return ret;
-    }
-
-    /**
-     * Result request API
-     */
-    public class Result {
-
-        private final String _reasonPhrase;
-        private final int _statusCode;
-        private final JSONObject _response;
-
-        private Result(JSONObject respose, int statusCode, String reasonPhrase) {
-            _response = respose;
-            _statusCode = statusCode;
-            _reasonPhrase = reasonPhrase;
-        }
-
-        /**
-         * Gets the reason phrase which typically is sent by servers together
-         * with the status code.
-         *
-         * @return
-         */
-        public String getReasonPhrase() {
-            return _reasonPhrase;
-        }
-
-        /**
-         * Contains the values of status codes defined for HTTP.
-         *
-         * @return
-         */
-        public int getStatusCode() {
-            return _statusCode;
-        }
-
-        /**
-         * Gets a value that indicates if the HTTP response was successful.
-         *
-         * @return
-         */
-        public boolean isSuccessStatusCode() {
-            return _statusCode == HttpURLConnection.HTTP_OK;
-        }
-
-        /**
-         * Proxmox VE response.
-         *
-         * @return JSONObject
-         */
-        public JSONObject getResponse() {
-            return _response;
-        }
-
-        /**
-         * Get if response Proxmox VE contain errors
-         *
-         * @return
-         * @throws org.json.JSONException
-         */
-        public boolean responseInError() throws JSONException {
-            return !_response.isNull("errorr");
-        }
-
-        /**
-         * Get error
-         *
-         * @return
-         * @throws org.json.JSONException
-         */
-        public String getError() throws JSONException {
-            StringBuilder ret = new StringBuilder();
-            if (responseInError()) {
-                JSONObject errors = _response.getJSONObject("errors");
-                for (int i = 0; i < errors.names().length(); i++) {
-                    if (ret.length() > 0) {
-                        ret.append("\n");
-                    }
-                    String name = errors.names().getString(i);
-                    ret.append(name)
-                            .append(" : ")
-                            .append(errors.get(name));
-                }
-            }
-            return ret.toString();
-        }
-    }
     private PVECluster _cluster;
 
     public PVECluster getCluster() {
         if (_cluster == null) {
             _cluster = new PVECluster(_client);
         }
+
         return _cluster;
     }
     private PVENodes _nodes;
@@ -473,6 +31,7 @@ public class Client {
         if (_nodes == null) {
             _nodes = new PVENodes(_client);
         }
+
         return _nodes;
     }
     private PVEStorage _storage;
@@ -481,6 +40,7 @@ public class Client {
         if (_storage == null) {
             _storage = new PVEStorage(_client);
         }
+
         return _storage;
     }
     private PVEAccess _access;
@@ -489,6 +49,7 @@ public class Client {
         if (_access == null) {
             _access = new PVEAccess(_client);
         }
+
         return _access;
     }
     private PVEPools _pools;
@@ -497,6 +58,7 @@ public class Client {
         if (_pools == null) {
             _pools = new PVEPools(_client);
         }
+
         return _pools;
     }
     private PVEVersion _version;
@@ -505,6 +67,7 @@ public class Client {
         if (_version == null) {
             _version = new PVEVersion(_client);
         }
+
         return _version;
     }
 
@@ -514,13 +77,16 @@ public class Client {
 
         protected PVECluster(Client client) {
             _client = client;
+
         }
+
         private PVEReplication _replication;
 
         public PVEReplication getReplication() {
             if (_replication == null) {
                 _replication = new PVEReplication(_client);
             }
+
             return _replication;
         }
         private PVEConfig _config;
@@ -529,6 +95,7 @@ public class Client {
             if (_config == null) {
                 _config = new PVEConfig(_client);
             }
+
             return _config;
         }
         private PVEFirewall _firewall;
@@ -537,6 +104,7 @@ public class Client {
             if (_firewall == null) {
                 _firewall = new PVEFirewall(_client);
             }
+
             return _firewall;
         }
         private PVEBackup _backup;
@@ -545,6 +113,7 @@ public class Client {
             if (_backup == null) {
                 _backup = new PVEBackup(_client);
             }
+
             return _backup;
         }
         private PVEHa _ha;
@@ -553,6 +122,7 @@ public class Client {
             if (_ha == null) {
                 _ha = new PVEHa(_client);
             }
+
             return _ha;
         }
         private PVEAcme _acme;
@@ -561,6 +131,7 @@ public class Client {
             if (_acme == null) {
                 _acme = new PVEAcme(_client);
             }
+
             return _acme;
         }
         private PVELog _log;
@@ -569,6 +140,7 @@ public class Client {
             if (_log == null) {
                 _log = new PVELog(_client);
             }
+
             return _log;
         }
         private PVEResources _resources;
@@ -577,6 +149,7 @@ public class Client {
             if (_resources == null) {
                 _resources = new PVEResources(_client);
             }
+
             return _resources;
         }
         private PVETasks _tasks;
@@ -585,6 +158,7 @@ public class Client {
             if (_tasks == null) {
                 _tasks = new PVETasks(_client);
             }
+
             return _tasks;
         }
         private PVEOptions _options;
@@ -593,6 +167,7 @@ public class Client {
             if (_options == null) {
                 _options = new PVEOptions(_client);
             }
+
             return _options;
         }
         private PVEStatus _status;
@@ -601,6 +176,7 @@ public class Client {
             if (_status == null) {
                 _status = new PVEStatus(_client);
             }
+
             return _status;
         }
         private PVENextid _nextid;
@@ -609,7 +185,17 @@ public class Client {
             if (_nextid == null) {
                 _nextid = new PVENextid(_client);
             }
+
             return _nextid;
+        }
+        private PVECeph _ceph;
+
+        public PVECeph getCeph() {
+            if (_ceph == null) {
+                _ceph = new PVECeph(_client);
+            }
+
+            return _ceph;
         }
 
         public class PVEReplication {
@@ -618,6 +204,7 @@ public class Client {
 
             protected PVEReplication(Client client) {
                 _client = client;
+
             }
 
             public PVEItemId get(Object id) {
@@ -669,6 +256,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result deleteRest() throws JSONException {
                     return _client.delete("/cluster/replication/" + _id + "", null);
                 }
@@ -689,6 +277,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/cluster/replication/" + _id + "", null);
                 }
@@ -725,6 +314,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest(String comment, String delete, String digest, Boolean disable, Integer rate, String remove_job, String schedule, String source) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("comment", comment);
@@ -770,6 +360,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest() throws JSONException {
                     return _client.set("/cluster/replication/" + _id + "", null);
                 }
@@ -783,6 +374,7 @@ public class Client {
                 public Result update() throws JSONException {
                     return setRest();
                 }
+
             }
 
             /**
@@ -827,6 +419,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result createRest(String id, String target, String type, String comment, Boolean disable, Integer rate, String remove_job, String schedule, String source) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("id", id);
@@ -878,6 +471,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result createRest(String id, String target, String type) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("id", id);
@@ -900,6 +494,7 @@ public class Client {
             public Result create(String id, String target, String type) throws JSONException {
                 return createRest(id, target, type);
             }
+
         }
 
         public class PVEConfig {
@@ -908,13 +503,16 @@ public class Client {
 
             protected PVEConfig(Client client) {
                 _client = client;
+
             }
+
             private PVENodes _nodes;
 
             public PVENodes getNodes() {
                 if (_nodes == null) {
                     _nodes = new PVENodes(_client);
                 }
+
                 return _nodes;
             }
             private PVEJoin _join;
@@ -923,6 +521,7 @@ public class Client {
                 if (_join == null) {
                     _join = new PVEJoin(_client);
                 }
+
                 return _join;
             }
             private PVETotem _totem;
@@ -931,7 +530,17 @@ public class Client {
                 if (_totem == null) {
                     _totem = new PVETotem(_client);
                 }
+
                 return _totem;
+            }
+            private PVEQdevice _qdevice;
+
+            public PVEQdevice getQdevice() {
+                if (_qdevice == null) {
+                    _qdevice = new PVEQdevice(_client);
+                }
+
+                return _qdevice;
             }
 
             public class PVENodes {
@@ -940,6 +549,7 @@ public class Client {
 
                 protected PVENodes(Client client) {
                     _client = client;
+
                 }
 
                 public PVEItemNode get(Object node) {
@@ -981,23 +591,20 @@ public class Client {
                      * for internal use.
                      *
                      * @param force Do not throw error if node already exists.
+                     * @param linkN Address and priority information of a single
+                     * corosync link.
                      * @param nodeid Node id for this node.
-                     * @param ring0_addr Hostname (or IP) of the corosync ring0
-                     * address of this node.
-                     * @param ring1_addr Hostname (or IP) of the corosync ring1
-                     * address of this node. Requires a valid configured ring 1
-                     * (bindnet1_addr) in the cluster.
                      * @param votes Number of votes for this node
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result createRest(Boolean force, Integer nodeid, String ring0_addr, String ring1_addr, Integer votes) throws JSONException {
+
+                    public Result createRest(Boolean force, Map<Integer, String> linkN, Integer nodeid, Integer votes) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("force", force);
                         parameters.put("nodeid", nodeid);
-                        parameters.put("ring0_addr", ring0_addr);
-                        parameters.put("ring1_addr", ring1_addr);
                         parameters.put("votes", votes);
+                        addIndexedParameter(parameters, "link", linkN);
                         return _client.create("/cluster/config/nodes/" + _node + "", parameters);
                     }
 
@@ -1006,18 +613,15 @@ public class Client {
                      * for internal use.
                      *
                      * @param force Do not throw error if node already exists.
+                     * @param linkN Address and priority information of a single
+                     * corosync link.
                      * @param nodeid Node id for this node.
-                     * @param ring0_addr Hostname (or IP) of the corosync ring0
-                     * address of this node.
-                     * @param ring1_addr Hostname (or IP) of the corosync ring1
-                     * address of this node. Requires a valid configured ring 1
-                     * (bindnet1_addr) in the cluster.
                      * @param votes Number of votes for this node
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result addnode(Boolean force, Integer nodeid, String ring0_addr, String ring1_addr, Integer votes) throws JSONException {
-                        return createRest(force, nodeid, ring0_addr, ring1_addr, votes);
+                    public Result addnode(Boolean force, Map<Integer, String> linkN, Integer nodeid, Integer votes) throws JSONException {
+                        return createRest(force, linkN, nodeid, votes);
                     }
 
                     /**
@@ -1027,6 +631,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest() throws JSONException {
                         return _client.create("/cluster/config/nodes/" + _node + "", null);
                     }
@@ -1041,6 +646,7 @@ public class Client {
                     public Result addnode() throws JSONException {
                         return createRest();
                     }
+
                 }
 
                 /**
@@ -1062,6 +668,7 @@ public class Client {
                 public Result nodes() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVEJoin {
@@ -1070,6 +677,7 @@ public class Client {
 
                 protected PVEJoin(Client client) {
                     _client = client;
+
                 }
 
                 /**
@@ -1105,6 +713,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/cluster/config/join", null);
                 }
@@ -1128,26 +737,23 @@ public class Client {
                  * member.
                  * @param password Superuser (root) password of peer node.
                  * @param force Do not throw error if node already exists.
+                 * @param linkN Address and priority information of a single
+                 * corosync link.
                  * @param nodeid Node id for this node.
-                 * @param ring0_addr Hostname (or IP) of the corosync ring0
-                 * address of this node.
-                 * @param ring1_addr Hostname (or IP) of the corosync ring1
-                 * address of this node. Requires a valid configured ring 1
-                 * (bindnet1_addr) in the cluster.
                  * @param votes Number of votes for this node
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createRest(String fingerprint, String hostname, String password, Boolean force, Integer nodeid, String ring0_addr, String ring1_addr, Integer votes) throws JSONException {
+
+                public Result createRest(String fingerprint, String hostname, String password, Boolean force, Map<Integer, String> linkN, Integer nodeid, Integer votes) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("fingerprint", fingerprint);
                     parameters.put("hostname", hostname);
                     parameters.put("password", password);
                     parameters.put("force", force);
                     parameters.put("nodeid", nodeid);
-                    parameters.put("ring0_addr", ring0_addr);
-                    parameters.put("ring1_addr", ring1_addr);
                     parameters.put("votes", votes);
+                    addIndexedParameter(parameters, "link", linkN);
                     return _client.create("/cluster/config/join", parameters);
                 }
 
@@ -1159,18 +765,15 @@ public class Client {
                  * member.
                  * @param password Superuser (root) password of peer node.
                  * @param force Do not throw error if node already exists.
+                 * @param linkN Address and priority information of a single
+                 * corosync link.
                  * @param nodeid Node id for this node.
-                 * @param ring0_addr Hostname (or IP) of the corosync ring0
-                 * address of this node.
-                 * @param ring1_addr Hostname (or IP) of the corosync ring1
-                 * address of this node. Requires a valid configured ring 1
-                 * (bindnet1_addr) in the cluster.
                  * @param votes Number of votes for this node
                  * @return Result
                  * @throws JSONException
                  */
-                public Result join(String fingerprint, String hostname, String password, Boolean force, Integer nodeid, String ring0_addr, String ring1_addr, Integer votes) throws JSONException {
-                    return createRest(fingerprint, hostname, password, force, nodeid, ring0_addr, ring1_addr, votes);
+                public Result join(String fingerprint, String hostname, String password, Boolean force, Map<Integer, String> linkN, Integer nodeid, Integer votes) throws JSONException {
+                    return createRest(fingerprint, hostname, password, force, linkN, nodeid, votes);
                 }
 
                 /**
@@ -1183,6 +786,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String fingerprint, String hostname, String password) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("fingerprint", fingerprint);
@@ -1204,6 +808,7 @@ public class Client {
                 public Result join(String fingerprint, String hostname, String password) throws JSONException {
                     return createRest(fingerprint, hostname, password);
                 }
+
             }
 
             public class PVETotem {
@@ -1212,6 +817,7 @@ public class Client {
 
                 protected PVETotem(Client client) {
                     _client = client;
+
                 }
 
                 /**
@@ -1233,6 +839,38 @@ public class Client {
                 public Result totem() throws JSONException {
                     return getRest();
                 }
+
+            }
+
+            public class PVEQdevice {
+
+                private final Client _client;
+
+                protected PVEQdevice(Client client) {
+                    _client = client;
+
+                }
+
+                /**
+                 * Get QDevice status
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/config/qdevice", null);
+                }
+
+                /**
+                 * Get QDevice status
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result status() throws JSONException {
+                    return getRest();
+                }
+
             }
 
             /**
@@ -1259,30 +897,20 @@ public class Client {
              * Generate new cluster configuration.
              *
              * @param clustername The name of the cluster.
-             * @param bindnet0_addr This specifies the network address the
-             * corosync ring 0 executive should bind to and defaults to the
-             * local IP address of the node.
-             * @param bindnet1_addr This specifies the network address the
-             * corosync ring 1 executive should bind to and is optional.
+             * @param linkN Address and priority information of a single
+             * corosync link.
              * @param nodeid Node id for this node.
-             * @param ring0_addr Hostname (or IP) of the corosync ring0 address
-             * of this node.
-             * @param ring1_addr Hostname (or IP) of the corosync ring1 address
-             * of this node. Requires a valid configured ring 1 (bindnet1_addr)
-             * in the cluster.
              * @param votes Number of votes for this node.
              * @return Result
              * @throws JSONException
              */
-            public Result createRest(String clustername, String bindnet0_addr, String bindnet1_addr, Integer nodeid, String ring0_addr, String ring1_addr, Integer votes) throws JSONException {
+
+            public Result createRest(String clustername, Map<Integer, String> linkN, Integer nodeid, Integer votes) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("clustername", clustername);
-                parameters.put("bindnet0_addr", bindnet0_addr);
-                parameters.put("bindnet1_addr", bindnet1_addr);
                 parameters.put("nodeid", nodeid);
-                parameters.put("ring0_addr", ring0_addr);
-                parameters.put("ring1_addr", ring1_addr);
                 parameters.put("votes", votes);
+                addIndexedParameter(parameters, "link", linkN);
                 return _client.create("/cluster/config", parameters);
             }
 
@@ -1290,23 +918,15 @@ public class Client {
              * Generate new cluster configuration.
              *
              * @param clustername The name of the cluster.
-             * @param bindnet0_addr This specifies the network address the
-             * corosync ring 0 executive should bind to and defaults to the
-             * local IP address of the node.
-             * @param bindnet1_addr This specifies the network address the
-             * corosync ring 1 executive should bind to and is optional.
+             * @param linkN Address and priority information of a single
+             * corosync link.
              * @param nodeid Node id for this node.
-             * @param ring0_addr Hostname (or IP) of the corosync ring0 address
-             * of this node.
-             * @param ring1_addr Hostname (or IP) of the corosync ring1 address
-             * of this node. Requires a valid configured ring 1 (bindnet1_addr)
-             * in the cluster.
              * @param votes Number of votes for this node.
              * @return Result
              * @throws JSONException
              */
-            public Result create(String clustername, String bindnet0_addr, String bindnet1_addr, Integer nodeid, String ring0_addr, String ring1_addr, Integer votes) throws JSONException {
-                return createRest(clustername, bindnet0_addr, bindnet1_addr, nodeid, ring0_addr, ring1_addr, votes);
+            public Result create(String clustername, Map<Integer, String> linkN, Integer nodeid, Integer votes) throws JSONException {
+                return createRest(clustername, linkN, nodeid, votes);
             }
 
             /**
@@ -1316,6 +936,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result createRest(String clustername) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("clustername", clustername);
@@ -1332,6 +953,7 @@ public class Client {
             public Result create(String clustername) throws JSONException {
                 return createRest(clustername);
             }
+
         }
 
         public class PVEFirewall {
@@ -1340,13 +962,16 @@ public class Client {
 
             protected PVEFirewall(Client client) {
                 _client = client;
+
             }
+
             private PVEGroups _groups;
 
             public PVEGroups getGroups() {
                 if (_groups == null) {
                     _groups = new PVEGroups(_client);
                 }
+
                 return _groups;
             }
             private PVERules _rules;
@@ -1355,6 +980,7 @@ public class Client {
                 if (_rules == null) {
                     _rules = new PVERules(_client);
                 }
+
                 return _rules;
             }
             private PVEIpset _ipset;
@@ -1363,6 +989,7 @@ public class Client {
                 if (_ipset == null) {
                     _ipset = new PVEIpset(_client);
                 }
+
                 return _ipset;
             }
             private PVEAliases _aliases;
@@ -1371,6 +998,7 @@ public class Client {
                 if (_aliases == null) {
                     _aliases = new PVEAliases(_client);
                 }
+
                 return _aliases;
             }
             private PVEOptions _options;
@@ -1379,6 +1007,7 @@ public class Client {
                 if (_options == null) {
                     _options = new PVEOptions(_client);
                 }
+
                 return _options;
             }
             private PVEMacros _macros;
@@ -1387,6 +1016,7 @@ public class Client {
                 if (_macros == null) {
                     _macros = new PVEMacros(_client);
                 }
+
                 return _macros;
             }
             private PVERefs _refs;
@@ -1395,6 +1025,7 @@ public class Client {
                 if (_refs == null) {
                     _refs = new PVERefs(_client);
                 }
+
                 return _refs;
             }
 
@@ -1404,6 +1035,7 @@ public class Client {
 
                 protected PVEGroups(Client client) {
                     _client = client;
+
                 }
 
                 public PVEItemGroup get(Object group) {
@@ -1470,6 +1102,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result deleteRest() throws JSONException {
                             return _client.delete("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
                         }
@@ -1490,6 +1123,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest() throws JSONException {
                             return _client.get("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
                         }
@@ -1557,6 +1191,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("action", action);
@@ -1640,6 +1275,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest() throws JSONException {
                             return _client.set("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
                         }
@@ -1653,6 +1289,7 @@ public class Client {
                         public Result updateRule() throws JSONException {
                             return setRest();
                         }
+
                     }
 
                     /**
@@ -1681,6 +1318,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/cluster/firewall/groups/" + _group + "", null);
                     }
@@ -1743,6 +1381,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
@@ -1823,6 +1462,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String action, String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
@@ -1842,6 +1482,7 @@ public class Client {
                     public Result createRule(String action, String type) throws JSONException {
                         return createRest(action, type);
                     }
+
                 }
 
                 /**
@@ -1878,6 +1519,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String group, String comment, String digest, String rename) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
@@ -1912,6 +1554,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String group) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
@@ -1928,6 +1571,7 @@ public class Client {
                 public Result createSecurityGroup(String group) throws JSONException {
                     return createRest(group);
                 }
+
             }
 
             public class PVERules {
@@ -1936,6 +1580,7 @@ public class Client {
 
                 protected PVERules(Client client) {
                     _client = client;
+
                 }
 
                 public PVEItemPos get(Object pos) {
@@ -1986,6 +1631,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result deleteRest() throws JSONException {
                         return _client.delete("/cluster/firewall/rules/" + _pos + "", null);
                     }
@@ -2006,6 +1652,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/cluster/firewall/rules/" + _pos + "", null);
                     }
@@ -2070,6 +1717,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
@@ -2150,6 +1798,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result setRest() throws JSONException {
                         return _client.set("/cluster/firewall/rules/" + _pos + "", null);
                     }
@@ -2163,6 +1812,7 @@ public class Client {
                     public Result updateRule() throws JSONException {
                         return setRest();
                     }
+
                 }
 
                 /**
@@ -2231,6 +1881,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("action", action);
@@ -2309,6 +1960,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String action, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("action", action);
@@ -2328,6 +1980,7 @@ public class Client {
                 public Result createRule(String action, String type) throws JSONException {
                     return createRest(action, type);
                 }
+
             }
 
             public class PVEIpset {
@@ -2336,6 +1989,7 @@ public class Client {
 
                 protected PVEIpset(Client client) {
                     _client = client;
+
                 }
 
                 public PVEItemName get(Object name) {
@@ -2402,6 +2056,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result deleteRest() throws JSONException {
                             return _client.delete("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
                         }
@@ -2422,6 +2077,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest() throws JSONException {
                             return _client.get("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
                         }
@@ -2447,6 +2103,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest(String comment, String digest, Boolean nomatch) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("comment", comment);
@@ -2476,6 +2133,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest() throws JSONException {
                             return _client.set("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
                         }
@@ -2489,6 +2147,7 @@ public class Client {
                         public Result updateIp() throws JSONException {
                             return setRest();
                         }
+
                     }
 
                     /**
@@ -2517,6 +2176,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/cluster/firewall/ipset/" + _name + "", null);
                     }
@@ -2540,6 +2200,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String cidr, String comment, Boolean nomatch) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
@@ -2568,6 +2229,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String cidr) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
@@ -2584,6 +2246,7 @@ public class Client {
                     public Result createIp(String cidr) throws JSONException {
                         return createRest(cidr);
                     }
+
                 }
 
                 /**
@@ -2620,6 +2283,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String name, String comment, String digest, String rename) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("name", name);
@@ -2654,6 +2318,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String name) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("name", name);
@@ -2670,6 +2335,7 @@ public class Client {
                 public Result createIpset(String name) throws JSONException {
                     return createRest(name);
                 }
+
             }
 
             public class PVEAliases {
@@ -2678,6 +2344,7 @@ public class Client {
 
                 protected PVEAliases(Client client) {
                     _client = client;
+
                 }
 
                 public PVEItemName get(Object name) {
@@ -2728,6 +2395,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result deleteRest() throws JSONException {
                         return _client.delete("/cluster/firewall/aliases/" + _name + "", null);
                     }
@@ -2748,6 +2416,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/cluster/firewall/aliases/" + _name + "", null);
                     }
@@ -2774,6 +2443,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result setRest(String cidr, String comment, String digest, String rename) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
@@ -2806,6 +2476,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result setRest(String cidr) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
@@ -2822,6 +2493,7 @@ public class Client {
                     public Result updateAlias(String cidr) throws JSONException {
                         return setRest(cidr);
                     }
+
                 }
 
                 /**
@@ -2853,6 +2525,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String cidr, String name, String comment) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("cidr", cidr);
@@ -2882,6 +2555,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String cidr, String name) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("cidr", cidr);
@@ -2900,6 +2574,7 @@ public class Client {
                 public Result createAlias(String cidr, String name) throws JSONException {
                     return createRest(cidr, name);
                 }
+
             }
 
             public class PVEOptions {
@@ -2908,6 +2583,7 @@ public class Client {
 
                 protected PVEOptions(Client client) {
                     _client = client;
+
                 }
 
                 /**
@@ -2945,6 +2621,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest(String delete, String digest, Boolean ebtables, Integer enable, String log_ratelimit, String policy_in, String policy_out) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("delete", delete);
@@ -2982,6 +2659,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest() throws JSONException {
                     return _client.set("/cluster/firewall/options", null);
                 }
@@ -2995,6 +2673,7 @@ public class Client {
                 public Result setOptions() throws JSONException {
                     return setRest();
                 }
+
             }
 
             public class PVEMacros {
@@ -3003,6 +2682,7 @@ public class Client {
 
                 protected PVEMacros(Client client) {
                     _client = client;
+
                 }
 
                 /**
@@ -3024,6 +2704,7 @@ public class Client {
                 public Result getMacros() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVERefs {
@@ -3032,6 +2713,7 @@ public class Client {
 
                 protected PVERefs(Client client) {
                     _client = client;
+
                 }
 
                 /**
@@ -3069,6 +2751,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/cluster/firewall/refs", null);
                 }
@@ -3083,6 +2766,7 @@ public class Client {
                 public Result refs() throws JSONException {
                     return getRest();
                 }
+
             }
 
             /**
@@ -3104,6 +2788,7 @@ public class Client {
             public Result index() throws JSONException {
                 return getRest();
             }
+
         }
 
         public class PVEBackup {
@@ -3112,6 +2797,7 @@ public class Client {
 
             protected PVEBackup(Client client) {
                 _client = client;
+
             }
 
             public PVEItemId get(Object id) {
@@ -3154,6 +2840,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/cluster/backup/" + _id + "", null);
                 }
@@ -3196,13 +2883,15 @@ public class Client {
                  * @param node Only run if executed on this node.
                  * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1
                  * uses half of cores, N&amp;gt;1 uses N as thread count.
+                 * @param pool Backup all known guest systems included in the
+                 * specified pool.
                  * @param quiet Be quiet.
                  * @param remove Remove old backup files if there are more than
                  * 'maxfiles' backup files.
                  * @param script Use specified hook script.
                  * @param size Unused, will be removed in a future release.
                  * @param stdexcludes Exclude temporary files and logs.
-                 * @param stop Stop runnig backup jobs on this host.
+                 * @param stop Stop running backup jobs on this host.
                  * @param stopwait Maximal time to wait until a guest system is
                  * stopped (minutes).
                  * @param storage Store resulting file to this storage.
@@ -3211,7 +2900,8 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result setRest(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
+
+                public Result setRest(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("starttime", starttime);
                     parameters.put("all", all);
@@ -3231,6 +2921,7 @@ public class Client {
                     parameters.put("mode", mode);
                     parameters.put("node", node);
                     parameters.put("pigz", pigz);
+                    parameters.put("pool", pool);
                     parameters.put("quiet", quiet);
                     parameters.put("remove", remove);
                     parameters.put("script", script);
@@ -3272,13 +2963,15 @@ public class Client {
                  * @param node Only run if executed on this node.
                  * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1
                  * uses half of cores, N&amp;gt;1 uses N as thread count.
+                 * @param pool Backup all known guest systems included in the
+                 * specified pool.
                  * @param quiet Be quiet.
                  * @param remove Remove old backup files if there are more than
                  * 'maxfiles' backup files.
                  * @param script Use specified hook script.
                  * @param size Unused, will be removed in a future release.
                  * @param stdexcludes Exclude temporary files and logs.
-                 * @param stop Stop runnig backup jobs on this host.
+                 * @param stop Stop running backup jobs on this host.
                  * @param stopwait Maximal time to wait until a guest system is
                  * stopped (minutes).
                  * @param storage Store resulting file to this storage.
@@ -3287,8 +2980,8 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result updateJob(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
-                    return setRest(starttime, all, bwlimit, compress, delete, dow, dumpdir, enabled, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, node, pigz, quiet, remove, script, size, stdexcludes, stop, stopwait, storage, tmpdir, vmid);
+                public Result updateJob(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
+                    return setRest(starttime, all, bwlimit, compress, delete, dow, dumpdir, enabled, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, node, pigz, pool, quiet, remove, script, size, stdexcludes, stop, stopwait, storage, tmpdir, vmid);
                 }
 
                 /**
@@ -3298,6 +2991,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest(String starttime) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("starttime", starttime);
@@ -3314,6 +3008,7 @@ public class Client {
                 public Result updateJob(String starttime) throws JSONException {
                     return setRest(starttime);
                 }
+
             }
 
             /**
@@ -3361,13 +3056,15 @@ public class Client {
              * @param node Only run if executed on this node.
              * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1 uses
              * half of cores, N&amp;gt;1 uses N as thread count.
+             * @param pool Backup all known guest systems included in the
+             * specified pool.
              * @param quiet Be quiet.
              * @param remove Remove old backup files if there are more than
              * 'maxfiles' backup files.
              * @param script Use specified hook script.
              * @param size Unused, will be removed in a future release.
              * @param stdexcludes Exclude temporary files and logs.
-             * @param stop Stop runnig backup jobs on this host.
+             * @param stop Stop running backup jobs on this host.
              * @param stopwait Maximal time to wait until a guest system is
              * stopped (minutes).
              * @param storage Store resulting file to this storage.
@@ -3376,7 +3073,8 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
-            public Result createRest(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
+
+            public Result createRest(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("starttime", starttime);
                 parameters.put("all", all);
@@ -3395,6 +3093,7 @@ public class Client {
                 parameters.put("mode", mode);
                 parameters.put("node", node);
                 parameters.put("pigz", pigz);
+                parameters.put("pool", pool);
                 parameters.put("quiet", quiet);
                 parameters.put("remove", remove);
                 parameters.put("script", script);
@@ -3433,13 +3132,15 @@ public class Client {
              * @param node Only run if executed on this node.
              * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1 uses
              * half of cores, N&amp;gt;1 uses N as thread count.
+             * @param pool Backup all known guest systems included in the
+             * specified pool.
              * @param quiet Be quiet.
              * @param remove Remove old backup files if there are more than
              * 'maxfiles' backup files.
              * @param script Use specified hook script.
              * @param size Unused, will be removed in a future release.
              * @param stdexcludes Exclude temporary files and logs.
-             * @param stop Stop runnig backup jobs on this host.
+             * @param stop Stop running backup jobs on this host.
              * @param stopwait Maximal time to wait until a guest system is
              * stopped (minutes).
              * @param storage Store resulting file to this storage.
@@ -3448,8 +3149,8 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
-            public Result createJob(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
-                return createRest(starttime, all, bwlimit, compress, dow, dumpdir, enabled, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, node, pigz, quiet, remove, script, size, stdexcludes, stop, stopwait, storage, tmpdir, vmid);
+            public Result createJob(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
+                return createRest(starttime, all, bwlimit, compress, dow, dumpdir, enabled, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, node, pigz, pool, quiet, remove, script, size, stdexcludes, stop, stopwait, storage, tmpdir, vmid);
             }
 
             /**
@@ -3459,6 +3160,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result createRest(String starttime) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("starttime", starttime);
@@ -3475,6 +3177,7 @@ public class Client {
             public Result createJob(String starttime) throws JSONException {
                 return createRest(starttime);
             }
+
         }
 
         public class PVEHa {
@@ -3483,13 +3186,16 @@ public class Client {
 
             protected PVEHa(Client client) {
                 _client = client;
+
             }
+
             private PVEResources _resources;
 
             public PVEResources getResources() {
                 if (_resources == null) {
                     _resources = new PVEResources(_client);
                 }
+
                 return _resources;
             }
             private PVEGroups _groups;
@@ -3498,6 +3204,7 @@ public class Client {
                 if (_groups == null) {
                     _groups = new PVEGroups(_client);
                 }
+
                 return _groups;
             }
             private PVEStatus _status;
@@ -3506,6 +3213,7 @@ public class Client {
                 if (_status == null) {
                     _status = new PVEStatus(_client);
                 }
+
                 return _status;
             }
 
@@ -3515,6 +3223,7 @@ public class Client {
 
                 protected PVEResources(Client client) {
                     _client = client;
+
                 }
 
                 public PVEItemSid get(Object sid) {
@@ -3530,12 +3239,14 @@ public class Client {
                         _client = client;
                         _sid = sid;
                     }
+
                     private PVEMigrate _migrate;
 
                     public PVEMigrate getMigrate() {
                         if (_migrate == null) {
                             _migrate = new PVEMigrate(_client, _sid);
                         }
+
                         return _migrate;
                     }
                     private PVERelocate _relocate;
@@ -3544,6 +3255,7 @@ public class Client {
                         if (_relocate == null) {
                             _relocate = new PVERelocate(_client, _sid);
                         }
+
                         return _relocate;
                     }
 
@@ -3580,6 +3292,7 @@ public class Client {
                         public Result migrate(String node) throws JSONException {
                             return createRest(node);
                         }
+
                     }
 
                     public class PVERelocate {
@@ -3619,6 +3332,7 @@ public class Client {
                         public Result relocate(String node) throws JSONException {
                             return createRest(node);
                         }
+
                     }
 
                     /**
@@ -3647,6 +3361,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/cluster/ha/resources/" + _sid + "", null);
                     }
@@ -3679,6 +3394,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result setRest(String comment, String delete, String digest, String group, Integer max_relocate, Integer max_restart, String state) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("comment", comment);
@@ -3719,6 +3435,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result setRest() throws JSONException {
                         return _client.set("/cluster/ha/resources/" + _sid + "", null);
                     }
@@ -3732,6 +3449,7 @@ public class Client {
                     public Result update() throws JSONException {
                         return setRest();
                     }
+
                 }
 
                 /**
@@ -3764,6 +3482,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/cluster/ha/resources", null);
                 }
@@ -3798,6 +3517,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String sid, String comment, String group, Integer max_relocate, Integer max_restart, String state, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("sid", sid);
@@ -3845,6 +3565,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String sid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("sid", sid);
@@ -3865,6 +3586,7 @@ public class Client {
                 public Result create(String sid) throws JSONException {
                     return createRest(sid);
                 }
+
             }
 
             public class PVEGroups {
@@ -3873,6 +3595,7 @@ public class Client {
 
                 protected PVEGroups(Client client) {
                     _client = client;
+
                 }
 
                 public PVEItemGroup get(Object group) {
@@ -3915,6 +3638,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/cluster/ha/groups/" + _group + "", null);
                     }
@@ -3948,6 +3672,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result setRest(String comment, String delete, String digest, String nodes, Boolean nofailback, Boolean restricted) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("comment", comment);
@@ -3988,6 +3713,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result setRest() throws JSONException {
                         return _client.set("/cluster/ha/groups/" + _group + "", null);
                     }
@@ -4001,6 +3727,7 @@ public class Client {
                     public Result update() throws JSONException {
                         return setRest();
                     }
+
                 }
 
                 /**
@@ -4040,6 +3767,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String group, String nodes, String comment, Boolean nofailback, Boolean restricted, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
@@ -4081,6 +3809,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String group, String nodes) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
@@ -4100,6 +3829,7 @@ public class Client {
                 public Result create(String group, String nodes) throws JSONException {
                     return createRest(group, nodes);
                 }
+
             }
 
             public class PVEStatus {
@@ -4108,13 +3838,16 @@ public class Client {
 
                 protected PVEStatus(Client client) {
                     _client = client;
+
                 }
+
                 private PVECurrent _current;
 
                 public PVECurrent getCurrent() {
                     if (_current == null) {
                         _current = new PVECurrent(_client);
                     }
+
                     return _current;
                 }
                 private PVEManagerStatus _managerStatus;
@@ -4123,6 +3856,7 @@ public class Client {
                     if (_managerStatus == null) {
                         _managerStatus = new PVEManagerStatus(_client);
                     }
+
                     return _managerStatus;
                 }
 
@@ -4132,6 +3866,7 @@ public class Client {
 
                     protected PVECurrent(Client client) {
                         _client = client;
+
                     }
 
                     /**
@@ -4153,6 +3888,7 @@ public class Client {
                     public Result status() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 public class PVEManagerStatus {
@@ -4161,6 +3897,7 @@ public class Client {
 
                     protected PVEManagerStatus(Client client) {
                         _client = client;
+
                     }
 
                     /**
@@ -4182,6 +3919,7 @@ public class Client {
                     public Result managerStatus() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 /**
@@ -4203,6 +3941,7 @@ public class Client {
                 public Result index() throws JSONException {
                     return getRest();
                 }
+
             }
 
             /**
@@ -4224,6 +3963,7 @@ public class Client {
             public Result index() throws JSONException {
                 return getRest();
             }
+
         }
 
         public class PVEAcme {
@@ -4232,13 +3972,16 @@ public class Client {
 
             protected PVEAcme(Client client) {
                 _client = client;
+
             }
+
             private PVEAccount _account;
 
             public PVEAccount getAccount() {
                 if (_account == null) {
                     _account = new PVEAccount(_client);
                 }
+
                 return _account;
             }
             private PVETos _tos;
@@ -4247,6 +3990,7 @@ public class Client {
                 if (_tos == null) {
                     _tos = new PVETos(_client);
                 }
+
                 return _tos;
             }
             private PVEDirectories _directories;
@@ -4255,6 +3999,7 @@ public class Client {
                 if (_directories == null) {
                     _directories = new PVEDirectories(_client);
                 }
+
                 return _directories;
             }
 
@@ -4264,6 +4009,7 @@ public class Client {
 
                 protected PVEAccount(Client client) {
                     _client = client;
+
                 }
 
                 public PVEItemName get(Object name) {
@@ -4306,6 +4052,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/cluster/acme/account/" + _name + "", null);
                     }
@@ -4329,6 +4076,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result setRest(String contact) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("contact", contact);
@@ -4356,6 +4104,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result setRest() throws JSONException {
                         return _client.set("/cluster/acme/account/" + _name + "", null);
                     }
@@ -4371,6 +4120,7 @@ public class Client {
                     public Result updateAccount() throws JSONException {
                         return setRest();
                     }
+
                 }
 
                 /**
@@ -4404,6 +4154,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String contact, String directory, String name, String tos_url) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("contact", contact);
@@ -4435,6 +4186,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String contact) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("contact", contact);
@@ -4451,6 +4203,7 @@ public class Client {
                 public Result registerAccount(String contact) throws JSONException {
                     return createRest(contact);
                 }
+
             }
 
             public class PVETos {
@@ -4459,6 +4212,7 @@ public class Client {
 
                 protected PVETos(Client client) {
                     _client = client;
+
                 }
 
                 /**
@@ -4491,6 +4245,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/cluster/acme/tos", null);
                 }
@@ -4504,6 +4259,7 @@ public class Client {
                 public Result getTos() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVEDirectories {
@@ -4512,6 +4268,7 @@ public class Client {
 
                 protected PVEDirectories(Client client) {
                     _client = client;
+
                 }
 
                 /**
@@ -4533,6 +4290,7 @@ public class Client {
                 public Result getDirectories() throws JSONException {
                     return getRest();
                 }
+
             }
 
             /**
@@ -4554,6 +4312,7 @@ public class Client {
             public Result index() throws JSONException {
                 return getRest();
             }
+
         }
 
         public class PVELog {
@@ -4562,6 +4321,7 @@ public class Client {
 
             protected PVELog(Client client) {
                 _client = client;
+
             }
 
             /**
@@ -4594,6 +4354,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result getRest() throws JSONException {
                 return _client.get("/cluster/log", null);
             }
@@ -4607,6 +4368,7 @@ public class Client {
             public Result log() throws JSONException {
                 return getRest();
             }
+
         }
 
         public class PVEResources {
@@ -4615,6 +4377,7 @@ public class Client {
 
             protected PVEResources(Client client) {
                 _client = client;
+
             }
 
             /**
@@ -4647,6 +4410,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result getRest() throws JSONException {
                 return _client.get("/cluster/resources", null);
             }
@@ -4660,6 +4424,7 @@ public class Client {
             public Result resources() throws JSONException {
                 return getRest();
             }
+
         }
 
         public class PVETasks {
@@ -4668,6 +4433,7 @@ public class Client {
 
             protected PVETasks(Client client) {
                 _client = client;
+
             }
 
             /**
@@ -4689,6 +4455,7 @@ public class Client {
             public Result tasks() throws JSONException {
                 return getRest();
             }
+
         }
 
         public class PVEOptions {
@@ -4697,6 +4464,7 @@ public class Client {
 
             protected PVEOptions(Client client) {
                 _client = client;
+
             }
 
             /**
@@ -4757,6 +4525,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result setRest(String bwlimit, String console, String delete, String email_from, String fencing, String ha, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure, String u2f) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("bwlimit", bwlimit);
@@ -4824,6 +4593,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result setRest() throws JSONException {
                 return _client.set("/cluster/options", null);
             }
@@ -4837,6 +4607,7 @@ public class Client {
             public Result setOptions() throws JSONException {
                 return setRest();
             }
+
         }
 
         public class PVEStatus {
@@ -4845,10 +4616,11 @@ public class Client {
 
             protected PVEStatus(Client client) {
                 _client = client;
+
             }
 
             /**
-             * Get cluster status informations.
+             * Get cluster status information.
              *
              * @return Result
              * @throws JSONException
@@ -4858,7 +4630,7 @@ public class Client {
             }
 
             /**
-             * Get cluster status informations.
+             * Get cluster status information.
              *
              * @return Result
              * @throws JSONException
@@ -4866,6 +4638,7 @@ public class Client {
             public Result getStatus() throws JSONException {
                 return getRest();
             }
+
         }
 
         public class PVENextid {
@@ -4874,6 +4647,7 @@ public class Client {
 
             protected PVENextid(Client client) {
                 _client = client;
+
             }
 
             /**
@@ -4909,6 +4683,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result getRest() throws JSONException {
                 return _client.get("/cluster/nextid", null);
             }
@@ -4923,6 +4698,119 @@ public class Client {
             public Result nextid() throws JSONException {
                 return getRest();
             }
+
+        }
+
+        public class PVECeph {
+
+            private final Client _client;
+
+            protected PVECeph(Client client) {
+                _client = client;
+
+            }
+
+            private PVEMetadata _metadata;
+
+            public PVEMetadata getMetadata() {
+                if (_metadata == null) {
+                    _metadata = new PVEMetadata(_client);
+                }
+
+                return _metadata;
+            }
+            private PVEStatus _status;
+
+            public PVEStatus getStatus() {
+                if (_status == null) {
+                    _status = new PVEStatus(_client);
+                }
+
+                return _status;
+            }
+
+            public class PVEMetadata {
+
+                private final Client _client;
+
+                protected PVEMetadata(Client client) {
+                    _client = client;
+
+                }
+
+                /**
+                 * Get ceph metadata.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/ceph/metadata", null);
+                }
+
+                /**
+                 * Get ceph metadata.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result cephMetadata() throws JSONException {
+                    return getRest();
+                }
+
+            }
+
+            public class PVEStatus {
+
+                private final Client _client;
+
+                protected PVEStatus(Client client) {
+                    _client = client;
+
+                }
+
+                /**
+                 * Get ceph status.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/ceph/status", null);
+                }
+
+                /**
+                 * Get ceph status.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result cephstatus() throws JSONException {
+                    return getRest();
+                }
+
+            }
+
+            /**
+             * Cluster ceph index.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/cluster/ceph", null);
+            }
+
+            /**
+             * Cluster ceph index.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result cephindex() throws JSONException {
+                return getRest();
+            }
+
         }
 
         /**
@@ -4944,6 +4832,7 @@ public class Client {
         public Result index() throws JSONException {
             return getRest();
         }
+
     }
 
     public class PVENodes {
@@ -4952,6 +4841,7 @@ public class Client {
 
         protected PVENodes(Client client) {
             _client = client;
+
         }
 
         public PVEItemNode get(Object node) {
@@ -4967,12 +4857,14 @@ public class Client {
                 _client = client;
                 _node = node;
             }
+
             private PVEQemu _qemu;
 
             public PVEQemu getQemu() {
                 if (_qemu == null) {
                     _qemu = new PVEQemu(_client, _node);
                 }
+
                 return _qemu;
             }
             private PVELxc _lxc;
@@ -4981,6 +4873,7 @@ public class Client {
                 if (_lxc == null) {
                     _lxc = new PVELxc(_client, _node);
                 }
+
                 return _lxc;
             }
             private PVECeph _ceph;
@@ -4989,6 +4882,7 @@ public class Client {
                 if (_ceph == null) {
                     _ceph = new PVECeph(_client, _node);
                 }
+
                 return _ceph;
             }
             private PVEVzdump _vzdump;
@@ -4997,6 +4891,7 @@ public class Client {
                 if (_vzdump == null) {
                     _vzdump = new PVEVzdump(_client, _node);
                 }
+
                 return _vzdump;
             }
             private PVEServices _services;
@@ -5005,6 +4900,7 @@ public class Client {
                 if (_services == null) {
                     _services = new PVEServices(_client, _node);
                 }
+
                 return _services;
             }
             private PVESubscription _subscription;
@@ -5013,6 +4909,7 @@ public class Client {
                 if (_subscription == null) {
                     _subscription = new PVESubscription(_client, _node);
                 }
+
                 return _subscription;
             }
             private PVENetwork _network;
@@ -5021,6 +4918,7 @@ public class Client {
                 if (_network == null) {
                     _network = new PVENetwork(_client, _node);
                 }
+
                 return _network;
             }
             private PVETasks _tasks;
@@ -5029,6 +4927,7 @@ public class Client {
                 if (_tasks == null) {
                     _tasks = new PVETasks(_client, _node);
                 }
+
                 return _tasks;
             }
             private PVEScan _scan;
@@ -5037,6 +4936,7 @@ public class Client {
                 if (_scan == null) {
                     _scan = new PVEScan(_client, _node);
                 }
+
                 return _scan;
             }
             private PVEHardware _hardware;
@@ -5045,6 +4945,7 @@ public class Client {
                 if (_hardware == null) {
                     _hardware = new PVEHardware(_client, _node);
                 }
+
                 return _hardware;
             }
             private PVEStorage _storage;
@@ -5053,6 +4954,7 @@ public class Client {
                 if (_storage == null) {
                     _storage = new PVEStorage(_client, _node);
                 }
+
                 return _storage;
             }
             private PVEDisks _disks;
@@ -5061,6 +4963,7 @@ public class Client {
                 if (_disks == null) {
                     _disks = new PVEDisks(_client, _node);
                 }
+
                 return _disks;
             }
             private PVEApt _apt;
@@ -5069,6 +4972,7 @@ public class Client {
                 if (_apt == null) {
                     _apt = new PVEApt(_client, _node);
                 }
+
                 return _apt;
             }
             private PVEFirewall _firewall;
@@ -5077,6 +4981,7 @@ public class Client {
                 if (_firewall == null) {
                     _firewall = new PVEFirewall(_client, _node);
                 }
+
                 return _firewall;
             }
             private PVEReplication _replication;
@@ -5085,6 +4990,7 @@ public class Client {
                 if (_replication == null) {
                     _replication = new PVEReplication(_client, _node);
                 }
+
                 return _replication;
             }
             private PVECertificates _certificates;
@@ -5093,6 +4999,7 @@ public class Client {
                 if (_certificates == null) {
                     _certificates = new PVECertificates(_client, _node);
                 }
+
                 return _certificates;
             }
             private PVEConfig _config;
@@ -5101,6 +5008,7 @@ public class Client {
                 if (_config == null) {
                     _config = new PVEConfig(_client, _node);
                 }
+
                 return _config;
             }
             private PVEVersion _version;
@@ -5109,6 +5017,7 @@ public class Client {
                 if (_version == null) {
                     _version = new PVEVersion(_client, _node);
                 }
+
                 return _version;
             }
             private PVEStatus _status;
@@ -5117,6 +5026,7 @@ public class Client {
                 if (_status == null) {
                     _status = new PVEStatus(_client, _node);
                 }
+
                 return _status;
             }
             private PVENetstat _netstat;
@@ -5125,6 +5035,7 @@ public class Client {
                 if (_netstat == null) {
                     _netstat = new PVENetstat(_client, _node);
                 }
+
                 return _netstat;
             }
             private PVEExecute _execute;
@@ -5133,6 +5044,7 @@ public class Client {
                 if (_execute == null) {
                     _execute = new PVEExecute(_client, _node);
                 }
+
                 return _execute;
             }
             private PVEWakeonlan _wakeonlan;
@@ -5141,6 +5053,7 @@ public class Client {
                 if (_wakeonlan == null) {
                     _wakeonlan = new PVEWakeonlan(_client, _node);
                 }
+
                 return _wakeonlan;
             }
             private PVERrd _rrd;
@@ -5149,6 +5062,7 @@ public class Client {
                 if (_rrd == null) {
                     _rrd = new PVERrd(_client, _node);
                 }
+
                 return _rrd;
             }
             private PVERrddata _rrddata;
@@ -5157,6 +5071,7 @@ public class Client {
                 if (_rrddata == null) {
                     _rrddata = new PVERrddata(_client, _node);
                 }
+
                 return _rrddata;
             }
             private PVESyslog _syslog;
@@ -5165,7 +5080,17 @@ public class Client {
                 if (_syslog == null) {
                     _syslog = new PVESyslog(_client, _node);
                 }
+
                 return _syslog;
+            }
+            private PVEJournal _journal;
+
+            public PVEJournal getJournal() {
+                if (_journal == null) {
+                    _journal = new PVEJournal(_client, _node);
+                }
+
+                return _journal;
             }
             private PVEVncshell _vncshell;
 
@@ -5173,6 +5098,7 @@ public class Client {
                 if (_vncshell == null) {
                     _vncshell = new PVEVncshell(_client, _node);
                 }
+
                 return _vncshell;
             }
             private PVETermproxy _termproxy;
@@ -5181,6 +5107,7 @@ public class Client {
                 if (_termproxy == null) {
                     _termproxy = new PVETermproxy(_client, _node);
                 }
+
                 return _termproxy;
             }
             private PVEVncwebsocket _vncwebsocket;
@@ -5189,6 +5116,7 @@ public class Client {
                 if (_vncwebsocket == null) {
                     _vncwebsocket = new PVEVncwebsocket(_client, _node);
                 }
+
                 return _vncwebsocket;
             }
             private PVESpiceshell _spiceshell;
@@ -5197,6 +5125,7 @@ public class Client {
                 if (_spiceshell == null) {
                     _spiceshell = new PVESpiceshell(_client, _node);
                 }
+
                 return _spiceshell;
             }
             private PVEDns _dns;
@@ -5205,6 +5134,7 @@ public class Client {
                 if (_dns == null) {
                     _dns = new PVEDns(_client, _node);
                 }
+
                 return _dns;
             }
             private PVETime _time;
@@ -5213,6 +5143,7 @@ public class Client {
                 if (_time == null) {
                     _time = new PVETime(_client, _node);
                 }
+
                 return _time;
             }
             private PVEAplinfo _aplinfo;
@@ -5221,6 +5152,7 @@ public class Client {
                 if (_aplinfo == null) {
                     _aplinfo = new PVEAplinfo(_client, _node);
                 }
+
                 return _aplinfo;
             }
             private PVEReport _report;
@@ -5229,6 +5161,7 @@ public class Client {
                 if (_report == null) {
                     _report = new PVEReport(_client, _node);
                 }
+
                 return _report;
             }
             private PVEStartall _startall;
@@ -5237,6 +5170,7 @@ public class Client {
                 if (_startall == null) {
                     _startall = new PVEStartall(_client, _node);
                 }
+
                 return _startall;
             }
             private PVEStopall _stopall;
@@ -5245,6 +5179,7 @@ public class Client {
                 if (_stopall == null) {
                     _stopall = new PVEStopall(_client, _node);
                 }
+
                 return _stopall;
             }
             private PVEMigrateall _migrateall;
@@ -5253,6 +5188,7 @@ public class Client {
                 if (_migrateall == null) {
                     _migrateall = new PVEMigrateall(_client, _node);
                 }
+
                 return _migrateall;
             }
             private PVEHosts _hosts;
@@ -5261,6 +5197,7 @@ public class Client {
                 if (_hosts == null) {
                     _hosts = new PVEHosts(_client, _node);
                 }
+
                 return _hosts;
             }
 
@@ -5289,12 +5226,14 @@ public class Client {
                         _node = node;
                         _vmid = vmid;
                     }
+
                     private PVEFirewall _firewall;
 
                     public PVEFirewall getFirewall() {
                         if (_firewall == null) {
                             _firewall = new PVEFirewall(_client, _node, _vmid);
                         }
+
                         return _firewall;
                     }
                     private PVEAgent _agent;
@@ -5303,6 +5242,7 @@ public class Client {
                         if (_agent == null) {
                             _agent = new PVEAgent(_client, _node, _vmid);
                         }
+
                         return _agent;
                     }
                     private PVERrd _rrd;
@@ -5311,6 +5251,7 @@ public class Client {
                         if (_rrd == null) {
                             _rrd = new PVERrd(_client, _node, _vmid);
                         }
+
                         return _rrd;
                     }
                     private PVERrddata _rrddata;
@@ -5319,6 +5260,7 @@ public class Client {
                         if (_rrddata == null) {
                             _rrddata = new PVERrddata(_client, _node, _vmid);
                         }
+
                         return _rrddata;
                     }
                     private PVEConfig _config;
@@ -5327,6 +5269,7 @@ public class Client {
                         if (_config == null) {
                             _config = new PVEConfig(_client, _node, _vmid);
                         }
+
                         return _config;
                     }
                     private PVEPending _pending;
@@ -5335,6 +5278,7 @@ public class Client {
                         if (_pending == null) {
                             _pending = new PVEPending(_client, _node, _vmid);
                         }
+
                         return _pending;
                     }
                     private PVEUnlink _unlink;
@@ -5343,6 +5287,7 @@ public class Client {
                         if (_unlink == null) {
                             _unlink = new PVEUnlink(_client, _node, _vmid);
                         }
+
                         return _unlink;
                     }
                     private PVEVncproxy _vncproxy;
@@ -5351,6 +5296,7 @@ public class Client {
                         if (_vncproxy == null) {
                             _vncproxy = new PVEVncproxy(_client, _node, _vmid);
                         }
+
                         return _vncproxy;
                     }
                     private PVETermproxy _termproxy;
@@ -5359,6 +5305,7 @@ public class Client {
                         if (_termproxy == null) {
                             _termproxy = new PVETermproxy(_client, _node, _vmid);
                         }
+
                         return _termproxy;
                     }
                     private PVEVncwebsocket _vncwebsocket;
@@ -5367,6 +5314,7 @@ public class Client {
                         if (_vncwebsocket == null) {
                             _vncwebsocket = new PVEVncwebsocket(_client, _node, _vmid);
                         }
+
                         return _vncwebsocket;
                     }
                     private PVESpiceproxy _spiceproxy;
@@ -5375,6 +5323,7 @@ public class Client {
                         if (_spiceproxy == null) {
                             _spiceproxy = new PVESpiceproxy(_client, _node, _vmid);
                         }
+
                         return _spiceproxy;
                     }
                     private PVEStatus _status;
@@ -5383,6 +5332,7 @@ public class Client {
                         if (_status == null) {
                             _status = new PVEStatus(_client, _node, _vmid);
                         }
+
                         return _status;
                     }
                     private PVESendkey _sendkey;
@@ -5391,6 +5341,7 @@ public class Client {
                         if (_sendkey == null) {
                             _sendkey = new PVESendkey(_client, _node, _vmid);
                         }
+
                         return _sendkey;
                     }
                     private PVEFeature _feature;
@@ -5399,6 +5350,7 @@ public class Client {
                         if (_feature == null) {
                             _feature = new PVEFeature(_client, _node, _vmid);
                         }
+
                         return _feature;
                     }
                     private PVEClone _clone;
@@ -5407,6 +5359,7 @@ public class Client {
                         if (_clone == null) {
                             _clone = new PVEClone(_client, _node, _vmid);
                         }
+
                         return _clone;
                     }
                     private PVEMoveDisk _moveDisk;
@@ -5415,6 +5368,7 @@ public class Client {
                         if (_moveDisk == null) {
                             _moveDisk = new PVEMoveDisk(_client, _node, _vmid);
                         }
+
                         return _moveDisk;
                     }
                     private PVEMigrate _migrate;
@@ -5423,6 +5377,7 @@ public class Client {
                         if (_migrate == null) {
                             _migrate = new PVEMigrate(_client, _node, _vmid);
                         }
+
                         return _migrate;
                     }
                     private PVEMonitor _monitor;
@@ -5431,6 +5386,7 @@ public class Client {
                         if (_monitor == null) {
                             _monitor = new PVEMonitor(_client, _node, _vmid);
                         }
+
                         return _monitor;
                     }
                     private PVEResize _resize;
@@ -5439,6 +5395,7 @@ public class Client {
                         if (_resize == null) {
                             _resize = new PVEResize(_client, _node, _vmid);
                         }
+
                         return _resize;
                     }
                     private PVESnapshot _snapshot;
@@ -5447,6 +5404,7 @@ public class Client {
                         if (_snapshot == null) {
                             _snapshot = new PVESnapshot(_client, _node, _vmid);
                         }
+
                         return _snapshot;
                     }
                     private PVETemplate _template;
@@ -5455,7 +5413,17 @@ public class Client {
                         if (_template == null) {
                             _template = new PVETemplate(_client, _node, _vmid);
                         }
+
                         return _template;
+                    }
+                    private PVECloudinit _cloudinit;
+
+                    public PVECloudinit getCloudinit() {
+                        if (_cloudinit == null) {
+                            _cloudinit = new PVECloudinit(_client, _node, _vmid);
+                        }
+
+                        return _cloudinit;
                     }
 
                     public class PVEFirewall {
@@ -5469,12 +5437,14 @@ public class Client {
                             _node = node;
                             _vmid = vmid;
                         }
+
                         private PVERules _rules;
 
                         public PVERules getRules() {
                             if (_rules == null) {
                                 _rules = new PVERules(_client, _node, _vmid);
                             }
+
                             return _rules;
                         }
                         private PVEAliases _aliases;
@@ -5483,6 +5453,7 @@ public class Client {
                             if (_aliases == null) {
                                 _aliases = new PVEAliases(_client, _node, _vmid);
                             }
+
                             return _aliases;
                         }
                         private PVEIpset _ipset;
@@ -5491,6 +5462,7 @@ public class Client {
                             if (_ipset == null) {
                                 _ipset = new PVEIpset(_client, _node, _vmid);
                             }
+
                             return _ipset;
                         }
                         private PVEOptions _options;
@@ -5499,6 +5471,7 @@ public class Client {
                             if (_options == null) {
                                 _options = new PVEOptions(_client, _node, _vmid);
                             }
+
                             return _options;
                         }
                         private PVELog _log;
@@ -5507,6 +5480,7 @@ public class Client {
                             if (_log == null) {
                                 _log = new PVELog(_client, _node, _vmid);
                             }
+
                             return _log;
                         }
                         private PVERefs _refs;
@@ -5515,6 +5489,7 @@ public class Client {
                             if (_refs == null) {
                                 _refs = new PVERefs(_client, _node, _vmid);
                             }
+
                             return _refs;
                         }
 
@@ -5584,6 +5559,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result deleteRest() throws JSONException {
                                     return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
@@ -5604,6 +5580,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result getRest() throws JSONException {
                                     return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
@@ -5679,6 +5656,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("action", action);
@@ -5770,6 +5748,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result setRest() throws JSONException {
                                     return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
@@ -5783,6 +5762,7 @@ public class Client {
                                 public Result updateRule() throws JSONException {
                                     return setRest();
                                 }
+
                             }
 
                             /**
@@ -5860,6 +5840,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
@@ -5947,6 +5928,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String action, String type) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
@@ -5966,6 +5948,7 @@ public class Client {
                             public Result createRule(String action, String type) throws JSONException {
                                 return createRest(action, type);
                             }
+
                         }
 
                         public class PVEAliases {
@@ -6034,6 +6017,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result deleteRest() throws JSONException {
                                     return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", null);
                                 }
@@ -6054,6 +6038,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result getRest() throws JSONException {
                                     return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", null);
                                 }
@@ -6082,6 +6067,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result setRest(String cidr, String comment, String digest, String rename) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -6117,6 +6103,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result setRest(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -6134,6 +6121,7 @@ public class Client {
                                 public Result updateAlias(String cidr) throws JSONException {
                                     return setRest(cidr);
                                 }
+
                             }
 
                             /**
@@ -6166,6 +6154,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String cidr, String name, String comment) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
@@ -6197,6 +6186,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String cidr, String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
@@ -6216,6 +6206,7 @@ public class Client {
                             public Result createAlias(String cidr, String name) throws JSONException {
                                 return createRest(cidr, name);
                             }
+
                         }
 
                         public class PVEIpset {
@@ -6304,6 +6295,7 @@ public class Client {
                                      * @return Result
                                      * @throws JSONException
                                      */
+
                                     public Result deleteRest() throws JSONException {
                                         return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
@@ -6324,6 +6316,7 @@ public class Client {
                                      * @return Result
                                      * @throws JSONException
                                      */
+
                                     public Result getRest() throws JSONException {
                                         return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
@@ -6350,6 +6343,7 @@ public class Client {
                                      * @return Result
                                      * @throws JSONException
                                      */
+
                                     public Result setRest(String comment, String digest, Boolean nomatch) throws JSONException {
                                         Map<String, Object> parameters = new HashMap<>();
                                         parameters.put("comment", comment);
@@ -6380,6 +6374,7 @@ public class Client {
                                      * @return Result
                                      * @throws JSONException
                                      */
+
                                     public Result setRest() throws JSONException {
                                         return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
@@ -6393,6 +6388,7 @@ public class Client {
                                     public Result updateIp() throws JSONException {
                                         return setRest();
                                     }
+
                                 }
 
                                 /**
@@ -6421,6 +6417,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result getRest() throws JSONException {
                                     return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", null);
                                 }
@@ -6445,6 +6442,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result createRest(String cidr, String comment, Boolean nomatch) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -6475,6 +6473,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result createRest(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -6492,6 +6491,7 @@ public class Client {
                                 public Result createIp(String cidr) throws JSONException {
                                     return createRest(cidr);
                                 }
+
                             }
 
                             /**
@@ -6529,6 +6529,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String name, String comment, String digest, String rename) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
@@ -6564,6 +6565,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
@@ -6580,6 +6582,7 @@ public class Client {
                             public Result createIpset(String name) throws JSONException {
                                 return createRest(name);
                             }
+
                         }
 
                         public class PVEOptions {
@@ -6650,6 +6653,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result setRest(String delete, Boolean dhcp, String digest, Boolean enable, Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter, Boolean ndp, String policy_in, String policy_out, Boolean radv) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("delete", delete);
@@ -6713,6 +6717,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result setRest() throws JSONException {
                                 return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/options", null);
                             }
@@ -6726,6 +6731,7 @@ public class Client {
                             public Result setOptions() throws JSONException {
                                 return setRest();
                             }
+
                         }
 
                         public class PVELog {
@@ -6773,6 +6779,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result getRest() throws JSONException {
                                 return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/log", null);
                             }
@@ -6786,6 +6793,7 @@ public class Client {
                             public Result log() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVERefs {
@@ -6835,6 +6843,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result getRest() throws JSONException {
                                 return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/refs", null);
                             }
@@ -6849,6 +6858,7 @@ public class Client {
                             public Result refs() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         /**
@@ -6870,6 +6880,7 @@ public class Client {
                         public Result index() throws JSONException {
                             return getRest();
                         }
+
                     }
 
                     public class PVEAgent {
@@ -6883,12 +6894,14 @@ public class Client {
                             _node = node;
                             _vmid = vmid;
                         }
+
                         private PVEFsfreeze_Freeze _fsfreeze_Freeze;
 
                         public PVEFsfreeze_Freeze getFsfreeze_Freeze() {
                             if (_fsfreeze_Freeze == null) {
                                 _fsfreeze_Freeze = new PVEFsfreeze_Freeze(_client, _node, _vmid);
                             }
+
                             return _fsfreeze_Freeze;
                         }
                         private PVEFsfreeze_Status _fsfreeze_Status;
@@ -6897,6 +6910,7 @@ public class Client {
                             if (_fsfreeze_Status == null) {
                                 _fsfreeze_Status = new PVEFsfreeze_Status(_client, _node, _vmid);
                             }
+
                             return _fsfreeze_Status;
                         }
                         private PVEFsfreeze_Thaw _fsfreeze_Thaw;
@@ -6905,6 +6919,7 @@ public class Client {
                             if (_fsfreeze_Thaw == null) {
                                 _fsfreeze_Thaw = new PVEFsfreeze_Thaw(_client, _node, _vmid);
                             }
+
                             return _fsfreeze_Thaw;
                         }
                         private PVEFstrim _fstrim;
@@ -6913,6 +6928,7 @@ public class Client {
                             if (_fstrim == null) {
                                 _fstrim = new PVEFstrim(_client, _node, _vmid);
                             }
+
                             return _fstrim;
                         }
                         private PVEGet_Fsinfo _get_Fsinfo;
@@ -6921,6 +6937,7 @@ public class Client {
                             if (_get_Fsinfo == null) {
                                 _get_Fsinfo = new PVEGet_Fsinfo(_client, _node, _vmid);
                             }
+
                             return _get_Fsinfo;
                         }
                         private PVEGet_Host_Name _get_Host_Name;
@@ -6929,6 +6946,7 @@ public class Client {
                             if (_get_Host_Name == null) {
                                 _get_Host_Name = new PVEGet_Host_Name(_client, _node, _vmid);
                             }
+
                             return _get_Host_Name;
                         }
                         private PVEGet_Memory_Block_Info _get_Memory_Block_Info;
@@ -6937,6 +6955,7 @@ public class Client {
                             if (_get_Memory_Block_Info == null) {
                                 _get_Memory_Block_Info = new PVEGet_Memory_Block_Info(_client, _node, _vmid);
                             }
+
                             return _get_Memory_Block_Info;
                         }
                         private PVEGet_Memory_Blocks _get_Memory_Blocks;
@@ -6945,6 +6964,7 @@ public class Client {
                             if (_get_Memory_Blocks == null) {
                                 _get_Memory_Blocks = new PVEGet_Memory_Blocks(_client, _node, _vmid);
                             }
+
                             return _get_Memory_Blocks;
                         }
                         private PVEGet_Osinfo _get_Osinfo;
@@ -6953,6 +6973,7 @@ public class Client {
                             if (_get_Osinfo == null) {
                                 _get_Osinfo = new PVEGet_Osinfo(_client, _node, _vmid);
                             }
+
                             return _get_Osinfo;
                         }
                         private PVEGet_Time _get_Time;
@@ -6961,6 +6982,7 @@ public class Client {
                             if (_get_Time == null) {
                                 _get_Time = new PVEGet_Time(_client, _node, _vmid);
                             }
+
                             return _get_Time;
                         }
                         private PVEGet_Timezone _get_Timezone;
@@ -6969,6 +6991,7 @@ public class Client {
                             if (_get_Timezone == null) {
                                 _get_Timezone = new PVEGet_Timezone(_client, _node, _vmid);
                             }
+
                             return _get_Timezone;
                         }
                         private PVEGet_Users _get_Users;
@@ -6977,6 +7000,7 @@ public class Client {
                             if (_get_Users == null) {
                                 _get_Users = new PVEGet_Users(_client, _node, _vmid);
                             }
+
                             return _get_Users;
                         }
                         private PVEGet_Vcpus _get_Vcpus;
@@ -6985,6 +7009,7 @@ public class Client {
                             if (_get_Vcpus == null) {
                                 _get_Vcpus = new PVEGet_Vcpus(_client, _node, _vmid);
                             }
+
                             return _get_Vcpus;
                         }
                         private PVEInfo _info;
@@ -6993,6 +7018,7 @@ public class Client {
                             if (_info == null) {
                                 _info = new PVEInfo(_client, _node, _vmid);
                             }
+
                             return _info;
                         }
                         private PVENetwork_Get_Interfaces _network_Get_Interfaces;
@@ -7001,6 +7027,7 @@ public class Client {
                             if (_network_Get_Interfaces == null) {
                                 _network_Get_Interfaces = new PVENetwork_Get_Interfaces(_client, _node, _vmid);
                             }
+
                             return _network_Get_Interfaces;
                         }
                         private PVEPing _ping;
@@ -7009,6 +7036,7 @@ public class Client {
                             if (_ping == null) {
                                 _ping = new PVEPing(_client, _node, _vmid);
                             }
+
                             return _ping;
                         }
                         private PVEShutdown _shutdown;
@@ -7017,6 +7045,7 @@ public class Client {
                             if (_shutdown == null) {
                                 _shutdown = new PVEShutdown(_client, _node, _vmid);
                             }
+
                             return _shutdown;
                         }
                         private PVESuspend_Disk _suspend_Disk;
@@ -7025,6 +7054,7 @@ public class Client {
                             if (_suspend_Disk == null) {
                                 _suspend_Disk = new PVESuspend_Disk(_client, _node, _vmid);
                             }
+
                             return _suspend_Disk;
                         }
                         private PVESuspend_Hybrid _suspend_Hybrid;
@@ -7033,6 +7063,7 @@ public class Client {
                             if (_suspend_Hybrid == null) {
                                 _suspend_Hybrid = new PVESuspend_Hybrid(_client, _node, _vmid);
                             }
+
                             return _suspend_Hybrid;
                         }
                         private PVESuspend_Ram _suspend_Ram;
@@ -7041,6 +7072,7 @@ public class Client {
                             if (_suspend_Ram == null) {
                                 _suspend_Ram = new PVESuspend_Ram(_client, _node, _vmid);
                             }
+
                             return _suspend_Ram;
                         }
                         private PVESet_User_Password _set_User_Password;
@@ -7049,6 +7081,7 @@ public class Client {
                             if (_set_User_Password == null) {
                                 _set_User_Password = new PVESet_User_Password(_client, _node, _vmid);
                             }
+
                             return _set_User_Password;
                         }
                         private PVEExec _exec;
@@ -7057,6 +7090,7 @@ public class Client {
                             if (_exec == null) {
                                 _exec = new PVEExec(_client, _node, _vmid);
                             }
+
                             return _exec;
                         }
                         private PVEExec_Status _exec_Status;
@@ -7065,6 +7099,7 @@ public class Client {
                             if (_exec_Status == null) {
                                 _exec_Status = new PVEExec_Status(_client, _node, _vmid);
                             }
+
                             return _exec_Status;
                         }
                         private PVEFile_Read _file_Read;
@@ -7073,6 +7108,7 @@ public class Client {
                             if (_file_Read == null) {
                                 _file_Read = new PVEFile_Read(_client, _node, _vmid);
                             }
+
                             return _file_Read;
                         }
                         private PVEFile_Write _file_Write;
@@ -7081,6 +7117,7 @@ public class Client {
                             if (_file_Write == null) {
                                 _file_Write = new PVEFile_Write(_client, _node, _vmid);
                             }
+
                             return _file_Write;
                         }
 
@@ -7115,6 +7152,7 @@ public class Client {
                             public Result fsfreeze_Freeze() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVEFsfreeze_Status {
@@ -7148,6 +7186,7 @@ public class Client {
                             public Result fsfreeze_Status() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVEFsfreeze_Thaw {
@@ -7181,6 +7220,7 @@ public class Client {
                             public Result fsfreeze_Thaw() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVEFstrim {
@@ -7214,6 +7254,7 @@ public class Client {
                             public Result fstrim() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVEGet_Fsinfo {
@@ -7247,6 +7288,7 @@ public class Client {
                             public Result get_Fsinfo() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVEGet_Host_Name {
@@ -7280,6 +7322,7 @@ public class Client {
                             public Result get_Host_Name() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVEGet_Memory_Block_Info {
@@ -7313,6 +7356,7 @@ public class Client {
                             public Result get_Memory_Block_Info() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVEGet_Memory_Blocks {
@@ -7346,6 +7390,7 @@ public class Client {
                             public Result get_Memory_Blocks() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVEGet_Osinfo {
@@ -7379,6 +7424,7 @@ public class Client {
                             public Result get_Osinfo() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVEGet_Time {
@@ -7412,6 +7458,7 @@ public class Client {
                             public Result get_Time() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVEGet_Timezone {
@@ -7445,6 +7492,7 @@ public class Client {
                             public Result get_Timezone() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVEGet_Users {
@@ -7478,6 +7526,7 @@ public class Client {
                             public Result get_Users() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVEGet_Vcpus {
@@ -7511,6 +7560,7 @@ public class Client {
                             public Result get_Vcpus() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVEInfo {
@@ -7544,6 +7594,7 @@ public class Client {
                             public Result info() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVENetwork_Get_Interfaces {
@@ -7577,6 +7628,7 @@ public class Client {
                             public Result network_Get_Interfaces() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVEPing {
@@ -7610,6 +7662,7 @@ public class Client {
                             public Result ping() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVEShutdown {
@@ -7643,6 +7696,7 @@ public class Client {
                             public Result shutdown() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVESuspend_Disk {
@@ -7676,6 +7730,7 @@ public class Client {
                             public Result suspend_Disk() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVESuspend_Hybrid {
@@ -7709,6 +7764,7 @@ public class Client {
                             public Result suspend_Hybrid() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVESuspend_Ram {
@@ -7742,6 +7798,7 @@ public class Client {
                             public Result suspend_Ram() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVESet_User_Password {
@@ -7799,6 +7856,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String password, String username) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("password", password);
@@ -7818,6 +7876,7 @@ public class Client {
                             public Result set_User_Password(String password, String username) throws JSONException {
                                 return createRest(password, username);
                             }
+
                         }
 
                         public class PVEExec {
@@ -7859,6 +7918,7 @@ public class Client {
                             public Result exec(String command) throws JSONException {
                                 return createRest(command);
                             }
+
                         }
 
                         public class PVEExec_Status {
@@ -7898,6 +7958,7 @@ public class Client {
                             public Result exec_Status(int pid) throws JSONException {
                                 return getRest(pid);
                             }
+
                         }
 
                         public class PVEFile_Read {
@@ -7937,6 +7998,7 @@ public class Client {
                             public Result file_Read(String file) throws JSONException {
                                 return getRest(file);
                             }
+
                         }
 
                         public class PVEFile_Write {
@@ -7979,6 +8041,7 @@ public class Client {
                             public Result file_Write(String content, String file) throws JSONException {
                                 return createRest(content, file);
                             }
+
                         }
 
                         /**
@@ -8009,6 +8072,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(String command) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("command", command);
@@ -8026,6 +8090,7 @@ public class Client {
                         public Result agent(String command) throws JSONException {
                             return createRest(command);
                         }
+
                     }
 
                     public class PVERrd {
@@ -8086,6 +8151,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest(String ds, String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
@@ -8106,6 +8172,7 @@ public class Client {
                         public Result rrd(String ds, String timeframe) throws JSONException {
                             return getRest(ds, timeframe);
                         }
+
                     }
 
                     public class PVERrddata {
@@ -8159,6 +8226,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest(String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
@@ -8176,6 +8244,7 @@ public class Client {
                         public Result rrddata(String timeframe) throws JSONException {
                             return getRest(timeframe);
                         }
+
                     }
 
                     public class PVEConfig {
@@ -8233,6 +8302,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest() throws JSONException {
                             return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
                         }
@@ -8424,6 +8494,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(Boolean acpi, String agent, String arch, String args, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String sshkeys, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
@@ -8689,6 +8760,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
                         }
@@ -8877,6 +8949,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest(Boolean acpi, String agent, String arch, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String sshkeys, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
@@ -9142,6 +9215,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest() throws JSONException {
                             return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
                         }
@@ -9157,6 +9231,7 @@ public class Client {
                         public Result updateVm() throws JSONException {
                             return setRest();
                         }
+
                     }
 
                     public class PVEPending {
@@ -9192,6 +9267,7 @@ public class Client {
                         public Result vmPending() throws JSONException {
                             return getRest();
                         }
+
                     }
 
                     public class PVEUnlink {
@@ -9248,6 +9324,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest(String idlist) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("idlist", idlist);
@@ -9264,6 +9341,7 @@ public class Client {
                         public Result unlink(String idlist) throws JSONException {
                             return setRest(idlist);
                         }
+
                     }
 
                     public class PVEVncproxy {
@@ -9310,6 +9388,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/vncproxy", null);
                         }
@@ -9323,6 +9402,7 @@ public class Client {
                         public Result vncproxy() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     public class PVETermproxy {
@@ -9369,6 +9449,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/termproxy", null);
                         }
@@ -9382,6 +9463,7 @@ public class Client {
                         public Result termproxy() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     public class PVEVncwebsocket {
@@ -9426,6 +9508,7 @@ public class Client {
                         public Result vncwebsocket(int port, String vncticket) throws JSONException {
                             return getRest(port, vncticket);
                         }
+
                     }
 
                     public class PVESpiceproxy {
@@ -9484,6 +9567,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/spiceproxy", null);
                         }
@@ -9497,6 +9581,7 @@ public class Client {
                         public Result spiceproxy() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     public class PVEStatus {
@@ -9510,12 +9595,14 @@ public class Client {
                             _node = node;
                             _vmid = vmid;
                         }
+
                         private PVECurrent _current;
 
                         public PVECurrent getCurrent() {
                             if (_current == null) {
                                 _current = new PVECurrent(_client, _node, _vmid);
                             }
+
                             return _current;
                         }
                         private PVEStart _start;
@@ -9524,6 +9611,7 @@ public class Client {
                             if (_start == null) {
                                 _start = new PVEStart(_client, _node, _vmid);
                             }
+
                             return _start;
                         }
                         private PVEStop _stop;
@@ -9532,6 +9620,7 @@ public class Client {
                             if (_stop == null) {
                                 _stop = new PVEStop(_client, _node, _vmid);
                             }
+
                             return _stop;
                         }
                         private PVEReset _reset;
@@ -9540,6 +9629,7 @@ public class Client {
                             if (_reset == null) {
                                 _reset = new PVEReset(_client, _node, _vmid);
                             }
+
                             return _reset;
                         }
                         private PVEShutdown _shutdown;
@@ -9548,6 +9638,7 @@ public class Client {
                             if (_shutdown == null) {
                                 _shutdown = new PVEShutdown(_client, _node, _vmid);
                             }
+
                             return _shutdown;
                         }
                         private PVESuspend _suspend;
@@ -9556,6 +9647,7 @@ public class Client {
                             if (_suspend == null) {
                                 _suspend = new PVESuspend(_client, _node, _vmid);
                             }
+
                             return _suspend;
                         }
                         private PVEResume _resume;
@@ -9564,6 +9656,7 @@ public class Client {
                             if (_resume == null) {
                                 _resume = new PVEResume(_client, _node, _vmid);
                             }
+
                             return _resume;
                         }
 
@@ -9598,6 +9691,7 @@ public class Client {
                             public Result vmStatus() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVEStart {
@@ -9678,6 +9772,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/start", null);
                             }
@@ -9691,6 +9786,7 @@ public class Client {
                             public Result vmStart() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVEStop {
@@ -9757,6 +9853,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/stop", null);
                             }
@@ -9773,6 +9870,7 @@ public class Client {
                             public Result vmStop() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVEReset {
@@ -9819,6 +9917,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/reset", null);
                             }
@@ -9832,6 +9931,7 @@ public class Client {
                             public Result vmReset() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVEShutdown {
@@ -9901,6 +10001,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/shutdown", null);
                             }
@@ -9918,6 +10019,7 @@ public class Client {
                             public Result vmShutdown() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVESuspend {
@@ -9972,6 +10074,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/suspend", null);
                             }
@@ -9985,6 +10088,7 @@ public class Client {
                             public Result vmSuspend() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVEResume {
@@ -10034,6 +10138,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/resume", null);
                             }
@@ -10047,6 +10152,7 @@ public class Client {
                             public Result vmResume() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         /**
@@ -10068,6 +10174,7 @@ public class Client {
                         public Result vmcmdidx() throws JSONException {
                             return getRest();
                         }
+
                     }
 
                     public class PVESendkey {
@@ -10118,6 +10225,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest(String key) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("key", key);
@@ -10134,6 +10242,7 @@ public class Client {
                         public Result vmSendkey(String key) throws JSONException {
                             return setRest(key);
                         }
+
                     }
 
                     public class PVEFeature {
@@ -10185,6 +10294,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest(String feature) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("feature", feature);
@@ -10202,6 +10312,7 @@ public class Client {
                         public Result vmFeature(String feature) throws JSONException {
                             return getRest(feature);
                         }
+
                     }
 
                     public class PVEClone {
@@ -10286,6 +10397,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(int newid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("newid", newid);
@@ -10302,6 +10414,7 @@ public class Client {
                         public Result cloneVm(int newid) throws JSONException {
                             return createRest(newid);
                         }
+
                     }
 
                     public class PVEMoveDisk {
@@ -10376,6 +10489,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(String disk, String storage) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
@@ -10395,6 +10509,7 @@ public class Client {
                         public Result moveVmDisk(String disk, String storage) throws JSONException {
                             return createRest(disk, storage);
                         }
+
                     }
 
                     public class PVEMigrate {
@@ -10407,6 +10522,51 @@ public class Client {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
+                        }
+
+                        /**
+                         * Get preconditions for migration.
+                         *
+                         * @param target Target node.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getRest(String target) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("target", target);
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/migrate", parameters);
+                        }
+
+                        /**
+                         * Get preconditions for migration.
+                         *
+                         * @param target Target node.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result migrateVmPrecondition(String target) throws JSONException {
+                            return getRest(target);
+                        }
+
+                        /**
+                         * Get preconditions for migration.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/migrate", null);
+                        }
+
+                        /**
+                         * Get preconditions for migration.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result migrateVmPrecondition() throws JSONException {
+                            return getRest();
                         }
 
                         /**
@@ -10431,6 +10591,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(String target, Integer bwlimit, Boolean force, String migration_network, String migration_type, Boolean online, String targetstorage, Boolean with_local_disks) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
@@ -10478,6 +10639,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(String target) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
@@ -10495,6 +10657,7 @@ public class Client {
                         public Result migrateVm(String target) throws JSONException {
                             return createRest(target);
                         }
+
                     }
 
                     public class PVEMonitor {
@@ -10532,6 +10695,7 @@ public class Client {
                         public Result monitor(String command) throws JSONException {
                             return createRest(command);
                         }
+
                     }
 
                     public class PVEResize {
@@ -10605,6 +10769,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest(String disk, String size) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
@@ -10627,6 +10792,7 @@ public class Client {
                         public Result resizeVm(String disk, String size) throws JSONException {
                             return setRest(disk, size);
                         }
+
                     }
 
                     public class PVESnapshot {
@@ -10658,12 +10824,14 @@ public class Client {
                                 _vmid = vmid;
                                 _snapname = snapname;
                             }
+
                             private PVEConfig _config;
 
                             public PVEConfig getConfig() {
                                 if (_config == null) {
                                     _config = new PVEConfig(_client, _node, _vmid, _snapname);
                                 }
+
                                 return _config;
                             }
                             private PVERollback _rollback;
@@ -10672,6 +10840,7 @@ public class Client {
                                 if (_rollback == null) {
                                     _rollback = new PVERollback(_client, _node, _vmid, _snapname);
                                 }
+
                                 return _rollback;
                             }
 
@@ -10717,6 +10886,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result setRest(String description) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("description", description);
@@ -10741,6 +10911,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result setRest() throws JSONException {
                                     return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/config", null);
                                 }
@@ -10754,6 +10925,7 @@ public class Client {
                                 public Result updateSnapshotConfig() throws JSONException {
                                     return setRest();
                                 }
+
                             }
 
                             public class PVERollback {
@@ -10789,6 +10961,7 @@ public class Client {
                                 public Result rollback() throws JSONException {
                                     return createRest();
                                 }
+
                             }
 
                             /**
@@ -10823,6 +10996,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result deleteRest() throws JSONException {
                                 return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "", null);
                             }
@@ -10842,6 +11016,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result getRest() throws JSONException {
                                 return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "", null);
                             }
@@ -10854,6 +11029,7 @@ public class Client {
                             public Result snapshotCmdIdx() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         /**
@@ -10885,6 +11061,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(String snapname, String description, Boolean vmstate) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
@@ -10913,6 +11090,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(String snapname) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
@@ -10929,6 +11107,7 @@ public class Client {
                         public Result snapshot(String snapname) throws JSONException {
                             return createRest(snapname);
                         }
+
                     }
 
                     public class PVETemplate {
@@ -10977,6 +11156,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/template", null);
                         }
@@ -10990,6 +11170,69 @@ public class Client {
                         public Result template() throws JSONException {
                             return createRest();
                         }
+
+                    }
+
+                    public class PVECloudinit {
+
+                        private final Client _client;
+                        private final Object _node;
+                        private final Object _vmid;
+
+                        protected PVECloudinit(Client client, Object node, Object vmid) {
+                            _client = client;
+                            _node = node;
+                            _vmid = vmid;
+                        }
+
+                        private PVEDump _dump;
+
+                        public PVEDump getDump() {
+                            if (_dump == null) {
+                                _dump = new PVEDump(_client, _node, _vmid);
+                            }
+
+                            return _dump;
+                        }
+
+                        public class PVEDump {
+
+                            private final Client _client;
+                            private final Object _node;
+                            private final Object _vmid;
+
+                            protected PVEDump(Client client, Object node, Object vmid) {
+                                _client = client;
+                                _node = node;
+                                _vmid = vmid;
+                            }
+
+                            /**
+                             * Get automatically generated cloudinit config.
+                             *
+                             * @param type Config type. Enum: user,network,meta
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result getRest(String type) throws JSONException {
+                                Map<String, Object> parameters = new HashMap<>();
+                                parameters.put("type", type);
+                                return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/cloudinit/dump", parameters);
+                            }
+
+                            /**
+                             * Get automatically generated cloudinit config.
+                             *
+                             * @param type Config type. Enum: user,network,meta
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result cloudinitGeneratedConfigDump(String type) throws JSONException {
+                                return getRest(type);
+                            }
+
+                        }
+
                     }
 
                     /**
@@ -11024,6 +11267,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result deleteRest() throws JSONException {
                         return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "", null);
                     }
@@ -11044,6 +11288,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "", null);
                     }
@@ -11057,6 +11302,7 @@ public class Client {
                     public Result vmdiridx() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 /**
@@ -11089,6 +11335,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/nodes/" + _node + "/qemu", null);
                 }
@@ -11254,6 +11501,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(int vmid, Boolean acpi, String agent, String arch, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vmid", vmid);
@@ -11498,6 +11746,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(int vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vmid", vmid);
@@ -11514,6 +11763,7 @@ public class Client {
                 public Result createVm(int vmid) throws JSONException {
                     return createRest(vmid);
                 }
+
             }
 
             public class PVELxc {
@@ -11541,12 +11791,14 @@ public class Client {
                         _node = node;
                         _vmid = vmid;
                     }
+
                     private PVEConfig _config;
 
                     public PVEConfig getConfig() {
                         if (_config == null) {
                             _config = new PVEConfig(_client, _node, _vmid);
                         }
+
                         return _config;
                     }
                     private PVEStatus _status;
@@ -11555,6 +11807,7 @@ public class Client {
                         if (_status == null) {
                             _status = new PVEStatus(_client, _node, _vmid);
                         }
+
                         return _status;
                     }
                     private PVESnapshot _snapshot;
@@ -11563,6 +11816,7 @@ public class Client {
                         if (_snapshot == null) {
                             _snapshot = new PVESnapshot(_client, _node, _vmid);
                         }
+
                         return _snapshot;
                     }
                     private PVEFirewall _firewall;
@@ -11571,6 +11825,7 @@ public class Client {
                         if (_firewall == null) {
                             _firewall = new PVEFirewall(_client, _node, _vmid);
                         }
+
                         return _firewall;
                     }
                     private PVERrd _rrd;
@@ -11579,6 +11834,7 @@ public class Client {
                         if (_rrd == null) {
                             _rrd = new PVERrd(_client, _node, _vmid);
                         }
+
                         return _rrd;
                     }
                     private PVERrddata _rrddata;
@@ -11587,6 +11843,7 @@ public class Client {
                         if (_rrddata == null) {
                             _rrddata = new PVERrddata(_client, _node, _vmid);
                         }
+
                         return _rrddata;
                     }
                     private PVEVncproxy _vncproxy;
@@ -11595,6 +11852,7 @@ public class Client {
                         if (_vncproxy == null) {
                             _vncproxy = new PVEVncproxy(_client, _node, _vmid);
                         }
+
                         return _vncproxy;
                     }
                     private PVETermproxy _termproxy;
@@ -11603,6 +11861,7 @@ public class Client {
                         if (_termproxy == null) {
                             _termproxy = new PVETermproxy(_client, _node, _vmid);
                         }
+
                         return _termproxy;
                     }
                     private PVEVncwebsocket _vncwebsocket;
@@ -11611,6 +11870,7 @@ public class Client {
                         if (_vncwebsocket == null) {
                             _vncwebsocket = new PVEVncwebsocket(_client, _node, _vmid);
                         }
+
                         return _vncwebsocket;
                     }
                     private PVESpiceproxy _spiceproxy;
@@ -11619,6 +11879,7 @@ public class Client {
                         if (_spiceproxy == null) {
                             _spiceproxy = new PVESpiceproxy(_client, _node, _vmid);
                         }
+
                         return _spiceproxy;
                     }
                     private PVEMigrate _migrate;
@@ -11627,6 +11888,7 @@ public class Client {
                         if (_migrate == null) {
                             _migrate = new PVEMigrate(_client, _node, _vmid);
                         }
+
                         return _migrate;
                     }
                     private PVEFeature _feature;
@@ -11635,6 +11897,7 @@ public class Client {
                         if (_feature == null) {
                             _feature = new PVEFeature(_client, _node, _vmid);
                         }
+
                         return _feature;
                     }
                     private PVETemplate _template;
@@ -11643,6 +11906,7 @@ public class Client {
                         if (_template == null) {
                             _template = new PVETemplate(_client, _node, _vmid);
                         }
+
                         return _template;
                     }
                     private PVEClone _clone;
@@ -11651,6 +11915,7 @@ public class Client {
                         if (_clone == null) {
                             _clone = new PVEClone(_client, _node, _vmid);
                         }
+
                         return _clone;
                     }
                     private PVEResize _resize;
@@ -11659,6 +11924,7 @@ public class Client {
                         if (_resize == null) {
                             _resize = new PVEResize(_client, _node, _vmid);
                         }
+
                         return _resize;
                     }
                     private PVEMoveVolume _moveVolume;
@@ -11667,6 +11933,7 @@ public class Client {
                         if (_moveVolume == null) {
                             _moveVolume = new PVEMoveVolume(_client, _node, _vmid);
                         }
+
                         return _moveVolume;
                     }
 
@@ -11714,6 +11981,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest() throws JSONException {
                             return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/config", null);
                         }
@@ -11766,7 +12034,7 @@ public class Client {
                          * various steps in the containers lifetime.
                          * @param hostname Set a host name for the container.
                          * @param lock_ Lock/unlock the VM. Enum:
-                         * backup,disk,migrate,mounted,rollback,snapshot,snapshot-delete
+                         * backup,create,disk,fstrim,migrate,mounted,rollback,snapshot,snapshot-delete
                          * @param memory Amount of RAM for the VM in MB.
                          * @param mpN Use volume as container mount point.
                          * @param nameserver Sets DNS server IP address for a
@@ -11809,6 +12077,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String rootfs, String searchdomain, String startup, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("arch", arch);
@@ -11880,7 +12149,7 @@ public class Client {
                          * various steps in the containers lifetime.
                          * @param hostname Set a host name for the container.
                          * @param lock_ Lock/unlock the VM. Enum:
-                         * backup,disk,migrate,mounted,rollback,snapshot,snapshot-delete
+                         * backup,create,disk,fstrim,migrate,mounted,rollback,snapshot,snapshot-delete
                          * @param memory Amount of RAM for the VM in MB.
                          * @param mpN Use volume as container mount point.
                          * @param nameserver Sets DNS server IP address for a
@@ -11933,6 +12202,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest() throws JSONException {
                             return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/config", null);
                         }
@@ -11946,6 +12216,7 @@ public class Client {
                         public Result updateVm() throws JSONException {
                             return setRest();
                         }
+
                     }
 
                     public class PVEStatus {
@@ -11959,12 +12230,14 @@ public class Client {
                             _node = node;
                             _vmid = vmid;
                         }
+
                         private PVECurrent _current;
 
                         public PVECurrent getCurrent() {
                             if (_current == null) {
                                 _current = new PVECurrent(_client, _node, _vmid);
                             }
+
                             return _current;
                         }
                         private PVEStart _start;
@@ -11973,6 +12246,7 @@ public class Client {
                             if (_start == null) {
                                 _start = new PVEStart(_client, _node, _vmid);
                             }
+
                             return _start;
                         }
                         private PVEStop _stop;
@@ -11981,6 +12255,7 @@ public class Client {
                             if (_stop == null) {
                                 _stop = new PVEStop(_client, _node, _vmid);
                             }
+
                             return _stop;
                         }
                         private PVEShutdown _shutdown;
@@ -11989,6 +12264,7 @@ public class Client {
                             if (_shutdown == null) {
                                 _shutdown = new PVEShutdown(_client, _node, _vmid);
                             }
+
                             return _shutdown;
                         }
                         private PVESuspend _suspend;
@@ -11997,6 +12273,7 @@ public class Client {
                             if (_suspend == null) {
                                 _suspend = new PVESuspend(_client, _node, _vmid);
                             }
+
                             return _suspend;
                         }
                         private PVEResume _resume;
@@ -12005,6 +12282,7 @@ public class Client {
                             if (_resume == null) {
                                 _resume = new PVEResume(_client, _node, _vmid);
                             }
+
                             return _resume;
                         }
 
@@ -12039,6 +12317,7 @@ public class Client {
                             public Result vmStatus() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVEStart {
@@ -12085,6 +12364,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/start", null);
                             }
@@ -12098,6 +12378,7 @@ public class Client {
                             public Result vmStart() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVEStop {
@@ -12147,6 +12428,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/stop", null);
                             }
@@ -12161,6 +12443,7 @@ public class Client {
                             public Result vmStop() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVEShutdown {
@@ -12214,6 +12497,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/shutdown", null);
                             }
@@ -12229,6 +12513,7 @@ public class Client {
                             public Result vmShutdown() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVESuspend {
@@ -12262,6 +12547,7 @@ public class Client {
                             public Result vmSuspend() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVEResume {
@@ -12295,6 +12581,7 @@ public class Client {
                             public Result vmResume() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         /**
@@ -12316,6 +12603,7 @@ public class Client {
                         public Result vmcmdidx() throws JSONException {
                             return getRest();
                         }
+
                     }
 
                     public class PVESnapshot {
@@ -12347,12 +12635,14 @@ public class Client {
                                 _vmid = vmid;
                                 _snapname = snapname;
                             }
+
                             private PVERollback _rollback;
 
                             public PVERollback getRollback() {
                                 if (_rollback == null) {
                                     _rollback = new PVERollback(_client, _node, _vmid, _snapname);
                                 }
+
                                 return _rollback;
                             }
                             private PVEConfig _config;
@@ -12361,6 +12651,7 @@ public class Client {
                                 if (_config == null) {
                                     _config = new PVEConfig(_client, _node, _vmid, _snapname);
                                 }
+
                                 return _config;
                             }
 
@@ -12397,6 +12688,7 @@ public class Client {
                                 public Result rollback() throws JSONException {
                                     return createRest();
                                 }
+
                             }
 
                             public class PVEConfig {
@@ -12441,6 +12733,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result setRest(String description) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("description", description);
@@ -12465,6 +12758,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result setRest() throws JSONException {
                                     return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/config", null);
                                 }
@@ -12478,6 +12772,7 @@ public class Client {
                                 public Result updateSnapshotConfig() throws JSONException {
                                     return setRest();
                                 }
+
                             }
 
                             /**
@@ -12512,6 +12807,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result deleteRest() throws JSONException {
                                 return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "", null);
                             }
@@ -12531,6 +12827,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result getRest() throws JSONException {
                                 return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "", null);
                             }
@@ -12543,6 +12840,7 @@ public class Client {
                             public Result snapshotCmdIdx() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         /**
@@ -12573,6 +12871,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(String snapname, String description) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
@@ -12599,6 +12898,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(String snapname) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
@@ -12615,6 +12915,7 @@ public class Client {
                         public Result snapshot(String snapname) throws JSONException {
                             return createRest(snapname);
                         }
+
                     }
 
                     public class PVEFirewall {
@@ -12628,12 +12929,14 @@ public class Client {
                             _node = node;
                             _vmid = vmid;
                         }
+
                         private PVERules _rules;
 
                         public PVERules getRules() {
                             if (_rules == null) {
                                 _rules = new PVERules(_client, _node, _vmid);
                             }
+
                             return _rules;
                         }
                         private PVEAliases _aliases;
@@ -12642,6 +12945,7 @@ public class Client {
                             if (_aliases == null) {
                                 _aliases = new PVEAliases(_client, _node, _vmid);
                             }
+
                             return _aliases;
                         }
                         private PVEIpset _ipset;
@@ -12650,6 +12954,7 @@ public class Client {
                             if (_ipset == null) {
                                 _ipset = new PVEIpset(_client, _node, _vmid);
                             }
+
                             return _ipset;
                         }
                         private PVEOptions _options;
@@ -12658,6 +12963,7 @@ public class Client {
                             if (_options == null) {
                                 _options = new PVEOptions(_client, _node, _vmid);
                             }
+
                             return _options;
                         }
                         private PVELog _log;
@@ -12666,6 +12972,7 @@ public class Client {
                             if (_log == null) {
                                 _log = new PVELog(_client, _node, _vmid);
                             }
+
                             return _log;
                         }
                         private PVERefs _refs;
@@ -12674,6 +12981,7 @@ public class Client {
                             if (_refs == null) {
                                 _refs = new PVERefs(_client, _node, _vmid);
                             }
+
                             return _refs;
                         }
 
@@ -12743,6 +13051,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result deleteRest() throws JSONException {
                                     return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
@@ -12763,6 +13072,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result getRest() throws JSONException {
                                     return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
@@ -12838,6 +13148,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("action", action);
@@ -12929,6 +13240,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result setRest() throws JSONException {
                                     return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
@@ -12942,6 +13254,7 @@ public class Client {
                                 public Result updateRule() throws JSONException {
                                     return setRest();
                                 }
+
                             }
 
                             /**
@@ -13019,6 +13332,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
@@ -13106,6 +13420,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String action, String type) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
@@ -13125,6 +13440,7 @@ public class Client {
                             public Result createRule(String action, String type) throws JSONException {
                                 return createRest(action, type);
                             }
+
                         }
 
                         public class PVEAliases {
@@ -13193,6 +13509,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result deleteRest() throws JSONException {
                                     return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", null);
                                 }
@@ -13213,6 +13530,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result getRest() throws JSONException {
                                     return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", null);
                                 }
@@ -13241,6 +13559,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result setRest(String cidr, String comment, String digest, String rename) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -13276,6 +13595,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result setRest(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -13293,6 +13613,7 @@ public class Client {
                                 public Result updateAlias(String cidr) throws JSONException {
                                     return setRest(cidr);
                                 }
+
                             }
 
                             /**
@@ -13325,6 +13646,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String cidr, String name, String comment) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
@@ -13356,6 +13678,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String cidr, String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
@@ -13375,6 +13698,7 @@ public class Client {
                             public Result createAlias(String cidr, String name) throws JSONException {
                                 return createRest(cidr, name);
                             }
+
                         }
 
                         public class PVEIpset {
@@ -13463,6 +13787,7 @@ public class Client {
                                      * @return Result
                                      * @throws JSONException
                                      */
+
                                     public Result deleteRest() throws JSONException {
                                         return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
@@ -13483,6 +13808,7 @@ public class Client {
                                      * @return Result
                                      * @throws JSONException
                                      */
+
                                     public Result getRest() throws JSONException {
                                         return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
@@ -13509,6 +13835,7 @@ public class Client {
                                      * @return Result
                                      * @throws JSONException
                                      */
+
                                     public Result setRest(String comment, String digest, Boolean nomatch) throws JSONException {
                                         Map<String, Object> parameters = new HashMap<>();
                                         parameters.put("comment", comment);
@@ -13539,6 +13866,7 @@ public class Client {
                                      * @return Result
                                      * @throws JSONException
                                      */
+
                                     public Result setRest() throws JSONException {
                                         return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
@@ -13552,6 +13880,7 @@ public class Client {
                                     public Result updateIp() throws JSONException {
                                         return setRest();
                                     }
+
                                 }
 
                                 /**
@@ -13580,6 +13909,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result getRest() throws JSONException {
                                     return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", null);
                                 }
@@ -13604,6 +13934,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result createRest(String cidr, String comment, Boolean nomatch) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -13634,6 +13965,7 @@ public class Client {
                                  * @return Result
                                  * @throws JSONException
                                  */
+
                                 public Result createRest(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -13651,6 +13983,7 @@ public class Client {
                                 public Result createIp(String cidr) throws JSONException {
                                     return createRest(cidr);
                                 }
+
                             }
 
                             /**
@@ -13688,6 +14021,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String name, String comment, String digest, String rename) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
@@ -13723,6 +14057,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
@@ -13739,6 +14074,7 @@ public class Client {
                             public Result createIpset(String name) throws JSONException {
                                 return createRest(name);
                             }
+
                         }
 
                         public class PVEOptions {
@@ -13809,6 +14145,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result setRest(String delete, Boolean dhcp, String digest, Boolean enable, Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter, Boolean ndp, String policy_in, String policy_out, Boolean radv) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("delete", delete);
@@ -13872,6 +14209,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result setRest() throws JSONException {
                                 return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/options", null);
                             }
@@ -13885,6 +14223,7 @@ public class Client {
                             public Result setOptions() throws JSONException {
                                 return setRest();
                             }
+
                         }
 
                         public class PVELog {
@@ -13932,6 +14271,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result getRest() throws JSONException {
                                 return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/log", null);
                             }
@@ -13945,6 +14285,7 @@ public class Client {
                             public Result log() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         public class PVERefs {
@@ -13994,6 +14335,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result getRest() throws JSONException {
                                 return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/refs", null);
                             }
@@ -14008,6 +14350,7 @@ public class Client {
                             public Result refs() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         /**
@@ -14029,6 +14372,7 @@ public class Client {
                         public Result index() throws JSONException {
                             return getRest();
                         }
+
                     }
 
                     public class PVERrd {
@@ -14089,6 +14433,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest(String ds, String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
@@ -14109,6 +14454,7 @@ public class Client {
                         public Result rrd(String ds, String timeframe) throws JSONException {
                             return getRest(ds, timeframe);
                         }
+
                     }
 
                     public class PVERrddata {
@@ -14162,6 +14508,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest(String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
@@ -14179,6 +14526,7 @@ public class Client {
                         public Result rrddata(String timeframe) throws JSONException {
                             return getRest(timeframe);
                         }
+
                     }
 
                     public class PVEVncproxy {
@@ -14233,6 +14581,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/vncproxy", null);
                         }
@@ -14246,6 +14595,7 @@ public class Client {
                         public Result vncproxy() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     public class PVETermproxy {
@@ -14279,6 +14629,7 @@ public class Client {
                         public Result termproxy() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     public class PVEVncwebsocket {
@@ -14323,6 +14674,7 @@ public class Client {
                         public Result vncwebsocket(int port, String vncticket) throws JSONException {
                             return getRest(port, vncticket);
                         }
+
                     }
 
                     public class PVESpiceproxy {
@@ -14381,6 +14733,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/spiceproxy", null);
                         }
@@ -14394,6 +14747,7 @@ public class Client {
                         public Result spiceproxy() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     public class PVEMigrate {
@@ -14465,6 +14819,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(String target) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
@@ -14482,6 +14837,7 @@ public class Client {
                         public Result migrateVm(String target) throws JSONException {
                             return createRest(target);
                         }
+
                     }
 
                     public class PVEFeature {
@@ -14533,6 +14889,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest(String feature) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("feature", feature);
@@ -14550,6 +14907,7 @@ public class Client {
                         public Result vmFeature(String feature) throws JSONException {
                             return getRest(feature);
                         }
+
                     }
 
                     public class PVETemplate {
@@ -14583,6 +14941,7 @@ public class Client {
                         public Result template() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     public class PVEClone {
@@ -14662,6 +15021,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(int newid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("newid", newid);
@@ -14678,6 +15038,7 @@ public class Client {
                         public Result cloneVm(int newid) throws JSONException {
                             return createRest(newid);
                         }
+
                     }
 
                     public class PVEResize {
@@ -14746,6 +15107,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest(String disk, String size) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
@@ -14768,6 +15130,7 @@ public class Client {
                         public Result resizeVm(String disk, String size) throws JSONException {
                             return setRest(disk, size);
                         }
+
                     }
 
                     public class PVEMoveVolume {
@@ -14839,6 +15202,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(String storage, String volume) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("storage", storage);
@@ -14858,6 +15222,7 @@ public class Client {
                         public Result moveVolume(String storage, String volume) throws JSONException {
                             return createRest(storage, volume);
                         }
+
                     }
 
                     /**
@@ -14886,6 +15251,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "", null);
                     }
@@ -14899,6 +15265,7 @@ public class Client {
                     public Result vmdiridx() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 /**
@@ -14957,7 +15324,7 @@ public class Client {
                  * @param ignore_unpack_errors Ignore errors when extracting the
                  * template.
                  * @param lock_ Lock/unlock the VM. Enum:
-                 * backup,disk,migrate,mounted,rollback,snapshot,snapshot-delete
+                 * backup,create,disk,fstrim,migrate,mounted,rollback,snapshot,snapshot-delete
                  * @param memory Amount of RAM for the VM in MB.
                  * @param mpN Use volume as container mount point.
                  * @param nameserver Sets DNS server IP address for a container.
@@ -15004,6 +15371,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ostemplate", ostemplate);
@@ -15083,7 +15451,7 @@ public class Client {
                  * @param ignore_unpack_errors Ignore errors when extracting the
                  * template.
                  * @param lock_ Lock/unlock the VM. Enum:
-                 * backup,disk,migrate,mounted,rollback,snapshot,snapshot-delete
+                 * backup,create,disk,fstrim,migrate,mounted,rollback,snapshot,snapshot-delete
                  * @param memory Amount of RAM for the VM in MB.
                  * @param mpN Use volume as container mount point.
                  * @param nameserver Sets DNS server IP address for a container.
@@ -15142,6 +15510,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String ostemplate, int vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ostemplate", ostemplate);
@@ -15160,6 +15529,7 @@ public class Client {
                 public Result createVm(String ostemplate, int vmid) throws JSONException {
                     return createRest(ostemplate, vmid);
                 }
+
             }
 
             public class PVECeph {
@@ -15171,12 +15541,14 @@ public class Client {
                     _client = client;
                     _node = node;
                 }
+
                 private PVEOsd _osd;
 
                 public PVEOsd getOsd() {
                     if (_osd == null) {
                         _osd = new PVEOsd(_client, _node);
                     }
+
                     return _osd;
                 }
                 private PVEMds _mds;
@@ -15185,6 +15557,7 @@ public class Client {
                     if (_mds == null) {
                         _mds = new PVEMds(_client, _node);
                     }
+
                     return _mds;
                 }
                 private PVEMgr _mgr;
@@ -15193,6 +15566,7 @@ public class Client {
                     if (_mgr == null) {
                         _mgr = new PVEMgr(_client, _node);
                     }
+
                     return _mgr;
                 }
                 private PVEMon _mon;
@@ -15201,6 +15575,7 @@ public class Client {
                     if (_mon == null) {
                         _mon = new PVEMon(_client, _node);
                     }
+
                     return _mon;
                 }
                 private PVEFs _fs;
@@ -15209,6 +15584,7 @@ public class Client {
                     if (_fs == null) {
                         _fs = new PVEFs(_client, _node);
                     }
+
                     return _fs;
                 }
                 private PVEDisks _disks;
@@ -15217,6 +15593,7 @@ public class Client {
                     if (_disks == null) {
                         _disks = new PVEDisks(_client, _node);
                     }
+
                     return _disks;
                 }
                 private PVEConfig _config;
@@ -15225,7 +15602,17 @@ public class Client {
                     if (_config == null) {
                         _config = new PVEConfig(_client, _node);
                     }
+
                     return _config;
+                }
+                private PVEConfigdb _configdb;
+
+                public PVEConfigdb getConfigdb() {
+                    if (_configdb == null) {
+                        _configdb = new PVEConfigdb(_client, _node);
+                    }
+
+                    return _configdb;
                 }
                 private PVEInit _init;
 
@@ -15233,6 +15620,7 @@ public class Client {
                     if (_init == null) {
                         _init = new PVEInit(_client, _node);
                     }
+
                     return _init;
                 }
                 private PVEStop _stop;
@@ -15241,6 +15629,7 @@ public class Client {
                     if (_stop == null) {
                         _stop = new PVEStop(_client, _node);
                     }
+
                     return _stop;
                 }
                 private PVEStart _start;
@@ -15249,6 +15638,7 @@ public class Client {
                     if (_start == null) {
                         _start = new PVEStart(_client, _node);
                     }
+
                     return _start;
                 }
                 private PVERestart _restart;
@@ -15257,6 +15647,7 @@ public class Client {
                     if (_restart == null) {
                         _restart = new PVERestart(_client, _node);
                     }
+
                     return _restart;
                 }
                 private PVEStatus _status;
@@ -15265,6 +15656,7 @@ public class Client {
                     if (_status == null) {
                         _status = new PVEStatus(_client, _node);
                     }
+
                     return _status;
                 }
                 private PVEPools _pools;
@@ -15273,6 +15665,7 @@ public class Client {
                     if (_pools == null) {
                         _pools = new PVEPools(_client, _node);
                     }
+
                     return _pools;
                 }
                 private PVEFlags _flags;
@@ -15281,6 +15674,7 @@ public class Client {
                     if (_flags == null) {
                         _flags = new PVEFlags(_client, _node);
                     }
+
                     return _flags;
                 }
                 private PVECrush _crush;
@@ -15289,6 +15683,7 @@ public class Client {
                     if (_crush == null) {
                         _crush = new PVECrush(_client, _node);
                     }
+
                     return _crush;
                 }
                 private PVELog _log;
@@ -15297,6 +15692,7 @@ public class Client {
                     if (_log == null) {
                         _log = new PVELog(_client, _node);
                     }
+
                     return _log;
                 }
                 private PVERules _rules;
@@ -15305,6 +15701,7 @@ public class Client {
                     if (_rules == null) {
                         _rules = new PVERules(_client, _node);
                     }
+
                     return _rules;
                 }
 
@@ -15333,12 +15730,14 @@ public class Client {
                             _node = node;
                             _osdid = osdid;
                         }
+
                         private PVEIn _in;
 
                         public PVEIn getIn() {
                             if (_in == null) {
                                 _in = new PVEIn(_client, _node, _osdid);
                             }
+
                             return _in;
                         }
                         private PVEOut _out;
@@ -15347,7 +15746,17 @@ public class Client {
                             if (_out == null) {
                                 _out = new PVEOut(_client, _node, _osdid);
                             }
+
                             return _out;
+                        }
+                        private PVEScrub _scrub;
+
+                        public PVEScrub getScrub() {
+                            if (_scrub == null) {
+                                _scrub = new PVEScrub(_client, _node, _osdid);
+                            }
+
+                            return _scrub;
                         }
 
                         public class PVEIn {
@@ -15381,6 +15790,7 @@ public class Client {
                             public Result in() throws JSONException {
                                 return createRest();
                             }
+
                         }
 
                         public class PVEOut {
@@ -15414,6 +15824,68 @@ public class Client {
                             public Result out() throws JSONException {
                                 return createRest();
                             }
+
+                        }
+
+                        public class PVEScrub {
+
+                            private final Client _client;
+                            private final Object _node;
+                            private final Object _osdid;
+
+                            protected PVEScrub(Client client, Object node, Object osdid) {
+                                _client = client;
+                                _node = node;
+                                _osdid = osdid;
+                            }
+
+                            /**
+                             * Instruct the OSD to scrub.
+                             *
+                             * @param deep If set, instructs a deep scrub
+                             * instead of a normal one.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result createRest(Boolean deep) throws JSONException {
+                                Map<String, Object> parameters = new HashMap<>();
+                                parameters.put("deep", deep);
+                                return _client.create("/nodes/" + _node + "/ceph/osd/" + _osdid + "/scrub", parameters);
+                            }
+
+                            /**
+                             * Instruct the OSD to scrub.
+                             *
+                             * @param deep If set, instructs a deep scrub
+                             * instead of a normal one.
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result scrub(Boolean deep) throws JSONException {
+                                return createRest(deep);
+                            }
+
+                            /**
+                             * Instruct the OSD to scrub.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+
+                            public Result createRest() throws JSONException {
+                                return _client.create("/nodes/" + _node + "/ceph/osd/" + _osdid + "/scrub", null);
+                            }
+
+                            /**
+                             * Instruct the OSD to scrub.
+                             *
+                             * @return Result
+                             * @throws JSONException
+                             */
+                            public Result scrub() throws JSONException {
+                                return createRest();
+                            }
+
                         }
 
                         /**
@@ -15448,6 +15920,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result deleteRest() throws JSONException {
                             return _client.delete("/nodes/" + _node + "/ceph/osd/" + _osdid + "", null);
                         }
@@ -15461,6 +15934,7 @@ public class Client {
                         public Result destroyosd() throws JSONException {
                             return deleteRest();
                         }
+
                     }
 
                     /**
@@ -15487,24 +15961,23 @@ public class Client {
                      * Create OSD
                      *
                      * @param dev Block device name.
-                     * @param bluestore Use bluestore instead of filestore. This
-                     * is the default.
-                     * @param fstype File system type (filestore only). Enum:
-                     * xfs,ext4
-                     * @param journal_dev Block device name for journal
-                     * (filestore) or block.db (bluestore).
-                     * @param wal_dev Block device name for block.wal (bluestore
-                     * only).
+                     * @param db_dev Block device name for block.db.
+                     * @param db_size Size in GiB for block.db.
+                     * @param encrypted Enables encryption of the OSD.
+                     * @param wal_dev Block device name for block.wal.
+                     * @param wal_size Size in GiB for block.wal.
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result createRest(String dev, Boolean bluestore, String fstype, String journal_dev, String wal_dev) throws JSONException {
+
+                    public Result createRest(String dev, String db_dev, Integer db_size, Boolean encrypted, String wal_dev, Integer wal_size) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("dev", dev);
-                        parameters.put("bluestore", bluestore);
-                        parameters.put("fstype", fstype);
-                        parameters.put("journal_dev", journal_dev);
+                        parameters.put("db_dev", db_dev);
+                        parameters.put("db_size", db_size);
+                        parameters.put("encrypted", encrypted);
                         parameters.put("wal_dev", wal_dev);
+                        parameters.put("wal_size", wal_size);
                         return _client.create("/nodes/" + _node + "/ceph/osd", parameters);
                     }
 
@@ -15512,19 +15985,16 @@ public class Client {
                      * Create OSD
                      *
                      * @param dev Block device name.
-                     * @param bluestore Use bluestore instead of filestore. This
-                     * is the default.
-                     * @param fstype File system type (filestore only). Enum:
-                     * xfs,ext4
-                     * @param journal_dev Block device name for journal
-                     * (filestore) or block.db (bluestore).
-                     * @param wal_dev Block device name for block.wal (bluestore
-                     * only).
+                     * @param db_dev Block device name for block.db.
+                     * @param db_size Size in GiB for block.db.
+                     * @param encrypted Enables encryption of the OSD.
+                     * @param wal_dev Block device name for block.wal.
+                     * @param wal_size Size in GiB for block.wal.
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result createosd(String dev, Boolean bluestore, String fstype, String journal_dev, String wal_dev) throws JSONException {
-                        return createRest(dev, bluestore, fstype, journal_dev, wal_dev);
+                    public Result createosd(String dev, String db_dev, Integer db_size, Boolean encrypted, String wal_dev, Integer wal_size) throws JSONException {
+                        return createRest(dev, db_dev, db_size, encrypted, wal_dev, wal_size);
                     }
 
                     /**
@@ -15534,6 +16004,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String dev) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("dev", dev);
@@ -15550,6 +16021,7 @@ public class Client {
                     public Result createosd(String dev) throws JSONException {
                         return createRest(dev);
                     }
+
                 }
 
                 public class PVEMds {
@@ -15608,6 +16080,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(Boolean hotstandby) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("hotstandby", hotstandby);
@@ -15634,6 +16107,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/ceph/mds/" + _name + "", null);
                         }
@@ -15647,6 +16121,7 @@ public class Client {
                         public Result createmds() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     /**
@@ -15668,6 +16143,7 @@ public class Client {
                     public Result index() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 public class PVEMgr {
@@ -15715,53 +16191,50 @@ public class Client {
                         public Result destroymgr() throws JSONException {
                             return deleteRest();
                         }
+
+                        /**
+                         * Create Ceph Manager
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/ceph/mgr/" + _id + "", null);
+                        }
+
+                        /**
+                         * Create Ceph Manager
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createmgr() throws JSONException {
+                            return createRest();
+                        }
+
                     }
 
                     /**
-                     * Create Ceph Manager
-                     *
-                     * @param id The ID for the manager, when omitted the same
-                     * as the nodename
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result createRest(String id) throws JSONException {
-                        Map<String, Object> parameters = new HashMap<>();
-                        parameters.put("id", id);
-                        return _client.create("/nodes/" + _node + "/ceph/mgr", parameters);
-                    }
-
-                    /**
-                     * Create Ceph Manager
-                     *
-                     * @param id The ID for the manager, when omitted the same
-                     * as the nodename
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result createmgr(String id) throws JSONException {
-                        return createRest(id);
-                    }
-
-                    /**
-                     * Create Ceph Manager
+                     * MGR directory index.
                      *
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result createRest() throws JSONException {
-                        return _client.create("/nodes/" + _node + "/ceph/mgr", null);
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/mgr", null);
                     }
 
                     /**
-                     * Create Ceph Manager
+                     * MGR directory index.
                      *
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result createmgr() throws JSONException {
-                        return createRest();
+                    public Result index() throws JSONException {
+                        return getRest();
                     }
+
                 }
 
                 public class PVEMon {
@@ -15793,32 +16266,6 @@ public class Client {
                         /**
                          * Destroy Ceph Monitor and Manager.
                          *
-                         * @param exclude_manager When set, removes only the
-                         * monitor, not the manager
-                         * @return Result
-                         * @throws JSONException
-                         */
-                        public Result deleteRest(Boolean exclude_manager) throws JSONException {
-                            Map<String, Object> parameters = new HashMap<>();
-                            parameters.put("exclude-manager", exclude_manager);
-                            return _client.delete("/nodes/" + _node + "/ceph/mon/" + _monid + "", parameters);
-                        }
-
-                        /**
-                         * Destroy Ceph Monitor and Manager.
-                         *
-                         * @param exclude_manager When set, removes only the
-                         * monitor, not the manager
-                         * @return Result
-                         * @throws JSONException
-                         */
-                        public Result destroymon(Boolean exclude_manager) throws JSONException {
-                            return deleteRest(exclude_manager);
-                        }
-
-                        /**
-                         * Destroy Ceph Monitor and Manager.
-                         *
                          * @return Result
                          * @throws JSONException
                          */
@@ -15835,6 +16282,55 @@ public class Client {
                         public Result destroymon() throws JSONException {
                             return deleteRest();
                         }
+
+                        /**
+                         * Create Ceph Monitor and Manager
+                         *
+                         * @param mon_address Overwrites autodetected monitor IP
+                         * address. Must be in the public network of ceph.
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result createRest(String mon_address) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("mon-address", mon_address);
+                            return _client.create("/nodes/" + _node + "/ceph/mon/" + _monid + "", parameters);
+                        }
+
+                        /**
+                         * Create Ceph Monitor and Manager
+                         *
+                         * @param mon_address Overwrites autodetected monitor IP
+                         * address. Must be in the public network of ceph.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createmon(String mon_address) throws JSONException {
+                            return createRest(mon_address);
+                        }
+
+                        /**
+                         * Create Ceph Monitor and Manager
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result createRest() throws JSONException {
+                            return _client.create("/nodes/" + _node + "/ceph/mon/" + _monid + "", null);
+                        }
+
+                        /**
+                         * Create Ceph Monitor and Manager
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result createmon() throws JSONException {
+                            return createRest();
+                        }
+
                     }
 
                     /**
@@ -15857,61 +16353,6 @@ public class Client {
                         return getRest();
                     }
 
-                    /**
-                     * Create Ceph Monitor and Manager
-                     *
-                     * @param exclude_manager When set, only a monitor will be
-                     * created.
-                     * @param id The ID for the monitor, when omitted the same
-                     * as the nodename
-                     * @param mon_address Overwrites autodetected monitor IP
-                     * address. Must be in the public network of ceph.
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result createRest(Boolean exclude_manager, String id, String mon_address) throws JSONException {
-                        Map<String, Object> parameters = new HashMap<>();
-                        parameters.put("exclude-manager", exclude_manager);
-                        parameters.put("id", id);
-                        parameters.put("mon-address", mon_address);
-                        return _client.create("/nodes/" + _node + "/ceph/mon", parameters);
-                    }
-
-                    /**
-                     * Create Ceph Monitor and Manager
-                     *
-                     * @param exclude_manager When set, only a monitor will be
-                     * created.
-                     * @param id The ID for the monitor, when omitted the same
-                     * as the nodename
-                     * @param mon_address Overwrites autodetected monitor IP
-                     * address. Must be in the public network of ceph.
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result createmon(Boolean exclude_manager, String id, String mon_address) throws JSONException {
-                        return createRest(exclude_manager, id, mon_address);
-                    }
-
-                    /**
-                     * Create Ceph Monitor and Manager
-                     *
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result createRest() throws JSONException {
-                        return _client.create("/nodes/" + _node + "/ceph/mon", null);
-                    }
-
-                    /**
-                     * Create Ceph Monitor and Manager
-                     *
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result createmon() throws JSONException {
-                        return createRest();
-                    }
                 }
 
                 public class PVEFs {
@@ -15979,6 +16420,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/ceph/fs/" + _name + "", null);
                         }
@@ -15992,6 +16434,7 @@ public class Client {
                         public Result createfs() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     /**
@@ -16013,6 +16456,7 @@ public class Client {
                     public Result index() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 public class PVEDisks {
@@ -16057,6 +16501,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/ceph/disks", null);
                     }
@@ -16070,6 +16515,7 @@ public class Client {
                     public Result disks() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 public class PVEConfig {
@@ -16101,6 +16547,39 @@ public class Client {
                     public Result config() throws JSONException {
                         return getRest();
                     }
+
+                }
+
+                public class PVEConfigdb {
+
+                    private final Client _client;
+                    private final Object _node;
+
+                    protected PVEConfigdb(Client client, Object node) {
+                        _client = client;
+                        _node = node;
+                    }
+
+                    /**
+                     * Get Ceph configuration database.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/nodes/" + _node + "/ceph/configdb", null);
+                    }
+
+                    /**
+                     * Get Ceph configuration database.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result configdb() throws JSONException {
+                        return getRest();
+                    }
+
                 }
 
                 public class PVEInit {
@@ -16120,7 +16599,7 @@ public class Client {
                      * @param cluster_network Declare a separate cluster
                      * network, OSDs will routeheartbeat, object replication and
                      * recovery traffic over it
-                     * @param disable_cephx Disable cephx authentification.
+                     * @param disable_cephx Disable cephx authentication.
                      * WARNING: cephx is a security feature protecting against
                      * man-in-the-middle attacks. Only consider disabling cephx
                      * if your network is private!
@@ -16153,7 +16632,7 @@ public class Client {
                      * @param cluster_network Declare a separate cluster
                      * network, OSDs will routeheartbeat, object replication and
                      * recovery traffic over it
-                     * @param disable_cephx Disable cephx authentification.
+                     * @param disable_cephx Disable cephx authentication.
                      * WARNING: cephx is a security feature protecting against
                      * man-in-the-middle attacks. Only consider disabling cephx
                      * if your network is private!
@@ -16179,6 +16658,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest() throws JSONException {
                         return _client.create("/nodes/" + _node + "/ceph/init", null);
                     }
@@ -16193,6 +16673,7 @@ public class Client {
                     public Result init() throws JSONException {
                         return createRest();
                     }
+
                 }
 
                 public class PVEStop {
@@ -16235,6 +16716,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest() throws JSONException {
                         return _client.create("/nodes/" + _node + "/ceph/stop", null);
                     }
@@ -16248,6 +16730,7 @@ public class Client {
                     public Result stop() throws JSONException {
                         return createRest();
                     }
+
                 }
 
                 public class PVEStart {
@@ -16290,6 +16773,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest() throws JSONException {
                         return _client.create("/nodes/" + _node + "/ceph/start", null);
                     }
@@ -16303,6 +16787,7 @@ public class Client {
                     public Result start() throws JSONException {
                         return createRest();
                     }
+
                 }
 
                 public class PVERestart {
@@ -16345,6 +16830,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest() throws JSONException {
                         return _client.create("/nodes/" + _node + "/ceph/restart", null);
                     }
@@ -16358,6 +16844,7 @@ public class Client {
                     public Result restart() throws JSONException {
                         return createRest();
                     }
+
                 }
 
                 public class PVEStatus {
@@ -16389,6 +16876,7 @@ public class Client {
                     public Result status() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 public class PVEPools {
@@ -16452,6 +16940,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result deleteRest() throws JSONException {
                             return _client.delete("/nodes/" + _node + "/ceph/pools/" + _name + "", null);
                         }
@@ -16465,6 +16954,7 @@ public class Client {
                         public Result destroypool() throws JSONException {
                             return deleteRest();
                         }
+
                     }
 
                     /**
@@ -16503,6 +16993,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String name, Boolean add_storages, String application, String crush_rule, Integer min_size, Integer pg_num, Integer size) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
@@ -16542,6 +17033,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String name) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
@@ -16558,6 +17050,7 @@ public class Client {
                     public Result createpool(String name) throws JSONException {
                         return createRest(name);
                     }
+
                 }
 
                 public class PVEFlags {
@@ -16612,6 +17105,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/ceph/flags/" + _flag + "", null);
                         }
@@ -16625,6 +17119,7 @@ public class Client {
                         public Result setFlag() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     /**
@@ -16646,6 +17141,7 @@ public class Client {
                     public Result getFlags() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 public class PVECrush {
@@ -16677,6 +17173,7 @@ public class Client {
                     public Result crush() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 public class PVELog {
@@ -16722,6 +17219,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/ceph/log", null);
                     }
@@ -16735,6 +17233,7 @@ public class Client {
                     public Result log() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 public class PVERules {
@@ -16766,6 +17265,7 @@ public class Client {
                     public Result rules() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 /**
@@ -16787,6 +17287,7 @@ public class Client {
                 public Result index() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVEVzdump {
@@ -16798,12 +17299,14 @@ public class Client {
                     _client = client;
                     _node = node;
                 }
+
                 private PVEExtractconfig _extractconfig;
 
                 public PVEExtractconfig getExtractconfig() {
                     if (_extractconfig == null) {
                         _extractconfig = new PVEExtractconfig(_client, _node);
                     }
+
                     return _extractconfig;
                 }
 
@@ -16840,6 +17343,7 @@ public class Client {
                     public Result extractconfig(String volume) throws JSONException {
                         return getRest(volume);
                     }
+
                 }
 
                 /**
@@ -16865,6 +17369,8 @@ public class Client {
                  * @param mode Backup mode. Enum: snapshot,suspend,stop
                  * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1
                  * uses half of cores, N&amp;gt;1 uses N as thread count.
+                 * @param pool Backup all known guest systems included in the
+                 * specified pool.
                  * @param quiet Be quiet.
                  * @param remove Remove old backup files if there are more than
                  * 'maxfiles' backup files.
@@ -16872,7 +17378,7 @@ public class Client {
                  * @param size Unused, will be removed in a future release.
                  * @param stdexcludes Exclude temporary files and logs.
                  * @param stdout Write tar to stdout, not to a file.
-                 * @param stop Stop runnig backup jobs on this host.
+                 * @param stop Stop running backup jobs on this host.
                  * @param stopwait Maximal time to wait until a guest system is
                  * stopped (minutes).
                  * @param storage Store resulting file to this storage.
@@ -16881,7 +17387,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createRest(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
+                public Result createRest(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, Integer pigz, String pool, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("all", all);
                     parameters.put("bwlimit", bwlimit);
@@ -16896,6 +17402,7 @@ public class Client {
                     parameters.put("maxfiles", maxfiles);
                     parameters.put("mode", mode);
                     parameters.put("pigz", pigz);
+                    parameters.put("pool", pool);
                     parameters.put("quiet", quiet);
                     parameters.put("remove", remove);
                     parameters.put("script", script);
@@ -16933,6 +17440,8 @@ public class Client {
                  * @param mode Backup mode. Enum: snapshot,suspend,stop
                  * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1
                  * uses half of cores, N&amp;gt;1 uses N as thread count.
+                 * @param pool Backup all known guest systems included in the
+                 * specified pool.
                  * @param quiet Be quiet.
                  * @param remove Remove old backup files if there are more than
                  * 'maxfiles' backup files.
@@ -16940,7 +17449,7 @@ public class Client {
                  * @param size Unused, will be removed in a future release.
                  * @param stdexcludes Exclude temporary files and logs.
                  * @param stdout Write tar to stdout, not to a file.
-                 * @param stop Stop runnig backup jobs on this host.
+                 * @param stop Stop running backup jobs on this host.
                  * @param stopwait Maximal time to wait until a guest system is
                  * stopped (minutes).
                  * @param storage Store resulting file to this storage.
@@ -16949,8 +17458,8 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result vzdump(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, Integer pigz, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
-                    return createRest(all, bwlimit, compress, dumpdir, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, pigz, quiet, remove, script, size, stdexcludes, stdout, stop, stopwait, storage, tmpdir, vmid);
+                public Result vzdump(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, Integer pigz, String pool, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
+                    return createRest(all, bwlimit, compress, dumpdir, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, pigz, pool, quiet, remove, script, size, stdexcludes, stdout, stop, stopwait, storage, tmpdir, vmid);
                 }
 
                 /**
@@ -16959,6 +17468,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest() throws JSONException {
                     return _client.create("/nodes/" + _node + "/vzdump", null);
                 }
@@ -16972,6 +17482,7 @@ public class Client {
                 public Result vzdump() throws JSONException {
                     return createRest();
                 }
+
             }
 
             public class PVEServices {
@@ -16999,12 +17510,14 @@ public class Client {
                         _node = node;
                         _service = service;
                     }
+
                     private PVEState _state;
 
                     public PVEState getState() {
                         if (_state == null) {
                             _state = new PVEState(_client, _node, _service);
                         }
+
                         return _state;
                     }
                     private PVEStart _start;
@@ -17013,6 +17526,7 @@ public class Client {
                         if (_start == null) {
                             _start = new PVEStart(_client, _node, _service);
                         }
+
                         return _start;
                     }
                     private PVEStop _stop;
@@ -17021,6 +17535,7 @@ public class Client {
                         if (_stop == null) {
                             _stop = new PVEStop(_client, _node, _service);
                         }
+
                         return _stop;
                     }
                     private PVERestart _restart;
@@ -17029,6 +17544,7 @@ public class Client {
                         if (_restart == null) {
                             _restart = new PVERestart(_client, _node, _service);
                         }
+
                         return _restart;
                     }
                     private PVEReload _reload;
@@ -17037,6 +17553,7 @@ public class Client {
                         if (_reload == null) {
                             _reload = new PVEReload(_client, _node, _service);
                         }
+
                         return _reload;
                     }
 
@@ -17071,6 +17588,7 @@ public class Client {
                         public Result serviceState() throws JSONException {
                             return getRest();
                         }
+
                     }
 
                     public class PVEStart {
@@ -17104,6 +17622,7 @@ public class Client {
                         public Result serviceStart() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     public class PVEStop {
@@ -17137,6 +17656,7 @@ public class Client {
                         public Result serviceStop() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     public class PVERestart {
@@ -17170,6 +17690,7 @@ public class Client {
                         public Result serviceRestart() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     public class PVEReload {
@@ -17203,6 +17724,7 @@ public class Client {
                         public Result serviceReload() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     /**
@@ -17224,6 +17746,7 @@ public class Client {
                     public Result srvcmdidx() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 /**
@@ -17245,6 +17768,7 @@ public class Client {
                 public Result index() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVESubscription {
@@ -17285,6 +17809,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(Boolean force) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("force", force);
@@ -17309,6 +17834,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest() throws JSONException {
                     return _client.create("/nodes/" + _node + "/subscription", null);
                 }
@@ -17330,6 +17856,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest(String key) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("key", key);
@@ -17346,6 +17873,7 @@ public class Client {
                 public Result set(String key) throws JSONException {
                     return setRest(key);
                 }
+
             }
 
             public class PVENetwork {
@@ -17400,6 +17928,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/network/" + _iface + "", null);
                     }
@@ -17427,9 +17956,11 @@ public class Client {
                      * @param bond_xmit_hash_policy Selects the transmit hash
                      * policy to use for slave selection in balance-xor and
                      * 802.3ad modes. Enum: layer2,layer2+3,layer3+4
-                     * @param bridge_ports Specify the iterfaces you want to add
-                     * to your bridge.
+                     * @param bridge_ports Specify the interfaces you want to
+                     * add to your bridge.
                      * @param bridge_vlan_aware Enable bridge vlan support.
+                     * @param cidr IPv4 CIDR.
+                     * @param cidr6 IPv6 CIDR.
                      * @param comments Comments
                      * @param comments6 Comments
                      * @param delete A list of settings you want to delete.
@@ -17442,8 +17973,8 @@ public class Client {
                      * @param ovs_bridge The OVS bridge associated with a OVS
                      * port. This is required when you create an OVS port.
                      * @param ovs_options OVS interface options.
-                     * @param ovs_ports Specify the iterfaces you want to add to
-                     * your bridge.
+                     * @param ovs_ports Specify the interfaces you want to add
+                     * to your bridge.
                      * @param ovs_tag Specify a VLan tag (used by OVSPort,
                      * OVSIntPort, OVSBond)
                      * @param slaves Specify the interfaces used by the bonding
@@ -17451,7 +17982,8 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result setRest(String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String comments, String comments6, String delete, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
+
+                    public Result setRest(String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments, String comments6, String delete, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("type", type);
                         parameters.put("address", address);
@@ -17461,6 +17993,8 @@ public class Client {
                         parameters.put("bond_xmit_hash_policy", bond_xmit_hash_policy);
                         parameters.put("bridge_ports", bridge_ports);
                         parameters.put("bridge_vlan_aware", bridge_vlan_aware);
+                        parameters.put("cidr", cidr);
+                        parameters.put("cidr6", cidr6);
                         parameters.put("comments", comments);
                         parameters.put("comments6", comments6);
                         parameters.put("delete", delete);
@@ -17490,9 +18024,11 @@ public class Client {
                      * @param bond_xmit_hash_policy Selects the transmit hash
                      * policy to use for slave selection in balance-xor and
                      * 802.3ad modes. Enum: layer2,layer2+3,layer3+4
-                     * @param bridge_ports Specify the iterfaces you want to add
-                     * to your bridge.
+                     * @param bridge_ports Specify the interfaces you want to
+                     * add to your bridge.
                      * @param bridge_vlan_aware Enable bridge vlan support.
+                     * @param cidr IPv4 CIDR.
+                     * @param cidr6 IPv6 CIDR.
                      * @param comments Comments
                      * @param comments6 Comments
                      * @param delete A list of settings you want to delete.
@@ -17505,8 +18041,8 @@ public class Client {
                      * @param ovs_bridge The OVS bridge associated with a OVS
                      * port. This is required when you create an OVS port.
                      * @param ovs_options OVS interface options.
-                     * @param ovs_ports Specify the iterfaces you want to add to
-                     * your bridge.
+                     * @param ovs_ports Specify the interfaces you want to add
+                     * to your bridge.
                      * @param ovs_tag Specify a VLan tag (used by OVSPort,
                      * OVSIntPort, OVSBond)
                      * @param slaves Specify the interfaces used by the bonding
@@ -17514,8 +18050,8 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result updateNetwork(String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String comments, String comments6, String delete, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
-                        return setRest(type, address, address6, autostart, bond_mode, bond_xmit_hash_policy, bridge_ports, bridge_vlan_aware, comments, comments6, delete, gateway, gateway6, netmask, netmask6, ovs_bonds, ovs_bridge, ovs_options, ovs_ports, ovs_tag, slaves);
+                    public Result updateNetwork(String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments, String comments6, String delete, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
+                        return setRest(type, address, address6, autostart, bond_mode, bond_xmit_hash_policy, bridge_ports, bridge_vlan_aware, cidr, cidr6, comments, comments6, delete, gateway, gateway6, netmask, netmask6, ovs_bonds, ovs_bridge, ovs_options, ovs_ports, ovs_tag, slaves);
                     }
 
                     /**
@@ -17526,6 +18062,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result setRest(String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("type", type);
@@ -17543,6 +18080,7 @@ public class Client {
                     public Result updateNetwork(String type) throws JSONException {
                         return setRest(type);
                     }
+
                 }
 
                 /**
@@ -17573,6 +18111,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest(String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
@@ -17597,6 +18136,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/nodes/" + _node + "/network", null);
                 }
@@ -17625,9 +18165,11 @@ public class Client {
                  * @param bond_xmit_hash_policy Selects the transmit hash policy
                  * to use for slave selection in balance-xor and 802.3ad modes.
                  * Enum: layer2,layer2+3,layer3+4
-                 * @param bridge_ports Specify the iterfaces you want to add to
+                 * @param bridge_ports Specify the interfaces you want to add to
                  * your bridge.
                  * @param bridge_vlan_aware Enable bridge vlan support.
+                 * @param cidr IPv4 CIDR.
+                 * @param cidr6 IPv6 CIDR.
                  * @param comments Comments
                  * @param comments6 Comments
                  * @param gateway Default gateway address.
@@ -17639,7 +18181,7 @@ public class Client {
                  * @param ovs_bridge The OVS bridge associated with a OVS port.
                  * This is required when you create an OVS port.
                  * @param ovs_options OVS interface options.
-                 * @param ovs_ports Specify the iterfaces you want to add to
+                 * @param ovs_ports Specify the interfaces you want to add to
                  * your bridge.
                  * @param ovs_tag Specify a VLan tag (used by OVSPort,
                  * OVSIntPort, OVSBond)
@@ -17648,7 +18190,8 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createRest(String iface, String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String comments, String comments6, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
+
+                public Result createRest(String iface, String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments, String comments6, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("iface", iface);
                     parameters.put("type", type);
@@ -17659,6 +18202,8 @@ public class Client {
                     parameters.put("bond_xmit_hash_policy", bond_xmit_hash_policy);
                     parameters.put("bridge_ports", bridge_ports);
                     parameters.put("bridge_vlan_aware", bridge_vlan_aware);
+                    parameters.put("cidr", cidr);
+                    parameters.put("cidr6", cidr6);
                     parameters.put("comments", comments);
                     parameters.put("comments6", comments6);
                     parameters.put("gateway", gateway);
@@ -17688,9 +18233,11 @@ public class Client {
                  * @param bond_xmit_hash_policy Selects the transmit hash policy
                  * to use for slave selection in balance-xor and 802.3ad modes.
                  * Enum: layer2,layer2+3,layer3+4
-                 * @param bridge_ports Specify the iterfaces you want to add to
+                 * @param bridge_ports Specify the interfaces you want to add to
                  * your bridge.
                  * @param bridge_vlan_aware Enable bridge vlan support.
+                 * @param cidr IPv4 CIDR.
+                 * @param cidr6 IPv6 CIDR.
                  * @param comments Comments
                  * @param comments6 Comments
                  * @param gateway Default gateway address.
@@ -17702,7 +18249,7 @@ public class Client {
                  * @param ovs_bridge The OVS bridge associated with a OVS port.
                  * This is required when you create an OVS port.
                  * @param ovs_options OVS interface options.
-                 * @param ovs_ports Specify the iterfaces you want to add to
+                 * @param ovs_ports Specify the interfaces you want to add to
                  * your bridge.
                  * @param ovs_tag Specify a VLan tag (used by OVSPort,
                  * OVSIntPort, OVSBond)
@@ -17711,8 +18258,8 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createNetwork(String iface, String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String comments, String comments6, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
-                    return createRest(iface, type, address, address6, autostart, bond_mode, bond_xmit_hash_policy, bridge_ports, bridge_vlan_aware, comments, comments6, gateway, gateway6, netmask, netmask6, ovs_bonds, ovs_bridge, ovs_options, ovs_ports, ovs_tag, slaves);
+                public Result createNetwork(String iface, String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments, String comments6, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
+                    return createRest(iface, type, address, address6, autostart, bond_mode, bond_xmit_hash_policy, bridge_ports, bridge_vlan_aware, cidr, cidr6, comments, comments6, gateway, gateway6, netmask, netmask6, ovs_bonds, ovs_bridge, ovs_options, ovs_ports, ovs_tag, slaves);
                 }
 
                 /**
@@ -17724,6 +18271,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String iface, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("iface", iface);
@@ -17750,6 +18298,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest() throws JSONException {
                     return _client.set("/nodes/" + _node + "/network", null);
                 }
@@ -17763,6 +18312,7 @@ public class Client {
                 public Result reloadNetworkConfig() throws JSONException {
                     return setRest();
                 }
+
             }
 
             public class PVETasks {
@@ -17790,12 +18340,14 @@ public class Client {
                         _node = node;
                         _upid = upid;
                     }
+
                     private PVELog _log;
 
                     public PVELog getLog() {
                         if (_log == null) {
                             _log = new PVELog(_client, _node, _upid);
                         }
+
                         return _log;
                     }
                     private PVEStatus _status;
@@ -17804,6 +18356,7 @@ public class Client {
                         if (_status == null) {
                             _status = new PVEStatus(_client, _node, _upid);
                         }
+
                         return _status;
                     }
 
@@ -17852,6 +18405,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest() throws JSONException {
                             return _client.get("/nodes/" + _node + "/tasks/" + _upid + "/log", null);
                         }
@@ -17865,6 +18419,7 @@ public class Client {
                         public Result readTaskLog() throws JSONException {
                             return getRest();
                         }
+
                     }
 
                     public class PVEStatus {
@@ -17898,6 +18453,7 @@ public class Client {
                         public Result readTaskStatus() throws JSONException {
                             return getRest();
                         }
+
                     }
 
                     /**
@@ -17925,6 +18481,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/tasks/" + _upid + "", null);
                     }
@@ -17937,6 +18494,7 @@ public class Client {
                     public Result upidIndex() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 /**
@@ -17991,6 +18549,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/nodes/" + _node + "/tasks", null);
                 }
@@ -18004,6 +18563,7 @@ public class Client {
                 public Result nodeTasks() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVEScan {
@@ -18015,12 +18575,14 @@ public class Client {
                     _client = client;
                     _node = node;
                 }
+
                 private PVEZfs _zfs;
 
                 public PVEZfs getZfs() {
                     if (_zfs == null) {
                         _zfs = new PVEZfs(_client, _node);
                     }
+
                     return _zfs;
                 }
                 private PVENfs _nfs;
@@ -18029,6 +18591,7 @@ public class Client {
                     if (_nfs == null) {
                         _nfs = new PVENfs(_client, _node);
                     }
+
                     return _nfs;
                 }
                 private PVECifs _cifs;
@@ -18037,6 +18600,7 @@ public class Client {
                     if (_cifs == null) {
                         _cifs = new PVECifs(_client, _node);
                     }
+
                     return _cifs;
                 }
                 private PVEGlusterfs _glusterfs;
@@ -18045,6 +18609,7 @@ public class Client {
                     if (_glusterfs == null) {
                         _glusterfs = new PVEGlusterfs(_client, _node);
                     }
+
                     return _glusterfs;
                 }
                 private PVEIscsi _iscsi;
@@ -18053,6 +18618,7 @@ public class Client {
                     if (_iscsi == null) {
                         _iscsi = new PVEIscsi(_client, _node);
                     }
+
                     return _iscsi;
                 }
                 private PVELvm _lvm;
@@ -18061,6 +18627,7 @@ public class Client {
                     if (_lvm == null) {
                         _lvm = new PVELvm(_client, _node);
                     }
+
                     return _lvm;
                 }
                 private PVELvmthin _lvmthin;
@@ -18069,6 +18636,7 @@ public class Client {
                     if (_lvmthin == null) {
                         _lvmthin = new PVELvmthin(_client, _node);
                     }
+
                     return _lvmthin;
                 }
                 private PVEUsb _usb;
@@ -18077,6 +18645,7 @@ public class Client {
                     if (_usb == null) {
                         _usb = new PVEUsb(_client, _node);
                     }
+
                     return _usb;
                 }
 
@@ -18109,6 +18678,7 @@ public class Client {
                     public Result zfsscan() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 public class PVENfs {
@@ -18144,6 +18714,7 @@ public class Client {
                     public Result nfsscan(String server) throws JSONException {
                         return getRest(server);
                     }
+
                 }
 
                 public class PVECifs {
@@ -18196,6 +18767,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest(String server) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("server", server);
@@ -18212,6 +18784,7 @@ public class Client {
                     public Result cifsscan(String server) throws JSONException {
                         return getRest(server);
                     }
+
                 }
 
                 public class PVEGlusterfs {
@@ -18247,6 +18820,7 @@ public class Client {
                     public Result glusterfsscan(String server) throws JSONException {
                         return getRest(server);
                     }
+
                 }
 
                 public class PVEIscsi {
@@ -18284,6 +18858,7 @@ public class Client {
                     public Result iscsiscan(String portal) throws JSONException {
                         return getRest(portal);
                     }
+
                 }
 
                 public class PVELvm {
@@ -18315,6 +18890,7 @@ public class Client {
                     public Result lvmscan() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 public class PVELvmthin {
@@ -18350,6 +18926,7 @@ public class Client {
                     public Result lvmthinscan(String vg) throws JSONException {
                         return getRest(vg);
                     }
+
                 }
 
                 public class PVEUsb {
@@ -18381,6 +18958,7 @@ public class Client {
                     public Result usbscan() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 /**
@@ -18402,6 +18980,7 @@ public class Client {
                 public Result index() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVEHardware {
@@ -18413,12 +18992,14 @@ public class Client {
                     _client = client;
                     _node = node;
                 }
+
                 private PVEPci _pci;
 
                 public PVEPci getPci() {
                     if (_pci == null) {
                         _pci = new PVEPci(_client, _node);
                     }
+
                     return _pci;
                 }
 
@@ -18447,12 +19028,14 @@ public class Client {
                             _node = node;
                             _pciid = pciid;
                         }
+
                         private PVEMdev _mdev;
 
                         public PVEMdev getMdev() {
                             if (_mdev == null) {
                                 _mdev = new PVEMdev(_client, _node, _pciid);
                             }
+
                             return _mdev;
                         }
 
@@ -18487,6 +19070,7 @@ public class Client {
                             public Result mdevscan() throws JSONException {
                                 return getRest();
                             }
+
                         }
 
                         /**
@@ -18508,6 +19092,7 @@ public class Client {
                         public Result pciindex() throws JSONException {
                             return getRest();
                         }
+
                     }
 
                     /**
@@ -18553,6 +19138,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/hardware/pci", null);
                     }
@@ -18566,6 +19152,7 @@ public class Client {
                     public Result pciscan() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 /**
@@ -18587,6 +19174,7 @@ public class Client {
                 public Result index() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVEStorage {
@@ -18614,12 +19202,14 @@ public class Client {
                         _node = node;
                         _storage = storage;
                     }
+
                     private PVEContent _content;
 
                     public PVEContent getContent() {
                         if (_content == null) {
                             _content = new PVEContent(_client, _node, _storage);
                         }
+
                         return _content;
                     }
                     private PVEStatus _status;
@@ -18628,6 +19218,7 @@ public class Client {
                         if (_status == null) {
                             _status = new PVEStatus(_client, _node, _storage);
                         }
+
                         return _status;
                     }
                     private PVERrd _rrd;
@@ -18636,6 +19227,7 @@ public class Client {
                         if (_rrd == null) {
                             _rrd = new PVERrd(_client, _node, _storage);
                         }
+
                         return _rrd;
                     }
                     private PVERrddata _rrddata;
@@ -18644,6 +19236,7 @@ public class Client {
                         if (_rrddata == null) {
                             _rrddata = new PVERrddata(_client, _node, _storage);
                         }
+
                         return _rrddata;
                     }
                     private PVEUpload _upload;
@@ -18652,6 +19245,7 @@ public class Client {
                         if (_upload == null) {
                             _upload = new PVEUpload(_client, _node, _storage);
                         }
+
                         return _upload;
                     }
 
@@ -18711,6 +19305,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result getRest() throws JSONException {
                                 return _client.get("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", null);
                             }
@@ -18735,6 +19330,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String target, String target_node) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("target", target);
@@ -18764,6 +19360,7 @@ public class Client {
                              * @return Result
                              * @throws JSONException
                              */
+
                             public Result createRest(String target) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("target", target);
@@ -18781,6 +19378,7 @@ public class Client {
                             public Result copy(String target) throws JSONException {
                                 return createRest(target);
                             }
+
                         }
 
                         /**
@@ -18816,6 +19414,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest() throws JSONException {
                             return _client.get("/nodes/" + _node + "/storage/" + _storage + "/content", null);
                         }
@@ -18842,6 +19441,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(String filename, String size, int vmid, String format) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("filename", filename);
@@ -18878,6 +19478,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(String filename, String size, int vmid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("filename", filename);
@@ -18900,6 +19501,7 @@ public class Client {
                         public Result create(String filename, String size, int vmid) throws JSONException {
                             return createRest(filename, size, vmid);
                         }
+
                     }
 
                     public class PVEStatus {
@@ -18933,6 +19535,7 @@ public class Client {
                         public Result readStatus() throws JSONException {
                             return getRest();
                         }
+
                     }
 
                     public class PVERrd {
@@ -18993,6 +19596,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest(String ds, String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
@@ -19013,6 +19617,7 @@ public class Client {
                         public Result rrd(String ds, String timeframe) throws JSONException {
                             return getRest(ds, timeframe);
                         }
+
                     }
 
                     public class PVERrddata {
@@ -19066,6 +19671,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest(String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
@@ -19083,6 +19689,7 @@ public class Client {
                         public Result rrddata(String timeframe) throws JSONException {
                             return getRest(timeframe);
                         }
+
                     }
 
                     public class PVEUpload {
@@ -19104,7 +19711,7 @@ public class Client {
                          * @param filename The name of the file to create.
                          * @param tmpfilename The source file name. This
                          * parameter is usually set by the REST handler. You can
-                         * only overwrite it when connecting to the trustet port
+                         * only overwrite it when connecting to the trusted port
                          * on localhost.
                          * @return Result
                          * @throws JSONException
@@ -19124,7 +19731,7 @@ public class Client {
                          * @param filename The name of the file to create.
                          * @param tmpfilename The source file name. This
                          * parameter is usually set by the REST handler. You can
-                         * only overwrite it when connecting to the trustet port
+                         * only overwrite it when connecting to the trusted port
                          * on localhost.
                          * @return Result
                          * @throws JSONException
@@ -19141,6 +19748,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(String content, String filename) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("content", content);
@@ -19159,6 +19767,7 @@ public class Client {
                         public Result upload(String content, String filename) throws JSONException {
                             return createRest(content, filename);
                         }
+
                     }
 
                     /**
@@ -19178,6 +19787,7 @@ public class Client {
                     public Result diridx() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 /**
@@ -19230,6 +19840,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/nodes/" + _node + "/storage", null);
                 }
@@ -19243,6 +19854,7 @@ public class Client {
                 public Result index() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVEDisks {
@@ -19254,12 +19866,14 @@ public class Client {
                     _client = client;
                     _node = node;
                 }
+
                 private PVELvm _lvm;
 
                 public PVELvm getLvm() {
                     if (_lvm == null) {
                         _lvm = new PVELvm(_client, _node);
                     }
+
                     return _lvm;
                 }
                 private PVELvmthin _lvmthin;
@@ -19268,6 +19882,7 @@ public class Client {
                     if (_lvmthin == null) {
                         _lvmthin = new PVELvmthin(_client, _node);
                     }
+
                     return _lvmthin;
                 }
                 private PVEDirectory _directory;
@@ -19276,6 +19891,7 @@ public class Client {
                     if (_directory == null) {
                         _directory = new PVEDirectory(_client, _node);
                     }
+
                     return _directory;
                 }
                 private PVEZfs _zfs;
@@ -19284,6 +19900,7 @@ public class Client {
                     if (_zfs == null) {
                         _zfs = new PVEZfs(_client, _node);
                     }
+
                     return _zfs;
                 }
                 private PVEList _list;
@@ -19292,6 +19909,7 @@ public class Client {
                     if (_list == null) {
                         _list = new PVEList(_client, _node);
                     }
+
                     return _list;
                 }
                 private PVESmart _smart;
@@ -19300,6 +19918,7 @@ public class Client {
                     if (_smart == null) {
                         _smart = new PVESmart(_client, _node);
                     }
+
                     return _smart;
                 }
                 private PVEInitgpt _initgpt;
@@ -19308,6 +19927,7 @@ public class Client {
                     if (_initgpt == null) {
                         _initgpt = new PVEInitgpt(_client, _node);
                     }
+
                     return _initgpt;
                 }
 
@@ -19352,6 +19972,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String device, String name, Boolean add_storage) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
@@ -19384,6 +20005,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String device, String name) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
@@ -19403,6 +20025,7 @@ public class Client {
                     public Result create(String device, String name) throws JSONException {
                         return createRest(device, name);
                     }
+
                 }
 
                 public class PVELvmthin {
@@ -19445,6 +20068,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String device, String name, Boolean add_storage) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
@@ -19476,6 +20100,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String device, String name) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
@@ -19495,6 +20120,7 @@ public class Client {
                     public Result create(String device, String name) throws JSONException {
                         return createRest(device, name);
                     }
+
                 }
 
                 public class PVEDirectory {
@@ -19539,6 +20165,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String device, String name, Boolean add_storage, String filesystem) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
@@ -19574,6 +20201,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String device, String name) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
@@ -19594,6 +20222,7 @@ public class Client {
                     public Result create(String device, String name) throws JSONException {
                         return createRest(device, name);
                     }
+
                 }
 
                 public class PVEZfs {
@@ -19641,6 +20270,7 @@ public class Client {
                         public Result detail() throws JSONException {
                             return getRest();
                         }
+
                     }
 
                     /**
@@ -19678,6 +20308,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String devices, String name, String raidlevel, Boolean add_storage, Integer ashift, String compression) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("devices", devices);
@@ -19719,6 +20350,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String devices, String name, String raidlevel) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("devices", devices);
@@ -19741,6 +20373,7 @@ public class Client {
                     public Result create(String devices, String name, String raidlevel) throws JSONException {
                         return createRest(devices, name, raidlevel);
                     }
+
                 }
 
                 public class PVEList {
@@ -19788,6 +20421,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/disks/list", null);
                     }
@@ -19801,6 +20435,7 @@ public class Client {
                     public Result list() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 public class PVESmart {
@@ -19847,6 +20482,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest(String disk) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("disk", disk);
@@ -19863,6 +20499,7 @@ public class Client {
                     public Result smart(String disk) throws JSONException {
                         return getRest(disk);
                     }
+
                 }
 
                 public class PVEInitgpt {
@@ -19909,6 +20546,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String disk) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("disk", disk);
@@ -19925,6 +20563,7 @@ public class Client {
                     public Result initgpt(String disk) throws JSONException {
                         return createRest(disk);
                     }
+
                 }
 
                 /**
@@ -19946,6 +20585,7 @@ public class Client {
                 public Result index() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVEApt {
@@ -19957,12 +20597,14 @@ public class Client {
                     _client = client;
                     _node = node;
                 }
+
                 private PVEUpdate _update;
 
                 public PVEUpdate getUpdate() {
                     if (_update == null) {
                         _update = new PVEUpdate(_client, _node);
                     }
+
                     return _update;
                 }
                 private PVEChangelog _changelog;
@@ -19971,6 +20613,7 @@ public class Client {
                     if (_changelog == null) {
                         _changelog = new PVEChangelog(_client, _node);
                     }
+
                     return _changelog;
                 }
                 private PVEVersions _versions;
@@ -19979,6 +20622,7 @@ public class Client {
                     if (_versions == null) {
                         _versions = new PVEVersions(_client, _node);
                     }
+
                     return _versions;
                 }
 
@@ -20023,6 +20667,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(Boolean notify, Boolean quiet) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("notify", notify);
@@ -20052,6 +20697,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest() throws JSONException {
                         return _client.create("/nodes/" + _node + "/apt/update", null);
                     }
@@ -20066,6 +20712,7 @@ public class Client {
                     public Result updateDatabase() throws JSONException {
                         return createRest();
                     }
+
                 }
 
                 public class PVEChangelog {
@@ -20112,6 +20759,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest(String name) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
@@ -20128,6 +20776,7 @@ public class Client {
                     public Result changelog(String name) throws JSONException {
                         return getRest(name);
                     }
+
                 }
 
                 public class PVEVersions {
@@ -20159,6 +20808,7 @@ public class Client {
                     public Result versions() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 /**
@@ -20180,6 +20830,7 @@ public class Client {
                 public Result index() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVEFirewall {
@@ -20191,12 +20842,14 @@ public class Client {
                     _client = client;
                     _node = node;
                 }
+
                 private PVERules _rules;
 
                 public PVERules getRules() {
                     if (_rules == null) {
                         _rules = new PVERules(_client, _node);
                     }
+
                     return _rules;
                 }
                 private PVEOptions _options;
@@ -20205,6 +20858,7 @@ public class Client {
                     if (_options == null) {
                         _options = new PVEOptions(_client, _node);
                     }
+
                     return _options;
                 }
                 private PVELog _log;
@@ -20213,6 +20867,7 @@ public class Client {
                     if (_log == null) {
                         _log = new PVELog(_client, _node);
                     }
+
                     return _log;
                 }
 
@@ -20276,6 +20931,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result deleteRest() throws JSONException {
                             return _client.delete("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
                         }
@@ -20296,6 +20952,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest() throws JSONException {
                             return _client.get("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
                         }
@@ -20363,6 +21020,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("action", action);
@@ -20446,6 +21104,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest() throws JSONException {
                             return _client.set("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
                         }
@@ -20459,6 +21118,7 @@ public class Client {
                         public Result updateRule() throws JSONException {
                             return setRest();
                         }
+
                     }
 
                     /**
@@ -20529,6 +21189,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
@@ -20609,6 +21270,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String action, String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
@@ -20628,6 +21290,7 @@ public class Client {
                     public Result createRule(String action, String type) throws JSONException {
                         return createRest(action, type);
                     }
+
                 }
 
                 public class PVEOptions {
@@ -20692,6 +21355,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result setRest(String delete, String digest, Boolean enable, String log_level_in, String log_level_out, Boolean log_nf_conntrack, Boolean ndp, Boolean nf_conntrack_allow_invalid, Integer nf_conntrack_max, Integer nf_conntrack_tcp_timeout_established, Boolean nosmurfs, String smurf_log_level, String tcp_flags_log_level, Boolean tcpflags) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("delete", delete);
@@ -20753,6 +21417,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result setRest() throws JSONException {
                         return _client.set("/nodes/" + _node + "/firewall/options", null);
                     }
@@ -20766,6 +21431,7 @@ public class Client {
                     public Result setOptions() throws JSONException {
                         return setRest();
                     }
+
                 }
 
                 public class PVELog {
@@ -20811,6 +21477,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/firewall/log", null);
                     }
@@ -20824,6 +21491,7 @@ public class Client {
                     public Result log() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 /**
@@ -20845,6 +21513,7 @@ public class Client {
                 public Result index() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVEReplication {
@@ -20872,12 +21541,14 @@ public class Client {
                         _node = node;
                         _id = id;
                     }
+
                     private PVEStatus _status;
 
                     public PVEStatus getStatus() {
                         if (_status == null) {
                             _status = new PVEStatus(_client, _node, _id);
                         }
+
                         return _status;
                     }
                     private PVELog _log;
@@ -20886,6 +21557,7 @@ public class Client {
                         if (_log == null) {
                             _log = new PVELog(_client, _node, _id);
                         }
+
                         return _log;
                     }
                     private PVEScheduleNow _scheduleNow;
@@ -20894,6 +21566,7 @@ public class Client {
                         if (_scheduleNow == null) {
                             _scheduleNow = new PVEScheduleNow(_client, _node, _id);
                         }
+
                         return _scheduleNow;
                     }
 
@@ -20928,6 +21601,7 @@ public class Client {
                         public Result jobStatus() throws JSONException {
                             return getRest();
                         }
+
                     }
 
                     public class PVELog {
@@ -20975,6 +21649,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest() throws JSONException {
                             return _client.get("/nodes/" + _node + "/replication/" + _id + "/log", null);
                         }
@@ -20988,6 +21663,7 @@ public class Client {
                         public Result readJobLog() throws JSONException {
                             return getRest();
                         }
+
                     }
 
                     public class PVEScheduleNow {
@@ -21023,6 +21699,7 @@ public class Client {
                         public Result scheduleNow() throws JSONException {
                             return createRest();
                         }
+
                     }
 
                     /**
@@ -21044,6 +21721,7 @@ public class Client {
                     public Result index() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 /**
@@ -21076,6 +21754,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/nodes/" + _node + "/replication", null);
                 }
@@ -21089,6 +21768,7 @@ public class Client {
                 public Result status() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVECertificates {
@@ -21100,12 +21780,14 @@ public class Client {
                     _client = client;
                     _node = node;
                 }
+
                 private PVEAcme _acme;
 
                 public PVEAcme getAcme() {
                     if (_acme == null) {
                         _acme = new PVEAcme(_client, _node);
                     }
+
                     return _acme;
                 }
                 private PVEInfo _info;
@@ -21114,6 +21796,7 @@ public class Client {
                     if (_info == null) {
                         _info = new PVEInfo(_client, _node);
                     }
+
                     return _info;
                 }
                 private PVECustom _custom;
@@ -21122,6 +21805,7 @@ public class Client {
                     if (_custom == null) {
                         _custom = new PVECustom(_client, _node);
                     }
+
                     return _custom;
                 }
 
@@ -21134,12 +21818,14 @@ public class Client {
                         _client = client;
                         _node = node;
                     }
+
                     private PVECertificate _certificate;
 
                     public PVECertificate getCertificate() {
                         if (_certificate == null) {
                             _certificate = new PVECertificate(_client, _node);
                         }
+
                         return _certificate;
                     }
 
@@ -21180,6 +21866,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest(Boolean force) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("force", force);
@@ -21203,6 +21890,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/certificates/acme/certificate", null);
                         }
@@ -21225,6 +21913,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest(Boolean force) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("force", force);
@@ -21249,6 +21938,7 @@ public class Client {
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result setRest() throws JSONException {
                             return _client.set("/nodes/" + _node + "/certificates/acme/certificate", null);
                         }
@@ -21262,6 +21952,7 @@ public class Client {
                         public Result renewCertificate() throws JSONException {
                             return setRest();
                         }
+
                     }
 
                     /**
@@ -21283,6 +21974,7 @@ public class Client {
                     public Result index() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 public class PVEInfo {
@@ -21314,6 +22006,7 @@ public class Client {
                     public Result info() throws JSONException {
                         return getRest();
                     }
+
                 }
 
                 public class PVECustom {
@@ -21356,6 +22049,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result deleteRest() throws JSONException {
                         return _client.delete("/nodes/" + _node + "/certificates/custom", null);
                     }
@@ -21381,6 +22075,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String certificates, Boolean force, String key, Boolean restart) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("certificates", certificates);
@@ -21412,6 +22107,7 @@ public class Client {
                      * @return Result
                      * @throws JSONException
                      */
+
                     public Result createRest(String certificates) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("certificates", certificates);
@@ -21428,6 +22124,7 @@ public class Client {
                     public Result uploadCustomCert(String certificates) throws JSONException {
                         return createRest(certificates);
                     }
+
                 }
 
                 /**
@@ -21449,6 +22146,7 @@ public class Client {
                 public Result index() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVEConfig {
@@ -21494,6 +22192,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest(String acme, String delete, String description, String digest, String wakeonlan) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("acme", acme);
@@ -21527,6 +22226,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest() throws JSONException {
                     return _client.set("/nodes/" + _node + "/config", null);
                 }
@@ -21540,6 +22240,7 @@ public class Client {
                 public Result setOptions() throws JSONException {
                     return setRest();
                 }
+
             }
 
             public class PVEVersion {
@@ -21571,6 +22272,7 @@ public class Client {
                 public Result version() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVEStatus {
@@ -21610,6 +22312,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String command) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("command", command);
@@ -21626,6 +22329,7 @@ public class Client {
                 public Result nodeCmd(String command) throws JSONException {
                     return createRest(command);
                 }
+
             }
 
             public class PVENetstat {
@@ -21657,6 +22361,7 @@ public class Client {
                 public Result netstat() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVEExecute {
@@ -21692,6 +22397,7 @@ public class Client {
                 public Result execute(String commands) throws JSONException {
                     return createRest(commands);
                 }
+
             }
 
             public class PVEWakeonlan {
@@ -21723,6 +22429,7 @@ public class Client {
                 public Result wakeonlan() throws JSONException {
                     return createRest();
                 }
+
             }
 
             public class PVERrd {
@@ -21776,6 +22483,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest(String ds, String timeframe) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ds", ds);
@@ -21795,6 +22503,7 @@ public class Client {
                 public Result rrd(String ds, String timeframe) throws JSONException {
                     return getRest(ds, timeframe);
                 }
+
             }
 
             public class PVERrddata {
@@ -21844,6 +22553,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest(String timeframe) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("timeframe", timeframe);
@@ -21861,6 +22571,7 @@ public class Client {
                 public Result rrddata(String timeframe) throws JSONException {
                     return getRest(timeframe);
                 }
+
             }
 
             public class PVESyslog {
@@ -21915,6 +22626,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/nodes/" + _node + "/syslog", null);
                 }
@@ -21928,6 +22640,86 @@ public class Client {
                 public Result syslog() throws JSONException {
                     return getRest();
                 }
+
+            }
+
+            public class PVEJournal {
+
+                private final Client _client;
+                private final Object _node;
+
+                protected PVEJournal(Client client, Object node) {
+                    _client = client;
+                    _node = node;
+                }
+
+                /**
+                 * Read Journal
+                 *
+                 * @param endcursor End before the given Cursor. Conflicts with
+                 * 'until'
+                 * @param lastentries Limit to the last X lines. Conflicts with
+                 * a range.
+                 * @param since Display all log since this UNIX epoch. Conflicts
+                 * with 'startcursor'.
+                 * @param startcursor Start after the given Cursor. Conflicts
+                 * with 'since'
+                 * @param until Display all log until this UNIX epoch. Conflicts
+                 * with 'endcursor'.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest(String endcursor, Integer lastentries, Integer since, String startcursor, Integer until) throws JSONException {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("endcursor", endcursor);
+                    parameters.put("lastentries", lastentries);
+                    parameters.put("since", since);
+                    parameters.put("startcursor", startcursor);
+                    parameters.put("until", until);
+                    return _client.get("/nodes/" + _node + "/journal", parameters);
+                }
+
+                /**
+                 * Read Journal
+                 *
+                 * @param endcursor End before the given Cursor. Conflicts with
+                 * 'until'
+                 * @param lastentries Limit to the last X lines. Conflicts with
+                 * a range.
+                 * @param since Display all log since this UNIX epoch. Conflicts
+                 * with 'startcursor'.
+                 * @param startcursor Start after the given Cursor. Conflicts
+                 * with 'since'
+                 * @param until Display all log until this UNIX epoch. Conflicts
+                 * with 'endcursor'.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result journal(String endcursor, Integer lastentries, Integer since, String startcursor, Integer until) throws JSONException {
+                    return getRest(endcursor, lastentries, since, startcursor, until);
+                }
+
+                /**
+                 * Read Journal
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/journal", null);
+                }
+
+                /**
+                 * Read Journal
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result journal() throws JSONException {
+                    return getRest();
+                }
+
             }
 
             public class PVEVncshell {
@@ -21986,6 +22778,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest() throws JSONException {
                     return _client.create("/nodes/" + _node + "/vncshell", null);
                 }
@@ -21999,6 +22792,7 @@ public class Client {
                 public Result vncshell() throws JSONException {
                     return createRest();
                 }
+
             }
 
             public class PVETermproxy {
@@ -22048,6 +22842,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest() throws JSONException {
                     return _client.create("/nodes/" + _node + "/termproxy", null);
                 }
@@ -22061,6 +22856,7 @@ public class Client {
                 public Result termproxy() throws JSONException {
                     return createRest();
                 }
+
             }
 
             public class PVEVncwebsocket {
@@ -22099,6 +22895,7 @@ public class Client {
                 public Result vncwebsocket(int port, String vncticket) throws JSONException {
                     return getRest(port, vncticket);
                 }
+
             }
 
             public class PVESpiceshell {
@@ -22163,6 +22960,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest() throws JSONException {
                     return _client.create("/nodes/" + _node + "/spiceshell", null);
                 }
@@ -22176,6 +22974,7 @@ public class Client {
                 public Result spiceshell() throws JSONException {
                     return createRest();
                 }
+
             }
 
             public class PVEDns {
@@ -22218,6 +23017,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest(String search, String dns1, String dns2, String dns3) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("search", search);
@@ -22248,6 +23048,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest(String search) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("search", search);
@@ -22264,6 +23065,7 @@ public class Client {
                 public Result updateDns(String search) throws JSONException {
                     return setRest(search);
                 }
+
             }
 
             public class PVETime {
@@ -22305,6 +23107,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest(String timezone) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("timezone", timezone);
@@ -22323,6 +23126,7 @@ public class Client {
                 public Result setTimezone(String timezone) throws JSONException {
                     return setRest(timezone);
                 }
+
             }
 
             public class PVEAplinfo {
@@ -22359,10 +23163,11 @@ public class Client {
                  * Download appliance templates.
                  *
                  * @param storage The storage where the template will be stored
-                 * @param template The template wich will downloaded
+                 * @param template The template which will downloaded
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String storage, String template) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("storage", storage);
@@ -22374,13 +23179,14 @@ public class Client {
                  * Download appliance templates.
                  *
                  * @param storage The storage where the template will be stored
-                 * @param template The template wich will downloaded
+                 * @param template The template which will downloaded
                  * @return Result
                  * @throws JSONException
                  */
                 public Result aplDownload(String storage, String template) throws JSONException {
                     return createRest(storage, template);
                 }
+
             }
 
             public class PVEReport {
@@ -22412,6 +23218,7 @@ public class Client {
                 public Result report() throws JSONException {
                     return getRest();
                 }
+
             }
 
             public class PVEStartall {
@@ -22457,6 +23264,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest() throws JSONException {
                     return _client.create("/nodes/" + _node + "/startall", null);
                 }
@@ -22470,6 +23278,7 @@ public class Client {
                 public Result startall() throws JSONException {
                     return createRest();
                 }
+
             }
 
             public class PVEStopall {
@@ -22512,6 +23321,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest() throws JSONException {
                     return _client.create("/nodes/" + _node + "/stopall", null);
                 }
@@ -22525,6 +23335,7 @@ public class Client {
                 public Result stopall() throws JSONException {
                     return createRest();
                 }
+
             }
 
             public class PVEMigrateall {
@@ -22578,6 +23389,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String target) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("target", target);
@@ -22594,6 +23406,7 @@ public class Client {
                 public Result migrateall(String target) throws JSONException {
                     return createRest(target);
                 }
+
             }
 
             public class PVEHosts {
@@ -22636,6 +23449,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String data, String digest) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("data", data);
@@ -22664,6 +23478,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result createRest(String data) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("data", data);
@@ -22680,6 +23495,7 @@ public class Client {
                 public Result writeEtcHosts(String data) throws JSONException {
                     return createRest(data);
                 }
+
             }
 
             /**
@@ -22701,6 +23517,7 @@ public class Client {
             public Result index() throws JSONException {
                 return getRest();
             }
+
         }
 
         /**
@@ -22722,6 +23539,7 @@ public class Client {
         public Result index() throws JSONException {
             return getRest();
         }
+
     }
 
     public class PVEStorage {
@@ -22730,6 +23548,7 @@ public class Client {
 
         protected PVEStorage(Client client) {
             _client = client;
+
         }
 
         public PVEItemStorage get(Object storage) {
@@ -22772,6 +23591,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result getRest() throws JSONException {
                 return _client.get("/storage/" + _storage + "", null);
             }
@@ -22838,6 +23658,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result setRest(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String format, Boolean fuse, String is_mountpoint, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String password, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("blocksize", blocksize);
@@ -22939,6 +23760,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result setRest() throws JSONException {
                 return _client.set("/storage/" + _storage + "", null);
             }
@@ -22952,13 +23774,14 @@ public class Client {
             public Result update() throws JSONException {
                 return setRest();
             }
+
         }
 
         /**
          * Storage index.
          *
          * @param type Only list storage of specific type Enum:
-         * cephfs,cifs,dir,drbd,fake,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * cephfs,cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,zfs,zfspool
          * @return Result
          * @throws JSONException
          */
@@ -22972,7 +23795,7 @@ public class Client {
          * Storage index.
          *
          * @param type Only list storage of specific type Enum:
-         * cephfs,cifs,dir,drbd,fake,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * cephfs,cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,zfs,zfspool
          * @return Result
          * @throws JSONException
          */
@@ -22986,6 +23809,7 @@ public class Client {
          * @return Result
          * @throws JSONException
          */
+
         public Result getRest() throws JSONException {
             return _client.get("/storage", null);
         }
@@ -23005,7 +23829,7 @@ public class Client {
          *
          * @param storage The storage identifier.
          * @param type Storage type. Enum:
-         * cephfs,cifs,dir,drbd,fake,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * cephfs,cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,zfs,zfspool
          * @param authsupported Authsupported.
          * @param base_ Base volume. This volume is automatically activated.
          * @param blocksize block size
@@ -23060,6 +23884,7 @@ public class Client {
          * @return Result
          * @throws JSONException
          */
+
         public Result createRest(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, Boolean disable, String domain, String export, String format, Boolean fuse, String is_mountpoint, String iscsiprovider, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String password, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("storage", storage);
@@ -23115,7 +23940,7 @@ public class Client {
          *
          * @param storage The storage identifier.
          * @param type Storage type. Enum:
-         * cephfs,cifs,dir,drbd,fake,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * cephfs,cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,zfs,zfspool
          * @param authsupported Authsupported.
          * @param base_ Base volume. This volume is automatically activated.
          * @param blocksize block size
@@ -23179,10 +24004,11 @@ public class Client {
          *
          * @param storage The storage identifier.
          * @param type Storage type. Enum:
-         * cephfs,cifs,dir,drbd,fake,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * cephfs,cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,zfs,zfspool
          * @return Result
          * @throws JSONException
          */
+
         public Result createRest(String storage, String type) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("storage", storage);
@@ -23195,13 +24021,14 @@ public class Client {
          *
          * @param storage The storage identifier.
          * @param type Storage type. Enum:
-         * cephfs,cifs,dir,drbd,fake,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,sheepdog,zfs,zfspool
+         * cephfs,cifs,dir,drbd,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,rbd,zfs,zfspool
          * @return Result
          * @throws JSONException
          */
         public Result create(String storage, String type) throws JSONException {
             return createRest(storage, type);
         }
+
     }
 
     public class PVEAccess {
@@ -23210,13 +24037,16 @@ public class Client {
 
         protected PVEAccess(Client client) {
             _client = client;
+
         }
+
         private PVEUsers _users;
 
         public PVEUsers getUsers() {
             if (_users == null) {
                 _users = new PVEUsers(_client);
             }
+
             return _users;
         }
         private PVEGroups _groups;
@@ -23225,6 +24055,7 @@ public class Client {
             if (_groups == null) {
                 _groups = new PVEGroups(_client);
             }
+
             return _groups;
         }
         private PVERoles _roles;
@@ -23233,6 +24064,7 @@ public class Client {
             if (_roles == null) {
                 _roles = new PVERoles(_client);
             }
+
             return _roles;
         }
         private PVEAcl _acl;
@@ -23241,6 +24073,7 @@ public class Client {
             if (_acl == null) {
                 _acl = new PVEAcl(_client);
             }
+
             return _acl;
         }
         private PVEDomains _domains;
@@ -23249,6 +24082,7 @@ public class Client {
             if (_domains == null) {
                 _domains = new PVEDomains(_client);
             }
+
             return _domains;
         }
         private PVETicket _ticket;
@@ -23257,6 +24091,7 @@ public class Client {
             if (_ticket == null) {
                 _ticket = new PVETicket(_client);
             }
+
             return _ticket;
         }
         private PVEPassword _password;
@@ -23265,6 +24100,7 @@ public class Client {
             if (_password == null) {
                 _password = new PVEPassword(_client);
             }
+
             return _password;
         }
         private PVETfa _tfa;
@@ -23273,6 +24109,7 @@ public class Client {
             if (_tfa == null) {
                 _tfa = new PVETfa(_client);
             }
+
             return _tfa;
         }
 
@@ -23282,6 +24119,7 @@ public class Client {
 
             protected PVEUsers(Client client) {
                 _client = client;
+
             }
 
             public PVEItemUserid get(Object userid) {
@@ -23296,6 +24134,48 @@ public class Client {
                 protected PVEItemUserid(Client client, Object userid) {
                     _client = client;
                     _userid = userid;
+                }
+
+                private PVETfa _tfa;
+
+                public PVETfa getTfa() {
+                    if (_tfa == null) {
+                        _tfa = new PVETfa(_client, _userid);
+                    }
+
+                    return _tfa;
+                }
+
+                public class PVETfa {
+
+                    private final Client _client;
+                    private final Object _userid;
+
+                    protected PVETfa(Client client, Object userid) {
+                        _client = client;
+                        _userid = userid;
+                    }
+
+                    /**
+                     * Get user TFA types (Personal and Realm).
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/access/users/" + _userid + "/tfa", null);
+                    }
+
+                    /**
+                     * Get user TFA types (Personal and Realm).
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result readUserTfaType() throws JSONException {
+                        return getRest();
+                    }
+
                 }
 
                 /**
@@ -23324,6 +24204,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/access/users/" + _userid + "", null);
                 }
@@ -23355,6 +24236,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest(Boolean append, String comment, String email, Boolean enable, Integer expire, String firstname, String groups, String keys, String lastname) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("append", append);
@@ -23396,6 +24278,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest() throws JSONException {
                     return _client.set("/access/users/" + _userid + "", null);
                 }
@@ -23409,6 +24292,7 @@ public class Client {
                 public Result updateUser() throws JSONException {
                     return setRest();
                 }
+
             }
 
             /**
@@ -23441,6 +24325,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result getRest() throws JSONException {
                 return _client.get("/access/users", null);
             }
@@ -23473,6 +24358,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result createRest(String userid, String comment, String email, Boolean enable, Integer expire, String firstname, String groups, String keys, String lastname, String password) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("userid", userid);
@@ -23517,6 +24403,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result createRest(String userid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("userid", userid);
@@ -23533,6 +24420,7 @@ public class Client {
             public Result createUser(String userid) throws JSONException {
                 return createRest(userid);
             }
+
         }
 
         public class PVEGroups {
@@ -23541,6 +24429,7 @@ public class Client {
 
             protected PVEGroups(Client client) {
                 _client = client;
+
             }
 
             public PVEItemGroupid get(Object groupid) {
@@ -23583,6 +24472,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/access/groups/" + _groupid + "", null);
                 }
@@ -23604,6 +24494,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest(String comment) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("comment", comment);
@@ -23627,6 +24518,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest() throws JSONException {
                     return _client.set("/access/groups/" + _groupid + "", null);
                 }
@@ -23640,6 +24532,7 @@ public class Client {
                 public Result updateGroup() throws JSONException {
                     return setRest();
                 }
+
             }
 
             /**
@@ -23670,6 +24563,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result createRest(String groupid, String comment) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("groupid", groupid);
@@ -23696,6 +24590,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result createRest(String groupid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("groupid", groupid);
@@ -23712,6 +24607,7 @@ public class Client {
             public Result createGroup(String groupid) throws JSONException {
                 return createRest(groupid);
             }
+
         }
 
         public class PVERoles {
@@ -23720,6 +24616,7 @@ public class Client {
 
             protected PVERoles(Client client) {
                 _client = client;
+
             }
 
             public PVEItemRoleid get(Object roleid) {
@@ -23762,6 +24659,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/access/roles/" + _roleid + "", null);
                 }
@@ -23784,6 +24682,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest(Boolean append, String privs) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("append", append);
@@ -23809,6 +24708,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest() throws JSONException {
                     return _client.set("/access/roles/" + _roleid + "", null);
                 }
@@ -23822,6 +24722,7 @@ public class Client {
                 public Result updateRole() throws JSONException {
                     return setRest();
                 }
+
             }
 
             /**
@@ -23852,6 +24753,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result createRest(String roleid, String privs) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("roleid", roleid);
@@ -23878,6 +24780,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result createRest(String roleid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("roleid", roleid);
@@ -23894,6 +24797,7 @@ public class Client {
             public Result createRole(String roleid) throws JSONException {
                 return createRest(roleid);
             }
+
         }
 
         public class PVEAcl {
@@ -23902,6 +24806,7 @@ public class Client {
 
             protected PVEAcl(Client client) {
                 _client = client;
+
             }
 
             /**
@@ -23936,6 +24841,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result setRest(String path, String roles, Boolean delete, String groups, Boolean propagate, String users) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("path", path);
@@ -23971,6 +24877,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result setRest(String path, String roles) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("path", path);
@@ -23989,6 +24896,7 @@ public class Client {
             public Result updateAcl(String path, String roles) throws JSONException {
                 return setRest(path, roles);
             }
+
         }
 
         public class PVEDomains {
@@ -23997,6 +24905,7 @@ public class Client {
 
             protected PVEDomains(Client client) {
                 _client = client;
+
             }
 
             public PVEItemRealm get(Object realm) {
@@ -24039,6 +24948,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/access/domains/" + _realm + "", null);
                 }
@@ -24078,6 +24988,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest(String base_dn, String bind_dn, String capath, String cert, String certkey, String comment, Boolean default_, String delete, String digest, String domain, Integer port, Boolean secure, String server1, String server2, String tfa, String user_attr, Boolean verify) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("base_dn", base_dn);
@@ -24135,6 +25046,7 @@ public class Client {
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result setRest() throws JSONException {
                     return _client.set("/access/domains/" + _realm + "", null);
                 }
@@ -24148,6 +25060,7 @@ public class Client {
                 public Result update() throws JSONException {
                     return setRest();
                 }
+
             }
 
             /**
@@ -24193,6 +25106,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result createRest(String realm, String type, String base_dn, String bind_dn, String capath, String cert, String certkey, String comment, Boolean default_, String domain, Integer port, Boolean secure, String server1, String server2, String tfa, String user_attr, Boolean verify) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("realm", realm);
@@ -24250,6 +25164,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result createRest(String realm, String type) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("realm", realm);
@@ -24268,6 +25183,7 @@ public class Client {
             public Result create(String realm, String type) throws JSONException {
                 return createRest(realm, type);
             }
+
         }
 
         public class PVETicket {
@@ -24276,6 +25192,7 @@ public class Client {
 
             protected PVETicket(Client client) {
                 _client = client;
+
             }
 
             /**
@@ -24315,6 +25232,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result createRest(String password, String username, String otp, String path, String privs, String realm) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("password", password);
@@ -24356,6 +25274,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result createRest(String password, String username) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("password", password);
@@ -24375,6 +25294,7 @@ public class Client {
             public Result createTicket(String password, String username) throws JSONException {
                 return createRest(password, username);
             }
+
         }
 
         public class PVEPassword {
@@ -24383,6 +25303,7 @@ public class Client {
 
             protected PVEPassword(Client client) {
                 _client = client;
+
             }
 
             /**
@@ -24411,6 +25332,7 @@ public class Client {
             public Result changePassword(String password, String userid) throws JSONException {
                 return setRest(password, userid);
             }
+
         }
 
         public class PVETfa {
@@ -24419,6 +25341,7 @@ public class Client {
 
             protected PVETfa(Client client) {
                 _client = client;
+
             }
 
             /**
@@ -24462,6 +25385,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result setRest(String action, String userid, String config, String key, String password, String response) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("action", action);
@@ -24500,6 +25424,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result setRest(String action, String userid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("action", action);
@@ -24518,6 +25443,7 @@ public class Client {
             public Result changeTfa(String action, String userid) throws JSONException {
                 return setRest(action, userid);
             }
+
         }
 
         /**
@@ -24539,6 +25465,7 @@ public class Client {
         public Result index() throws JSONException {
             return getRest();
         }
+
     }
 
     public class PVEPools {
@@ -24547,6 +25474,7 @@ public class Client {
 
         protected PVEPools(Client client) {
             _client = client;
+
         }
 
         public PVEItemPoolid get(Object poolid) {
@@ -24589,6 +25517,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result getRest() throws JSONException {
                 return _client.get("/pools/" + _poolid + "", null);
             }
@@ -24613,6 +25542,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result setRest(String comment, Boolean delete, String storage, String vms) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("comment", comment);
@@ -24642,6 +25572,7 @@ public class Client {
              * @return Result
              * @throws JSONException
              */
+
             public Result setRest() throws JSONException {
                 return _client.set("/pools/" + _poolid + "", null);
             }
@@ -24655,6 +25586,7 @@ public class Client {
             public Result updatePool() throws JSONException {
                 return setRest();
             }
+
         }
 
         /**
@@ -24685,6 +25617,7 @@ public class Client {
          * @return Result
          * @throws JSONException
          */
+
         public Result createRest(String poolid, String comment) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("poolid", poolid);
@@ -24711,6 +25644,7 @@ public class Client {
          * @return Result
          * @throws JSONException
          */
+
         public Result createRest(String poolid) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("poolid", poolid);
@@ -24727,6 +25661,7 @@ public class Client {
         public Result createPool(String poolid) throws JSONException {
             return createRest(poolid);
         }
+
     }
 
     public class PVEVersion {
@@ -24735,6 +25670,7 @@ public class Client {
 
         protected PVEVersion(Client client) {
             _client = client;
+
         }
 
         /**
@@ -24758,5 +25694,7 @@ public class Client {
         public Result version() throws JSONException {
             return getRest();
         }
+
     }
+
 }
