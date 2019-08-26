@@ -112,6 +112,15 @@ public class ClientBase {
         }
     }
 
+    /**
+     * Returns the base URL used to interact with the Proxmox VE API.
+     *
+     * @return The proxmox API URL.
+     */
+    public String getApiUrl() {
+        return "https://" + getHostname() + ":" + getPort() + "/api2/json";
+    }
+
     private enum HttpMethod {
         GET, POST, PUT, DELETE
     }
@@ -182,8 +191,15 @@ public class ClientBase {
         return _debugLevel;
     }
 
+    private void setToken(HttpURLConnection httpCon) {
+        if (_ticketCSRFPreventionToken != null) {
+            httpCon.setRequestProperty("CSRFPreventionToken", _ticketCSRFPreventionToken);
+            httpCon.setRequestProperty("Cookie", "PVEAuthCookie=" + _ticketPVEAuthCookie);
+        }
+    }
+
     private Result executeAction(String resource, HttpMethod method, Map<String, Object> parameters) throws JSONException {
-        String url = "https://" + getHostname() + ":" + getPort() + "/api2/json" + resource;
+        String url = getApiUrl() + resource;
 
         Map params = new LinkedHashMap<>();
         if (parameters != null) {
@@ -192,11 +208,7 @@ public class ClientBase {
                 if (entry.getValue() instanceof Boolean) {
                     value = ((Boolean) entry.getValue()) ? "1" : "0";
                 }
-                try {
-                    params.put(entry.getKey(), URLEncoder.encode(value, "UTF-8"));
-                } catch (UnsupportedEncodingException ex) {
-                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                params.put(entry.getKey(), value);
             });
         }
 
@@ -227,7 +239,6 @@ public class ClientBase {
         }
 
         // Create all-trusting host name verifier
-        // Create all-trusting host name verifier
         HostnameVerifier allHostsValid = (String hostname, SSLSession session) -> true;
 
         // Install the all-trusting host verifier
@@ -241,20 +252,24 @@ public class ClientBase {
         try {
             switch (method) {
                 case GET: {
-                    if (params.isEmpty()) {
-                    } else {
+                    if (!params.isEmpty()) {
                         StringBuilder urlParams = new StringBuilder();
                         params.forEach((key, value) -> {
-                            urlParams.append(urlParams.length() > 0 ? "&" : "")
-                                    .append(key)
-                                    .append("=")
-                                    .append(value);
+                            try {
+                                urlParams.append(urlParams.length() > 0 ? "&" : "")
+                                        .append(key)
+                                        .append("=")
+                                        .append(URLEncoder.encode((String) value, "UTF-8"));
+                            } catch (UnsupportedEncodingException ex) {
+                                Logger.getLogger(ClientBase.class.getName()).log(Level.SEVERE, null, ex);
+                            }
                         });
                         url += "?" + urlParams.toString();
                     }
 
                     httpCon = (HttpURLConnection) new URL(url).openConnection();
                     httpCon.setRequestMethod("GET");
+                    setToken(httpCon);
                     break;
                 }
 
@@ -273,6 +288,8 @@ public class ClientBase {
                     httpCon.setRequestMethod(method + "");
                     httpCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
                     httpCon.setRequestProperty("Content-Length", String.valueOf(postDataBytes.length));
+                    setToken(httpCon);
+
                     httpCon.setDoOutput(true);
                     httpCon.getOutputStream().write(postDataBytes);
 
@@ -282,6 +299,7 @@ public class ClientBase {
                 case DELETE: {
                     httpCon = (HttpURLConnection) new URL(url).openConnection();
                     httpCon.setRequestMethod("DELETE");
+                    setToken(httpCon);
                     break;
                 }
             }
@@ -295,11 +313,6 @@ public class ClientBase {
                         System.out.println(key + " : " + value);
                     });
                 }
-            }
-
-            if (_ticketCSRFPreventionToken != null) {
-                httpCon.setRequestProperty("CSRFPreventionToken", _ticketCSRFPreventionToken);
-                httpCon.setRequestProperty("Cookie", "PVEAuthCookie=" + _ticketPVEAuthCookie);
             }
 
             statusCode = httpCon.getResponseCode();
@@ -341,6 +354,7 @@ public class ClientBase {
 
     /**
      * Add indexed parameter
+     *
      * @param parameters Parameters
      * @param name Name parameter
      * @param value Calues
