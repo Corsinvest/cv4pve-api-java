@@ -1,3 +1,20 @@
+/*
+ * This file is part of the cv4pve-api-java https://github.com/Corsinvest/cv4pve-api-java,
+ * Copyright (C) 2016 Corsinvest Srl
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package it.corsinvest.proxmoxve.api;
 
 import java.util.HashMap;
@@ -7,11 +24,11 @@ import org.json.JSONException;
 /**
  * Proxmox VE Client
  */
-public class Client extends ClientBase {
+public class PveClient extends PveClientBase {
 
-    private final Client _client;
+    private final PveClient _client;
 
-    public Client(String hostname, int port) {
+    public PveClient(String hostname, int port) {
         super(hostname, port);
         _client = this;
     }
@@ -73,9 +90,9 @@ public class Client extends ClientBase {
 
     public class PVECluster {
 
-        private final Client _client;
+        private final PveClient _client;
 
-        protected PVECluster(Client client) {
+        protected PVECluster(PveClient client) {
             _client = client;
 
         }
@@ -200,9 +217,9 @@ public class Client extends ClientBase {
 
         public class PVEReplication {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVEReplication(Client client) {
+            protected PVEReplication(PveClient client) {
                 _client = client;
 
             }
@@ -213,10 +230,10 @@ public class Client extends ClientBase {
 
             public class PVEItemId {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _id;
 
-                protected PVEItemId(Client client, Object id) {
+                protected PVEItemId(PveClient client, Object id) {
                     _client = client;
                     _id = id;
                 }
@@ -256,7 +273,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result deleteRest() throws JSONException {
                     return _client.delete("/cluster/replication/" + _id + "", null);
                 }
@@ -277,7 +293,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/cluster/replication/" + _id + "", null);
                 }
@@ -314,7 +329,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest(String comment, String delete, String digest, Boolean disable, Integer rate, String remove_job, String schedule, String source) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("comment", comment);
@@ -360,7 +374,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest() throws JSONException {
                     return _client.set("/cluster/replication/" + _id + "", null);
                 }
@@ -419,7 +432,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String id, String target, String type, String comment, Boolean disable, Integer rate, String remove_job, String schedule, String source) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("id", id);
@@ -471,7 +483,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String id, String target, String type) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("id", id);
@@ -499,9 +510,9 @@ public class Client extends ClientBase {
 
         public class PVEConfig {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVEConfig(Client client) {
+            protected PVEConfig(PveClient client) {
                 _client = client;
 
             }
@@ -545,9 +556,9 @@ public class Client extends ClientBase {
 
             public class PVENodes {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVENodes(Client client) {
+                protected PVENodes(PveClient client) {
                     _client = client;
 
                 }
@@ -558,10 +569,10 @@ public class Client extends ClientBase {
 
                 public class PVEItemNode {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEItemNode(Client client, Object node) {
+                    protected PVEItemNode(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -598,7 +609,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(Boolean force, Map<Integer, String> linkN, Integer nodeid, Integer votes) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("force", force);
@@ -631,7 +641,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest() throws JSONException {
                         return _client.create("/cluster/config/nodes/" + _node + "", null);
                     }
@@ -673,9 +682,9 @@ public class Client extends ClientBase {
 
             public class PVEJoin {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVEJoin(Client client) {
+                protected PVEJoin(PveClient client) {
                     _client = client;
 
                 }
@@ -713,7 +722,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/cluster/config/join", null);
                 }
@@ -744,7 +752,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String fingerprint, String hostname, String password, Boolean force, Map<Integer, String> linkN, Integer nodeid, Integer votes) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("fingerprint", fingerprint);
@@ -786,7 +793,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String fingerprint, String hostname, String password) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("fingerprint", fingerprint);
@@ -813,9 +819,9 @@ public class Client extends ClientBase {
 
             public class PVETotem {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVETotem(Client client) {
+                protected PVETotem(PveClient client) {
                     _client = client;
 
                 }
@@ -844,9 +850,9 @@ public class Client extends ClientBase {
 
             public class PVEQdevice {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVEQdevice(Client client) {
+                protected PVEQdevice(PveClient client) {
                     _client = client;
 
                 }
@@ -904,7 +910,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String clustername, Map<Integer, String> linkN, Integer nodeid, Integer votes) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("clustername", clustername);
@@ -936,7 +941,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String clustername) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("clustername", clustername);
@@ -958,9 +962,9 @@ public class Client extends ClientBase {
 
         public class PVEFirewall {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVEFirewall(Client client) {
+            protected PVEFirewall(PveClient client) {
                 _client = client;
 
             }
@@ -1031,9 +1035,9 @@ public class Client extends ClientBase {
 
             public class PVEGroups {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVEGroups(Client client) {
+                protected PVEGroups(PveClient client) {
                     _client = client;
 
                 }
@@ -1044,10 +1048,10 @@ public class Client extends ClientBase {
 
                 public class PVEItemGroup {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _group;
 
-                    protected PVEItemGroup(Client client, Object group) {
+                    protected PVEItemGroup(PveClient client, Object group) {
                         _client = client;
                         _group = group;
                     }
@@ -1058,11 +1062,11 @@ public class Client extends ClientBase {
 
                     public class PVEItemPos {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _group;
                         private final Object _pos;
 
-                        protected PVEItemPos(Client client, Object group, Object pos) {
+                        protected PVEItemPos(PveClient client, Object group, Object pos) {
                             _client = client;
                             _group = group;
                             _pos = pos;
@@ -1102,7 +1106,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result deleteRest() throws JSONException {
                             return _client.delete("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
                         }
@@ -1123,7 +1126,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest() throws JSONException {
                             return _client.get("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
                         }
@@ -1191,7 +1193,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("action", action);
@@ -1275,7 +1276,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest() throws JSONException {
                             return _client.set("/cluster/firewall/groups/" + _group + "/" + _pos + "", null);
                         }
@@ -1318,7 +1318,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/cluster/firewall/groups/" + _group + "", null);
                     }
@@ -1381,7 +1380,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
@@ -1462,7 +1460,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String action, String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
@@ -1519,7 +1516,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String group, String comment, String digest, String rename) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
@@ -1554,7 +1550,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String group) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
@@ -1576,9 +1571,9 @@ public class Client extends ClientBase {
 
             public class PVERules {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVERules(Client client) {
+                protected PVERules(PveClient client) {
                     _client = client;
 
                 }
@@ -1589,10 +1584,10 @@ public class Client extends ClientBase {
 
                 public class PVEItemPos {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _pos;
 
-                    protected PVEItemPos(Client client, Object pos) {
+                    protected PVEItemPos(PveClient client, Object pos) {
                         _client = client;
                         _pos = pos;
                     }
@@ -1631,7 +1626,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result deleteRest() throws JSONException {
                         return _client.delete("/cluster/firewall/rules/" + _pos + "", null);
                     }
@@ -1652,7 +1646,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/cluster/firewall/rules/" + _pos + "", null);
                     }
@@ -1717,7 +1710,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
@@ -1798,7 +1790,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result setRest() throws JSONException {
                         return _client.set("/cluster/firewall/rules/" + _pos + "", null);
                     }
@@ -1881,7 +1872,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("action", action);
@@ -1960,7 +1950,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String action, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("action", action);
@@ -1985,9 +1974,9 @@ public class Client extends ClientBase {
 
             public class PVEIpset {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVEIpset(Client client) {
+                protected PVEIpset(PveClient client) {
                     _client = client;
 
                 }
@@ -1998,10 +1987,10 @@ public class Client extends ClientBase {
 
                 public class PVEItemName {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _name;
 
-                    protected PVEItemName(Client client, Object name) {
+                    protected PVEItemName(PveClient client, Object name) {
                         _client = client;
                         _name = name;
                     }
@@ -2012,11 +2001,11 @@ public class Client extends ClientBase {
 
                     public class PVEItemCidr {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _name;
                         private final Object _cidr;
 
-                        protected PVEItemCidr(Client client, Object name, Object cidr) {
+                        protected PVEItemCidr(PveClient client, Object name, Object cidr) {
                             _client = client;
                             _name = name;
                             _cidr = cidr;
@@ -2056,7 +2045,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result deleteRest() throws JSONException {
                             return _client.delete("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
                         }
@@ -2077,7 +2065,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest() throws JSONException {
                             return _client.get("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
                         }
@@ -2103,7 +2090,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest(String comment, String digest, Boolean nomatch) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("comment", comment);
@@ -2133,7 +2119,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest() throws JSONException {
                             return _client.set("/cluster/firewall/ipset/" + _name + "/" + _cidr + "", null);
                         }
@@ -2176,7 +2161,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/cluster/firewall/ipset/" + _name + "", null);
                     }
@@ -2200,7 +2184,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String cidr, String comment, Boolean nomatch) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
@@ -2229,7 +2212,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String cidr) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
@@ -2283,7 +2265,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String name, String comment, String digest, String rename) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("name", name);
@@ -2318,7 +2299,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String name) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("name", name);
@@ -2340,9 +2320,9 @@ public class Client extends ClientBase {
 
             public class PVEAliases {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVEAliases(Client client) {
+                protected PVEAliases(PveClient client) {
                     _client = client;
 
                 }
@@ -2353,10 +2333,10 @@ public class Client extends ClientBase {
 
                 public class PVEItemName {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _name;
 
-                    protected PVEItemName(Client client, Object name) {
+                    protected PVEItemName(PveClient client, Object name) {
                         _client = client;
                         _name = name;
                     }
@@ -2395,7 +2375,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result deleteRest() throws JSONException {
                         return _client.delete("/cluster/firewall/aliases/" + _name + "", null);
                     }
@@ -2416,7 +2395,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/cluster/firewall/aliases/" + _name + "", null);
                     }
@@ -2443,7 +2421,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result setRest(String cidr, String comment, String digest, String rename) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
@@ -2476,7 +2453,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result setRest(String cidr) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
@@ -2525,7 +2501,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String cidr, String name, String comment) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("cidr", cidr);
@@ -2555,7 +2530,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String cidr, String name) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("cidr", cidr);
@@ -2579,9 +2553,9 @@ public class Client extends ClientBase {
 
             public class PVEOptions {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVEOptions(Client client) {
+                protected PVEOptions(PveClient client) {
                     _client = client;
 
                 }
@@ -2621,7 +2595,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest(String delete, String digest, Boolean ebtables, Integer enable, String log_ratelimit, String policy_in, String policy_out) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("delete", delete);
@@ -2659,7 +2632,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest() throws JSONException {
                     return _client.set("/cluster/firewall/options", null);
                 }
@@ -2678,9 +2650,9 @@ public class Client extends ClientBase {
 
             public class PVEMacros {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVEMacros(Client client) {
+                protected PVEMacros(PveClient client) {
                     _client = client;
 
                 }
@@ -2709,9 +2681,9 @@ public class Client extends ClientBase {
 
             public class PVERefs {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVERefs(Client client) {
+                protected PVERefs(PveClient client) {
                     _client = client;
 
                 }
@@ -2751,7 +2723,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/cluster/firewall/refs", null);
                 }
@@ -2793,9 +2764,9 @@ public class Client extends ClientBase {
 
         public class PVEBackup {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVEBackup(Client client) {
+            protected PVEBackup(PveClient client) {
                 _client = client;
 
             }
@@ -2806,10 +2777,10 @@ public class Client extends ClientBase {
 
             public class PVEItemId {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _id;
 
-                protected PVEItemId(Client client, Object id) {
+                protected PVEItemId(PveClient client, Object id) {
                     _client = client;
                     _id = id;
                 }
@@ -2840,7 +2811,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/cluster/backup/" + _id + "", null);
                 }
@@ -2900,7 +2870,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("starttime", starttime);
@@ -2991,7 +2960,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest(String starttime) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("starttime", starttime);
@@ -3073,7 +3041,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("starttime", starttime);
@@ -3160,7 +3127,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String starttime) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("starttime", starttime);
@@ -3182,9 +3148,9 @@ public class Client extends ClientBase {
 
         public class PVEHa {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVEHa(Client client) {
+            protected PVEHa(PveClient client) {
                 _client = client;
 
             }
@@ -3219,9 +3185,9 @@ public class Client extends ClientBase {
 
             public class PVEResources {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVEResources(Client client) {
+                protected PVEResources(PveClient client) {
                     _client = client;
 
                 }
@@ -3232,10 +3198,10 @@ public class Client extends ClientBase {
 
                 public class PVEItemSid {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _sid;
 
-                    protected PVEItemSid(Client client, Object sid) {
+                    protected PVEItemSid(PveClient client, Object sid) {
                         _client = client;
                         _sid = sid;
                     }
@@ -3261,10 +3227,10 @@ public class Client extends ClientBase {
 
                     public class PVEMigrate {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _sid;
 
-                        protected PVEMigrate(Client client, Object sid) {
+                        protected PVEMigrate(PveClient client, Object sid) {
                             _client = client;
                             _sid = sid;
                         }
@@ -3297,10 +3263,10 @@ public class Client extends ClientBase {
 
                     public class PVERelocate {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _sid;
 
-                        protected PVERelocate(Client client, Object sid) {
+                        protected PVERelocate(PveClient client, Object sid) {
                             _client = client;
                             _sid = sid;
                         }
@@ -3361,7 +3327,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/cluster/ha/resources/" + _sid + "", null);
                     }
@@ -3394,7 +3359,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result setRest(String comment, String delete, String digest, String group, Integer max_relocate, Integer max_restart, String state) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("comment", comment);
@@ -3435,7 +3399,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result setRest() throws JSONException {
                         return _client.set("/cluster/ha/resources/" + _sid + "", null);
                     }
@@ -3482,7 +3445,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/cluster/ha/resources", null);
                 }
@@ -3517,7 +3479,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String sid, String comment, String group, Integer max_relocate, Integer max_restart, String state, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("sid", sid);
@@ -3565,7 +3526,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String sid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("sid", sid);
@@ -3591,9 +3551,9 @@ public class Client extends ClientBase {
 
             public class PVEGroups {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVEGroups(Client client) {
+                protected PVEGroups(PveClient client) {
                     _client = client;
 
                 }
@@ -3604,10 +3564,10 @@ public class Client extends ClientBase {
 
                 public class PVEItemGroup {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _group;
 
-                    protected PVEItemGroup(Client client, Object group) {
+                    protected PVEItemGroup(PveClient client, Object group) {
                         _client = client;
                         _group = group;
                     }
@@ -3638,7 +3598,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/cluster/ha/groups/" + _group + "", null);
                     }
@@ -3672,7 +3631,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result setRest(String comment, String delete, String digest, String nodes, Boolean nofailback, Boolean restricted) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("comment", comment);
@@ -3713,7 +3671,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result setRest() throws JSONException {
                         return _client.set("/cluster/ha/groups/" + _group + "", null);
                     }
@@ -3767,7 +3724,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String group, String nodes, String comment, Boolean nofailback, Boolean restricted, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
@@ -3809,7 +3765,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String group, String nodes) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
@@ -3834,9 +3789,9 @@ public class Client extends ClientBase {
 
             public class PVEStatus {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVEStatus(Client client) {
+                protected PVEStatus(PveClient client) {
                     _client = client;
 
                 }
@@ -3862,9 +3817,9 @@ public class Client extends ClientBase {
 
                 public class PVECurrent {
 
-                    private final Client _client;
+                    private final PveClient _client;
 
-                    protected PVECurrent(Client client) {
+                    protected PVECurrent(PveClient client) {
                         _client = client;
 
                     }
@@ -3893,9 +3848,9 @@ public class Client extends ClientBase {
 
                 public class PVEManagerStatus {
 
-                    private final Client _client;
+                    private final PveClient _client;
 
-                    protected PVEManagerStatus(Client client) {
+                    protected PVEManagerStatus(PveClient client) {
                         _client = client;
 
                     }
@@ -3968,9 +3923,9 @@ public class Client extends ClientBase {
 
         public class PVEAcme {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVEAcme(Client client) {
+            protected PVEAcme(PveClient client) {
                 _client = client;
 
             }
@@ -4005,9 +3960,9 @@ public class Client extends ClientBase {
 
             public class PVEAccount {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVEAccount(Client client) {
+                protected PVEAccount(PveClient client) {
                     _client = client;
 
                 }
@@ -4018,10 +3973,10 @@ public class Client extends ClientBase {
 
                 public class PVEItemName {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _name;
 
-                    protected PVEItemName(Client client, Object name) {
+                    protected PVEItemName(PveClient client, Object name) {
                         _client = client;
                         _name = name;
                     }
@@ -4052,7 +4007,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/cluster/acme/account/" + _name + "", null);
                     }
@@ -4076,7 +4030,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result setRest(String contact) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("contact", contact);
@@ -4104,7 +4057,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result setRest() throws JSONException {
                         return _client.set("/cluster/acme/account/" + _name + "", null);
                     }
@@ -4154,7 +4106,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String contact, String directory, String name, String tos_url) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("contact", contact);
@@ -4186,7 +4137,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String contact) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("contact", contact);
@@ -4208,9 +4158,9 @@ public class Client extends ClientBase {
 
             public class PVETos {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVETos(Client client) {
+                protected PVETos(PveClient client) {
                     _client = client;
 
                 }
@@ -4245,7 +4195,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/cluster/acme/tos", null);
                 }
@@ -4264,9 +4213,9 @@ public class Client extends ClientBase {
 
             public class PVEDirectories {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVEDirectories(Client client) {
+                protected PVEDirectories(PveClient client) {
                     _client = client;
 
                 }
@@ -4317,9 +4266,9 @@ public class Client extends ClientBase {
 
         public class PVELog {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVELog(Client client) {
+            protected PVELog(PveClient client) {
                 _client = client;
 
             }
@@ -4354,7 +4303,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result getRest() throws JSONException {
                 return _client.get("/cluster/log", null);
             }
@@ -4373,9 +4321,9 @@ public class Client extends ClientBase {
 
         public class PVEResources {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVEResources(Client client) {
+            protected PVEResources(PveClient client) {
                 _client = client;
 
             }
@@ -4410,7 +4358,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result getRest() throws JSONException {
                 return _client.get("/cluster/resources", null);
             }
@@ -4429,9 +4376,9 @@ public class Client extends ClientBase {
 
         public class PVETasks {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVETasks(Client client) {
+            protected PVETasks(PveClient client) {
                 _client = client;
 
             }
@@ -4460,9 +4407,9 @@ public class Client extends ClientBase {
 
         public class PVEOptions {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVEOptions(Client client) {
+            protected PVEOptions(PveClient client) {
                 _client = client;
 
             }
@@ -4525,7 +4472,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result setRest(String bwlimit, String console, String delete, String email_from, String fencing, String ha, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure, String u2f) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("bwlimit", bwlimit);
@@ -4593,7 +4539,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result setRest() throws JSONException {
                 return _client.set("/cluster/options", null);
             }
@@ -4612,9 +4557,9 @@ public class Client extends ClientBase {
 
         public class PVEStatus {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVEStatus(Client client) {
+            protected PVEStatus(PveClient client) {
                 _client = client;
 
             }
@@ -4643,9 +4588,9 @@ public class Client extends ClientBase {
 
         public class PVENextid {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVENextid(Client client) {
+            protected PVENextid(PveClient client) {
                 _client = client;
 
             }
@@ -4683,7 +4628,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result getRest() throws JSONException {
                 return _client.get("/cluster/nextid", null);
             }
@@ -4703,9 +4647,9 @@ public class Client extends ClientBase {
 
         public class PVECeph {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVECeph(Client client) {
+            protected PVECeph(PveClient client) {
                 _client = client;
 
             }
@@ -4731,9 +4675,9 @@ public class Client extends ClientBase {
 
             public class PVEMetadata {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVEMetadata(Client client) {
+                protected PVEMetadata(PveClient client) {
                     _client = client;
 
                 }
@@ -4762,9 +4706,9 @@ public class Client extends ClientBase {
 
             public class PVEStatus {
 
-                private final Client _client;
+                private final PveClient _client;
 
-                protected PVEStatus(Client client) {
+                protected PVEStatus(PveClient client) {
                     _client = client;
 
                 }
@@ -4837,9 +4781,9 @@ public class Client extends ClientBase {
 
     public class PVENodes {
 
-        private final Client _client;
+        private final PveClient _client;
 
-        protected PVENodes(Client client) {
+        protected PVENodes(PveClient client) {
             _client = client;
 
         }
@@ -4850,10 +4794,10 @@ public class Client extends ClientBase {
 
         public class PVEItemNode {
 
-            private final Client _client;
+            private final PveClient _client;
             private final Object _node;
 
-            protected PVEItemNode(Client client, Object node) {
+            protected PVEItemNode(PveClient client, Object node) {
                 _client = client;
                 _node = node;
             }
@@ -5203,10 +5147,10 @@ public class Client extends ClientBase {
 
             public class PVEQemu {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEQemu(Client client, Object node) {
+                protected PVEQemu(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -5217,11 +5161,11 @@ public class Client extends ClientBase {
 
                 public class PVEItemVmid {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
                     private final Object _vmid;
 
-                    protected PVEItemVmid(Client client, Object node, Object vmid) {
+                    protected PVEItemVmid(PveClient client, Object node, Object vmid) {
                         _client = client;
                         _node = node;
                         _vmid = vmid;
@@ -5428,11 +5372,11 @@ public class Client extends ClientBase {
 
                     public class PVEFirewall {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEFirewall(Client client, Object node, Object vmid) {
+                        protected PVEFirewall(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -5495,11 +5439,11 @@ public class Client extends ClientBase {
 
                         public class PVERules {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVERules(Client client, Object node, Object vmid) {
+                            protected PVERules(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -5511,12 +5455,12 @@ public class Client extends ClientBase {
 
                             public class PVEItemPos {
 
-                                private final Client _client;
+                                private final PveClient _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _pos;
 
-                                protected PVEItemPos(Client client, Object node, Object vmid, Object pos) {
+                                protected PVEItemPos(PveClient client, Object node, Object vmid, Object pos) {
                                     _client = client;
                                     _node = node;
                                     _vmid = vmid;
@@ -5559,7 +5503,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result deleteRest() throws JSONException {
                                     return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
@@ -5580,7 +5523,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result getRest() throws JSONException {
                                     return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
@@ -5656,7 +5598,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("action", action);
@@ -5748,7 +5689,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result setRest() throws JSONException {
                                     return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
@@ -5840,7 +5780,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
@@ -5928,7 +5867,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String action, String type) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
@@ -5953,11 +5891,11 @@ public class Client extends ClientBase {
 
                         public class PVEAliases {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEAliases(Client client, Object node, Object vmid) {
+                            protected PVEAliases(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -5969,12 +5907,12 @@ public class Client extends ClientBase {
 
                             public class PVEItemName {
 
-                                private final Client _client;
+                                private final PveClient _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _name;
 
-                                protected PVEItemName(Client client, Object node, Object vmid, Object name) {
+                                protected PVEItemName(PveClient client, Object node, Object vmid, Object name) {
                                     _client = client;
                                     _node = node;
                                     _vmid = vmid;
@@ -6017,7 +5955,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result deleteRest() throws JSONException {
                                     return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", null);
                                 }
@@ -6038,7 +5975,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result getRest() throws JSONException {
                                     return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/aliases/" + _name + "", null);
                                 }
@@ -6067,7 +6003,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result setRest(String cidr, String comment, String digest, String rename) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -6103,7 +6038,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result setRest(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -6154,7 +6088,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String cidr, String name, String comment) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
@@ -6186,7 +6119,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String cidr, String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
@@ -6211,11 +6143,11 @@ public class Client extends ClientBase {
 
                         public class PVEIpset {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEIpset(Client client, Object node, Object vmid) {
+                            protected PVEIpset(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -6227,12 +6159,12 @@ public class Client extends ClientBase {
 
                             public class PVEItemName {
 
-                                private final Client _client;
+                                private final PveClient _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _name;
 
-                                protected PVEItemName(Client client, Object node, Object vmid, Object name) {
+                                protected PVEItemName(PveClient client, Object node, Object vmid, Object name) {
                                     _client = client;
                                     _node = node;
                                     _vmid = vmid;
@@ -6245,13 +6177,13 @@ public class Client extends ClientBase {
 
                                 public class PVEItemCidr {
 
-                                    private final Client _client;
+                                    private final PveClient _client;
                                     private final Object _node;
                                     private final Object _vmid;
                                     private final Object _name;
                                     private final Object _cidr;
 
-                                    protected PVEItemCidr(Client client, Object node, Object vmid, Object name, Object cidr) {
+                                    protected PVEItemCidr(PveClient client, Object node, Object vmid, Object name, Object cidr) {
                                         _client = client;
                                         _node = node;
                                         _vmid = vmid;
@@ -6295,7 +6227,6 @@ public class Client extends ClientBase {
                                      * @return Result
                                      * @throws JSONException
                                      */
-
                                     public Result deleteRest() throws JSONException {
                                         return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
@@ -6316,7 +6247,6 @@ public class Client extends ClientBase {
                                      * @return Result
                                      * @throws JSONException
                                      */
-
                                     public Result getRest() throws JSONException {
                                         return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
@@ -6343,7 +6273,6 @@ public class Client extends ClientBase {
                                      * @return Result
                                      * @throws JSONException
                                      */
-
                                     public Result setRest(String comment, String digest, Boolean nomatch) throws JSONException {
                                         Map<String, Object> parameters = new HashMap<>();
                                         parameters.put("comment", comment);
@@ -6374,7 +6303,6 @@ public class Client extends ClientBase {
                                      * @return Result
                                      * @throws JSONException
                                      */
-
                                     public Result setRest() throws JSONException {
                                         return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
@@ -6417,7 +6345,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result getRest() throws JSONException {
                                     return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/ipset/" + _name + "", null);
                                 }
@@ -6442,7 +6369,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result createRest(String cidr, String comment, Boolean nomatch) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -6473,7 +6399,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result createRest(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -6529,7 +6454,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String name, String comment, String digest, String rename) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
@@ -6565,7 +6489,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
@@ -6587,11 +6510,11 @@ public class Client extends ClientBase {
 
                         public class PVEOptions {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEOptions(Client client, Object node, Object vmid) {
+                            protected PVEOptions(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -6653,7 +6576,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result setRest(String delete, Boolean dhcp, String digest, Boolean enable, Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter, Boolean ndp, String policy_in, String policy_out, Boolean radv) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("delete", delete);
@@ -6717,7 +6639,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result setRest() throws JSONException {
                                 return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/options", null);
                             }
@@ -6736,11 +6657,11 @@ public class Client extends ClientBase {
 
                         public class PVELog {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVELog(Client client, Object node, Object vmid) {
+                            protected PVELog(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -6779,7 +6700,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result getRest() throws JSONException {
                                 return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/log", null);
                             }
@@ -6798,11 +6718,11 @@ public class Client extends ClientBase {
 
                         public class PVERefs {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVERefs(Client client, Object node, Object vmid) {
+                            protected PVERefs(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -6843,7 +6763,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result getRest() throws JSONException {
                                 return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/firewall/refs", null);
                             }
@@ -6885,11 +6804,11 @@ public class Client extends ClientBase {
 
                     public class PVEAgent {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEAgent(Client client, Object node, Object vmid) {
+                        protected PVEAgent(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -7123,11 +7042,11 @@ public class Client extends ClientBase {
 
                         public class PVEFsfreeze_Freeze {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEFsfreeze_Freeze(Client client, Object node, Object vmid) {
+                            protected PVEFsfreeze_Freeze(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7157,11 +7076,11 @@ public class Client extends ClientBase {
 
                         public class PVEFsfreeze_Status {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEFsfreeze_Status(Client client, Object node, Object vmid) {
+                            protected PVEFsfreeze_Status(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7191,11 +7110,11 @@ public class Client extends ClientBase {
 
                         public class PVEFsfreeze_Thaw {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEFsfreeze_Thaw(Client client, Object node, Object vmid) {
+                            protected PVEFsfreeze_Thaw(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7225,11 +7144,11 @@ public class Client extends ClientBase {
 
                         public class PVEFstrim {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEFstrim(Client client, Object node, Object vmid) {
+                            protected PVEFstrim(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7259,11 +7178,11 @@ public class Client extends ClientBase {
 
                         public class PVEGet_Fsinfo {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEGet_Fsinfo(Client client, Object node, Object vmid) {
+                            protected PVEGet_Fsinfo(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7293,11 +7212,11 @@ public class Client extends ClientBase {
 
                         public class PVEGet_Host_Name {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEGet_Host_Name(Client client, Object node, Object vmid) {
+                            protected PVEGet_Host_Name(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7327,11 +7246,11 @@ public class Client extends ClientBase {
 
                         public class PVEGet_Memory_Block_Info {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEGet_Memory_Block_Info(Client client, Object node, Object vmid) {
+                            protected PVEGet_Memory_Block_Info(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7361,11 +7280,11 @@ public class Client extends ClientBase {
 
                         public class PVEGet_Memory_Blocks {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEGet_Memory_Blocks(Client client, Object node, Object vmid) {
+                            protected PVEGet_Memory_Blocks(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7395,11 +7314,11 @@ public class Client extends ClientBase {
 
                         public class PVEGet_Osinfo {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEGet_Osinfo(Client client, Object node, Object vmid) {
+                            protected PVEGet_Osinfo(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7429,11 +7348,11 @@ public class Client extends ClientBase {
 
                         public class PVEGet_Time {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEGet_Time(Client client, Object node, Object vmid) {
+                            protected PVEGet_Time(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7463,11 +7382,11 @@ public class Client extends ClientBase {
 
                         public class PVEGet_Timezone {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEGet_Timezone(Client client, Object node, Object vmid) {
+                            protected PVEGet_Timezone(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7497,11 +7416,11 @@ public class Client extends ClientBase {
 
                         public class PVEGet_Users {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEGet_Users(Client client, Object node, Object vmid) {
+                            protected PVEGet_Users(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7531,11 +7450,11 @@ public class Client extends ClientBase {
 
                         public class PVEGet_Vcpus {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEGet_Vcpus(Client client, Object node, Object vmid) {
+                            protected PVEGet_Vcpus(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7565,11 +7484,11 @@ public class Client extends ClientBase {
 
                         public class PVEInfo {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEInfo(Client client, Object node, Object vmid) {
+                            protected PVEInfo(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7599,11 +7518,11 @@ public class Client extends ClientBase {
 
                         public class PVENetwork_Get_Interfaces {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVENetwork_Get_Interfaces(Client client, Object node, Object vmid) {
+                            protected PVENetwork_Get_Interfaces(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7633,11 +7552,11 @@ public class Client extends ClientBase {
 
                         public class PVEPing {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEPing(Client client, Object node, Object vmid) {
+                            protected PVEPing(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7667,11 +7586,11 @@ public class Client extends ClientBase {
 
                         public class PVEShutdown {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEShutdown(Client client, Object node, Object vmid) {
+                            protected PVEShutdown(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7701,11 +7620,11 @@ public class Client extends ClientBase {
 
                         public class PVESuspend_Disk {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVESuspend_Disk(Client client, Object node, Object vmid) {
+                            protected PVESuspend_Disk(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7735,11 +7654,11 @@ public class Client extends ClientBase {
 
                         public class PVESuspend_Hybrid {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVESuspend_Hybrid(Client client, Object node, Object vmid) {
+                            protected PVESuspend_Hybrid(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7769,11 +7688,11 @@ public class Client extends ClientBase {
 
                         public class PVESuspend_Ram {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVESuspend_Ram(Client client, Object node, Object vmid) {
+                            protected PVESuspend_Ram(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7803,11 +7722,11 @@ public class Client extends ClientBase {
 
                         public class PVESet_User_Password {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVESet_User_Password(Client client, Object node, Object vmid) {
+                            protected PVESet_User_Password(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7856,7 +7775,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String password, String username) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("password", password);
@@ -7881,11 +7799,11 @@ public class Client extends ClientBase {
 
                         public class PVEExec {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEExec(Client client, Object node, Object vmid) {
+                            protected PVEExec(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7923,11 +7841,11 @@ public class Client extends ClientBase {
 
                         public class PVEExec_Status {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEExec_Status(Client client, Object node, Object vmid) {
+                            protected PVEExec_Status(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -7963,11 +7881,11 @@ public class Client extends ClientBase {
 
                         public class PVEFile_Read {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEFile_Read(Client client, Object node, Object vmid) {
+                            protected PVEFile_Read(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -8003,11 +7921,11 @@ public class Client extends ClientBase {
 
                         public class PVEFile_Write {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEFile_Write(Client client, Object node, Object vmid) {
+                            protected PVEFile_Write(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -8072,7 +7990,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(String command) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("command", command);
@@ -8095,11 +8012,11 @@ public class Client extends ClientBase {
 
                     public class PVERrd {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVERrd(Client client, Object node, Object vmid) {
+                        protected PVERrd(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -8151,7 +8068,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest(String ds, String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
@@ -8177,11 +8093,11 @@ public class Client extends ClientBase {
 
                     public class PVERrddata {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVERrddata(Client client, Object node, Object vmid) {
+                        protected PVERrddata(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -8226,7 +8142,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest(String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
@@ -8249,11 +8164,11 @@ public class Client extends ClientBase {
 
                     public class PVEConfig {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEConfig(Client client, Object node, Object vmid) {
+                        protected PVEConfig(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -8302,7 +8217,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest() throws JSONException {
                             return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
                         }
@@ -8494,7 +8408,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(Boolean acpi, String agent, String arch, String args, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String sshkeys, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
@@ -8760,7 +8673,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
                         }
@@ -8949,7 +8861,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest(Boolean acpi, String agent, String arch, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String sshkeys, String startdate, String startup, Boolean tablet, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
@@ -9215,7 +9126,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest() throws JSONException {
                             return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/config", null);
                         }
@@ -9236,11 +9146,11 @@ public class Client extends ClientBase {
 
                     public class PVEPending {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEPending(Client client, Object node, Object vmid) {
+                        protected PVEPending(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -9272,11 +9182,11 @@ public class Client extends ClientBase {
 
                     public class PVEUnlink {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEUnlink(Client client, Object node, Object vmid) {
+                        protected PVEUnlink(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -9324,7 +9234,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest(String idlist) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("idlist", idlist);
@@ -9346,11 +9255,11 @@ public class Client extends ClientBase {
 
                     public class PVEVncproxy {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEVncproxy(Client client, Object node, Object vmid) {
+                        protected PVEVncproxy(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -9388,7 +9297,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/vncproxy", null);
                         }
@@ -9407,11 +9315,11 @@ public class Client extends ClientBase {
 
                     public class PVETermproxy {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVETermproxy(Client client, Object node, Object vmid) {
+                        protected PVETermproxy(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -9449,7 +9357,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/termproxy", null);
                         }
@@ -9468,11 +9375,11 @@ public class Client extends ClientBase {
 
                     public class PVEVncwebsocket {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEVncwebsocket(Client client, Object node, Object vmid) {
+                        protected PVEVncwebsocket(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -9513,11 +9420,11 @@ public class Client extends ClientBase {
 
                     public class PVESpiceproxy {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVESpiceproxy(Client client, Object node, Object vmid) {
+                        protected PVESpiceproxy(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -9567,7 +9474,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/spiceproxy", null);
                         }
@@ -9586,11 +9492,11 @@ public class Client extends ClientBase {
 
                     public class PVEStatus {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEStatus(Client client, Object node, Object vmid) {
+                        protected PVEStatus(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -9662,11 +9568,11 @@ public class Client extends ClientBase {
 
                         public class PVECurrent {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVECurrent(Client client, Object node, Object vmid) {
+                            protected PVECurrent(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -9696,11 +9602,11 @@ public class Client extends ClientBase {
 
                         public class PVEStart {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEStart(Client client, Object node, Object vmid) {
+                            protected PVEStart(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -9772,7 +9678,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/start", null);
                             }
@@ -9791,11 +9696,11 @@ public class Client extends ClientBase {
 
                         public class PVEStop {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEStop(Client client, Object node, Object vmid) {
+                            protected PVEStop(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -9853,7 +9758,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/stop", null);
                             }
@@ -9875,11 +9779,11 @@ public class Client extends ClientBase {
 
                         public class PVEReset {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEReset(Client client, Object node, Object vmid) {
+                            protected PVEReset(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -9917,7 +9821,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/reset", null);
                             }
@@ -9936,11 +9839,11 @@ public class Client extends ClientBase {
 
                         public class PVEShutdown {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEShutdown(Client client, Object node, Object vmid) {
+                            protected PVEShutdown(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -10001,7 +9904,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/shutdown", null);
                             }
@@ -10024,11 +9926,11 @@ public class Client extends ClientBase {
 
                         public class PVESuspend {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVESuspend(Client client, Object node, Object vmid) {
+                            protected PVESuspend(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -10074,7 +9976,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/suspend", null);
                             }
@@ -10093,11 +9994,11 @@ public class Client extends ClientBase {
 
                         public class PVEResume {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEResume(Client client, Object node, Object vmid) {
+                            protected PVEResume(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -10138,7 +10039,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/resume", null);
                             }
@@ -10179,11 +10079,11 @@ public class Client extends ClientBase {
 
                     public class PVESendkey {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVESendkey(Client client, Object node, Object vmid) {
+                        protected PVESendkey(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -10225,7 +10125,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest(String key) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("key", key);
@@ -10247,11 +10146,11 @@ public class Client extends ClientBase {
 
                     public class PVEFeature {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEFeature(Client client, Object node, Object vmid) {
+                        protected PVEFeature(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -10294,7 +10193,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest(String feature) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("feature", feature);
@@ -10317,11 +10215,11 @@ public class Client extends ClientBase {
 
                     public class PVEClone {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEClone(Client client, Object node, Object vmid) {
+                        protected PVEClone(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -10397,7 +10295,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(int newid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("newid", newid);
@@ -10419,11 +10316,11 @@ public class Client extends ClientBase {
 
                     public class PVEMoveDisk {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEMoveDisk(Client client, Object node, Object vmid) {
+                        protected PVEMoveDisk(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -10489,7 +10386,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(String disk, String storage) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
@@ -10514,11 +10410,11 @@ public class Client extends ClientBase {
 
                     public class PVEMigrate {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEMigrate(Client client, Object node, Object vmid) {
+                        protected PVEMigrate(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -10554,7 +10450,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest() throws JSONException {
                             return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/migrate", null);
                         }
@@ -10591,7 +10486,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(String target, Integer bwlimit, Boolean force, String migration_network, String migration_type, Boolean online, String targetstorage, Boolean with_local_disks) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
@@ -10639,7 +10533,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(String target) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
@@ -10662,11 +10555,11 @@ public class Client extends ClientBase {
 
                     public class PVEMonitor {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEMonitor(Client client, Object node, Object vmid) {
+                        protected PVEMonitor(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -10700,11 +10593,11 @@ public class Client extends ClientBase {
 
                     public class PVEResize {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEResize(Client client, Object node, Object vmid) {
+                        protected PVEResize(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -10769,7 +10662,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest(String disk, String size) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
@@ -10797,11 +10689,11 @@ public class Client extends ClientBase {
 
                     public class PVESnapshot {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVESnapshot(Client client, Object node, Object vmid) {
+                        protected PVESnapshot(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -10813,12 +10705,12 @@ public class Client extends ClientBase {
 
                         public class PVEItemSnapname {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
                             private final Object _snapname;
 
-                            protected PVEItemSnapname(Client client, Object node, Object vmid, Object snapname) {
+                            protected PVEItemSnapname(PveClient client, Object node, Object vmid, Object snapname) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -10846,12 +10738,12 @@ public class Client extends ClientBase {
 
                             public class PVEConfig {
 
-                                private final Client _client;
+                                private final PveClient _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _snapname;
 
-                                protected PVEConfig(Client client, Object node, Object vmid, Object snapname) {
+                                protected PVEConfig(PveClient client, Object node, Object vmid, Object snapname) {
                                     _client = client;
                                     _node = node;
                                     _vmid = vmid;
@@ -10886,7 +10778,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result setRest(String description) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("description", description);
@@ -10911,7 +10802,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result setRest() throws JSONException {
                                     return _client.set("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "/config", null);
                                 }
@@ -10930,12 +10820,12 @@ public class Client extends ClientBase {
 
                             public class PVERollback {
 
-                                private final Client _client;
+                                private final PveClient _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _snapname;
 
-                                protected PVERollback(Client client, Object node, Object vmid, Object snapname) {
+                                protected PVERollback(PveClient client, Object node, Object vmid, Object snapname) {
                                     _client = client;
                                     _node = node;
                                     _vmid = vmid;
@@ -10996,7 +10886,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result deleteRest() throws JSONException {
                                 return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "", null);
                             }
@@ -11016,7 +10905,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result getRest() throws JSONException {
                                 return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "/snapshot/" + _snapname + "", null);
                             }
@@ -11061,7 +10949,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(String snapname, String description, Boolean vmstate) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
@@ -11090,7 +10977,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(String snapname) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
@@ -11112,11 +10998,11 @@ public class Client extends ClientBase {
 
                     public class PVETemplate {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVETemplate(Client client, Object node, Object vmid) {
+                        protected PVETemplate(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -11156,7 +11042,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/template", null);
                         }
@@ -11175,11 +11060,11 @@ public class Client extends ClientBase {
 
                     public class PVECloudinit {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVECloudinit(Client client, Object node, Object vmid) {
+                        protected PVECloudinit(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -11197,11 +11082,11 @@ public class Client extends ClientBase {
 
                         public class PVEDump {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEDump(Client client, Object node, Object vmid) {
+                            protected PVEDump(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -11267,7 +11152,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result deleteRest() throws JSONException {
                         return _client.delete("/nodes/" + _node + "/qemu/" + _vmid + "", null);
                     }
@@ -11288,7 +11172,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/qemu/" + _vmid + "", null);
                     }
@@ -11335,7 +11218,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/nodes/" + _node + "/qemu", null);
                 }
@@ -11501,7 +11383,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(int vmid, Boolean acpi, String agent, String arch, String archive, String args, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vmid", vmid);
@@ -11746,7 +11627,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(int vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vmid", vmid);
@@ -11768,10 +11648,10 @@ public class Client extends ClientBase {
 
             public class PVELxc {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVELxc(Client client, Object node) {
+                protected PVELxc(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -11782,11 +11662,11 @@ public class Client extends ClientBase {
 
                 public class PVEItemVmid {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
                     private final Object _vmid;
 
-                    protected PVEItemVmid(Client client, Object node, Object vmid) {
+                    protected PVEItemVmid(PveClient client, Object node, Object vmid) {
                         _client = client;
                         _node = node;
                         _vmid = vmid;
@@ -11939,11 +11819,11 @@ public class Client extends ClientBase {
 
                     public class PVEConfig {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEConfig(Client client, Object node, Object vmid) {
+                        protected PVEConfig(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -11981,7 +11861,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest() throws JSONException {
                             return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/config", null);
                         }
@@ -12077,7 +11956,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String rootfs, String searchdomain, String startup, Integer swap, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("arch", arch);
@@ -12202,7 +12080,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest() throws JSONException {
                             return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/config", null);
                         }
@@ -12221,11 +12098,11 @@ public class Client extends ClientBase {
 
                     public class PVEStatus {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEStatus(Client client, Object node, Object vmid) {
+                        protected PVEStatus(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -12288,11 +12165,11 @@ public class Client extends ClientBase {
 
                         public class PVECurrent {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVECurrent(Client client, Object node, Object vmid) {
+                            protected PVECurrent(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -12322,11 +12199,11 @@ public class Client extends ClientBase {
 
                         public class PVEStart {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEStart(Client client, Object node, Object vmid) {
+                            protected PVEStart(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -12364,7 +12241,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/start", null);
                             }
@@ -12383,11 +12259,11 @@ public class Client extends ClientBase {
 
                         public class PVEStop {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEStop(Client client, Object node, Object vmid) {
+                            protected PVEStop(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -12428,7 +12304,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/stop", null);
                             }
@@ -12448,11 +12323,11 @@ public class Client extends ClientBase {
 
                         public class PVEShutdown {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEShutdown(Client client, Object node, Object vmid) {
+                            protected PVEShutdown(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -12497,7 +12372,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/shutdown", null);
                             }
@@ -12518,11 +12392,11 @@ public class Client extends ClientBase {
 
                         public class PVESuspend {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVESuspend(Client client, Object node, Object vmid) {
+                            protected PVESuspend(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -12552,11 +12426,11 @@ public class Client extends ClientBase {
 
                         public class PVEResume {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEResume(Client client, Object node, Object vmid) {
+                            protected PVEResume(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -12608,11 +12482,11 @@ public class Client extends ClientBase {
 
                     public class PVESnapshot {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVESnapshot(Client client, Object node, Object vmid) {
+                        protected PVESnapshot(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -12624,12 +12498,12 @@ public class Client extends ClientBase {
 
                         public class PVEItemSnapname {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
                             private final Object _snapname;
 
-                            protected PVEItemSnapname(Client client, Object node, Object vmid, Object snapname) {
+                            protected PVEItemSnapname(PveClient client, Object node, Object vmid, Object snapname) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -12657,12 +12531,12 @@ public class Client extends ClientBase {
 
                             public class PVERollback {
 
-                                private final Client _client;
+                                private final PveClient _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _snapname;
 
-                                protected PVERollback(Client client, Object node, Object vmid, Object snapname) {
+                                protected PVERollback(PveClient client, Object node, Object vmid, Object snapname) {
                                     _client = client;
                                     _node = node;
                                     _vmid = vmid;
@@ -12693,12 +12567,12 @@ public class Client extends ClientBase {
 
                             public class PVEConfig {
 
-                                private final Client _client;
+                                private final PveClient _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _snapname;
 
-                                protected PVEConfig(Client client, Object node, Object vmid, Object snapname) {
+                                protected PVEConfig(PveClient client, Object node, Object vmid, Object snapname) {
                                     _client = client;
                                     _node = node;
                                     _vmid = vmid;
@@ -12733,7 +12607,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result setRest(String description) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("description", description);
@@ -12758,7 +12631,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result setRest() throws JSONException {
                                     return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "/config", null);
                                 }
@@ -12807,7 +12679,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result deleteRest() throws JSONException {
                                 return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "", null);
                             }
@@ -12827,7 +12698,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result getRest() throws JSONException {
                                 return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/snapshot/" + _snapname + "", null);
                             }
@@ -12871,7 +12741,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(String snapname, String description) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
@@ -12898,7 +12767,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(String snapname) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
@@ -12920,11 +12788,11 @@ public class Client extends ClientBase {
 
                     public class PVEFirewall {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEFirewall(Client client, Object node, Object vmid) {
+                        protected PVEFirewall(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -12987,11 +12855,11 @@ public class Client extends ClientBase {
 
                         public class PVERules {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVERules(Client client, Object node, Object vmid) {
+                            protected PVERules(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -13003,12 +12871,12 @@ public class Client extends ClientBase {
 
                             public class PVEItemPos {
 
-                                private final Client _client;
+                                private final PveClient _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _pos;
 
-                                protected PVEItemPos(Client client, Object node, Object vmid, Object pos) {
+                                protected PVEItemPos(PveClient client, Object node, Object vmid, Object pos) {
                                     _client = client;
                                     _node = node;
                                     _vmid = vmid;
@@ -13051,7 +12919,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result deleteRest() throws JSONException {
                                     return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
@@ -13072,7 +12939,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result getRest() throws JSONException {
                                     return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
@@ -13148,7 +13014,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("action", action);
@@ -13240,7 +13105,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result setRest() throws JSONException {
                                     return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/rules/" + _pos + "", null);
                                 }
@@ -13332,7 +13196,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
@@ -13420,7 +13283,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String action, String type) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
@@ -13445,11 +13307,11 @@ public class Client extends ClientBase {
 
                         public class PVEAliases {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEAliases(Client client, Object node, Object vmid) {
+                            protected PVEAliases(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -13461,12 +13323,12 @@ public class Client extends ClientBase {
 
                             public class PVEItemName {
 
-                                private final Client _client;
+                                private final PveClient _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _name;
 
-                                protected PVEItemName(Client client, Object node, Object vmid, Object name) {
+                                protected PVEItemName(PveClient client, Object node, Object vmid, Object name) {
                                     _client = client;
                                     _node = node;
                                     _vmid = vmid;
@@ -13509,7 +13371,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result deleteRest() throws JSONException {
                                     return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", null);
                                 }
@@ -13530,7 +13391,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result getRest() throws JSONException {
                                     return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/aliases/" + _name + "", null);
                                 }
@@ -13559,7 +13419,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result setRest(String cidr, String comment, String digest, String rename) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -13595,7 +13454,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result setRest(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -13646,7 +13504,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String cidr, String name, String comment) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
@@ -13678,7 +13535,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String cidr, String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
@@ -13703,11 +13559,11 @@ public class Client extends ClientBase {
 
                         public class PVEIpset {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEIpset(Client client, Object node, Object vmid) {
+                            protected PVEIpset(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -13719,12 +13575,12 @@ public class Client extends ClientBase {
 
                             public class PVEItemName {
 
-                                private final Client _client;
+                                private final PveClient _client;
                                 private final Object _node;
                                 private final Object _vmid;
                                 private final Object _name;
 
-                                protected PVEItemName(Client client, Object node, Object vmid, Object name) {
+                                protected PVEItemName(PveClient client, Object node, Object vmid, Object name) {
                                     _client = client;
                                     _node = node;
                                     _vmid = vmid;
@@ -13737,13 +13593,13 @@ public class Client extends ClientBase {
 
                                 public class PVEItemCidr {
 
-                                    private final Client _client;
+                                    private final PveClient _client;
                                     private final Object _node;
                                     private final Object _vmid;
                                     private final Object _name;
                                     private final Object _cidr;
 
-                                    protected PVEItemCidr(Client client, Object node, Object vmid, Object name, Object cidr) {
+                                    protected PVEItemCidr(PveClient client, Object node, Object vmid, Object name, Object cidr) {
                                         _client = client;
                                         _node = node;
                                         _vmid = vmid;
@@ -13787,7 +13643,6 @@ public class Client extends ClientBase {
                                      * @return Result
                                      * @throws JSONException
                                      */
-
                                     public Result deleteRest() throws JSONException {
                                         return _client.delete("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
@@ -13808,7 +13663,6 @@ public class Client extends ClientBase {
                                      * @return Result
                                      * @throws JSONException
                                      */
-
                                     public Result getRest() throws JSONException {
                                         return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
@@ -13835,7 +13689,6 @@ public class Client extends ClientBase {
                                      * @return Result
                                      * @throws JSONException
                                      */
-
                                     public Result setRest(String comment, String digest, Boolean nomatch) throws JSONException {
                                         Map<String, Object> parameters = new HashMap<>();
                                         parameters.put("comment", comment);
@@ -13866,7 +13719,6 @@ public class Client extends ClientBase {
                                      * @return Result
                                      * @throws JSONException
                                      */
-
                                     public Result setRest() throws JSONException {
                                         return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "/" + _cidr + "", null);
                                     }
@@ -13909,7 +13761,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result getRest() throws JSONException {
                                     return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/ipset/" + _name + "", null);
                                 }
@@ -13934,7 +13785,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result createRest(String cidr, String comment, Boolean nomatch) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -13965,7 +13815,6 @@ public class Client extends ClientBase {
                                  * @return Result
                                  * @throws JSONException
                                  */
-
                                 public Result createRest(String cidr) throws JSONException {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
@@ -14021,7 +13870,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String name, String comment, String digest, String rename) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
@@ -14057,7 +13905,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String name) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
@@ -14079,11 +13926,11 @@ public class Client extends ClientBase {
 
                         public class PVEOptions {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVEOptions(Client client, Object node, Object vmid) {
+                            protected PVEOptions(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -14145,7 +13992,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result setRest(String delete, Boolean dhcp, String digest, Boolean enable, Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter, Boolean ndp, String policy_in, String policy_out, Boolean radv) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("delete", delete);
@@ -14209,7 +14055,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result setRest() throws JSONException {
                                 return _client.set("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/options", null);
                             }
@@ -14228,11 +14073,11 @@ public class Client extends ClientBase {
 
                         public class PVELog {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVELog(Client client, Object node, Object vmid) {
+                            protected PVELog(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -14271,7 +14116,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result getRest() throws JSONException {
                                 return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/log", null);
                             }
@@ -14290,11 +14134,11 @@ public class Client extends ClientBase {
 
                         public class PVERefs {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _vmid;
 
-                            protected PVERefs(Client client, Object node, Object vmid) {
+                            protected PVERefs(PveClient client, Object node, Object vmid) {
                                 _client = client;
                                 _node = node;
                                 _vmid = vmid;
@@ -14335,7 +14179,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result getRest() throws JSONException {
                                 return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "/firewall/refs", null);
                             }
@@ -14377,11 +14220,11 @@ public class Client extends ClientBase {
 
                     public class PVERrd {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVERrd(Client client, Object node, Object vmid) {
+                        protected PVERrd(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -14433,7 +14276,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest(String ds, String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
@@ -14459,11 +14301,11 @@ public class Client extends ClientBase {
 
                     public class PVERrddata {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVERrddata(Client client, Object node, Object vmid) {
+                        protected PVERrddata(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -14508,7 +14350,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest(String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
@@ -14531,11 +14372,11 @@ public class Client extends ClientBase {
 
                     public class PVEVncproxy {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEVncproxy(Client client, Object node, Object vmid) {
+                        protected PVEVncproxy(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -14581,7 +14422,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/vncproxy", null);
                         }
@@ -14600,11 +14440,11 @@ public class Client extends ClientBase {
 
                     public class PVETermproxy {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVETermproxy(Client client, Object node, Object vmid) {
+                        protected PVETermproxy(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -14634,11 +14474,11 @@ public class Client extends ClientBase {
 
                     public class PVEVncwebsocket {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEVncwebsocket(Client client, Object node, Object vmid) {
+                        protected PVEVncwebsocket(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -14679,11 +14519,11 @@ public class Client extends ClientBase {
 
                     public class PVESpiceproxy {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVESpiceproxy(Client client, Object node, Object vmid) {
+                        protected PVESpiceproxy(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -14733,7 +14573,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/spiceproxy", null);
                         }
@@ -14752,11 +14591,11 @@ public class Client extends ClientBase {
 
                     public class PVEMigrate {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEMigrate(Client client, Object node, Object vmid) {
+                        protected PVEMigrate(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -14819,7 +14658,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(String target) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
@@ -14842,11 +14680,11 @@ public class Client extends ClientBase {
 
                     public class PVEFeature {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEFeature(Client client, Object node, Object vmid) {
+                        protected PVEFeature(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -14889,7 +14727,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest(String feature) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("feature", feature);
@@ -14912,11 +14749,11 @@ public class Client extends ClientBase {
 
                     public class PVETemplate {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVETemplate(Client client, Object node, Object vmid) {
+                        protected PVETemplate(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -14946,11 +14783,11 @@ public class Client extends ClientBase {
 
                     public class PVEClone {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEClone(Client client, Object node, Object vmid) {
+                        protected PVEClone(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -15021,7 +14858,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(int newid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("newid", newid);
@@ -15043,11 +14879,11 @@ public class Client extends ClientBase {
 
                     public class PVEResize {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEResize(Client client, Object node, Object vmid) {
+                        protected PVEResize(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -15107,7 +14943,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest(String disk, String size) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
@@ -15135,11 +14970,11 @@ public class Client extends ClientBase {
 
                     public class PVEMoveVolume {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _vmid;
 
-                        protected PVEMoveVolume(Client client, Object node, Object vmid) {
+                        protected PVEMoveVolume(PveClient client, Object node, Object vmid) {
                             _client = client;
                             _node = node;
                             _vmid = vmid;
@@ -15202,7 +15037,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(String storage, String volume) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("storage", storage);
@@ -15251,7 +15085,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/lxc/" + _vmid + "", null);
                     }
@@ -15371,7 +15204,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, Boolean template, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ostemplate", ostemplate);
@@ -15510,7 +15342,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String ostemplate, int vmid) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ostemplate", ostemplate);
@@ -15534,10 +15365,10 @@ public class Client extends ClientBase {
 
             public class PVECeph {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVECeph(Client client, Object node) {
+                protected PVECeph(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -15707,10 +15538,10 @@ public class Client extends ClientBase {
 
                 public class PVEOsd {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEOsd(Client client, Object node) {
+                    protected PVEOsd(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -15721,11 +15552,11 @@ public class Client extends ClientBase {
 
                     public class PVEItemOsdid {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _osdid;
 
-                        protected PVEItemOsdid(Client client, Object node, Object osdid) {
+                        protected PVEItemOsdid(PveClient client, Object node, Object osdid) {
                             _client = client;
                             _node = node;
                             _osdid = osdid;
@@ -15761,11 +15592,11 @@ public class Client extends ClientBase {
 
                         public class PVEIn {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _osdid;
 
-                            protected PVEIn(Client client, Object node, Object osdid) {
+                            protected PVEIn(PveClient client, Object node, Object osdid) {
                                 _client = client;
                                 _node = node;
                                 _osdid = osdid;
@@ -15795,11 +15626,11 @@ public class Client extends ClientBase {
 
                         public class PVEOut {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _osdid;
 
-                            protected PVEOut(Client client, Object node, Object osdid) {
+                            protected PVEOut(PveClient client, Object node, Object osdid) {
                                 _client = client;
                                 _node = node;
                                 _osdid = osdid;
@@ -15829,11 +15660,11 @@ public class Client extends ClientBase {
 
                         public class PVEScrub {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _osdid;
 
-                            protected PVEScrub(Client client, Object node, Object osdid) {
+                            protected PVEScrub(PveClient client, Object node, Object osdid) {
                                 _client = client;
                                 _node = node;
                                 _osdid = osdid;
@@ -15871,7 +15702,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest() throws JSONException {
                                 return _client.create("/nodes/" + _node + "/ceph/osd/" + _osdid + "/scrub", null);
                             }
@@ -15920,7 +15750,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result deleteRest() throws JSONException {
                             return _client.delete("/nodes/" + _node + "/ceph/osd/" + _osdid + "", null);
                         }
@@ -15969,7 +15798,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String dev, String db_dev, Integer db_size, Boolean encrypted, String wal_dev, Integer wal_size) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("dev", dev);
@@ -16004,7 +15832,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String dev) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("dev", dev);
@@ -16026,10 +15853,10 @@ public class Client extends ClientBase {
 
                 public class PVEMds {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEMds(Client client, Object node) {
+                    protected PVEMds(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -16040,11 +15867,11 @@ public class Client extends ClientBase {
 
                     public class PVEItemName {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _name;
 
-                        protected PVEItemName(Client client, Object node, Object name) {
+                        protected PVEItemName(PveClient client, Object node, Object name) {
                             _client = client;
                             _node = node;
                             _name = name;
@@ -16080,7 +15907,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(Boolean hotstandby) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("hotstandby", hotstandby);
@@ -16107,7 +15933,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/ceph/mds/" + _name + "", null);
                         }
@@ -16148,10 +15973,10 @@ public class Client extends ClientBase {
 
                 public class PVEMgr {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEMgr(Client client, Object node) {
+                    protected PVEMgr(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -16162,11 +15987,11 @@ public class Client extends ClientBase {
 
                     public class PVEItemId {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _id;
 
-                        protected PVEItemId(Client client, Object node, Object id) {
+                        protected PVEItemId(PveClient client, Object node, Object id) {
                             _client = client;
                             _node = node;
                             _id = id;
@@ -16198,7 +16023,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/ceph/mgr/" + _id + "", null);
                         }
@@ -16239,10 +16063,10 @@ public class Client extends ClientBase {
 
                 public class PVEMon {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEMon(Client client, Object node) {
+                    protected PVEMon(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -16253,11 +16077,11 @@ public class Client extends ClientBase {
 
                     public class PVEItemMonid {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _monid;
 
-                        protected PVEItemMonid(Client client, Object node, Object monid) {
+                        protected PVEItemMonid(PveClient client, Object node, Object monid) {
                             _client = client;
                             _node = node;
                             _monid = monid;
@@ -16291,7 +16115,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(String mon_address) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("mon-address", mon_address);
@@ -16316,7 +16139,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/ceph/mon/" + _monid + "", null);
                         }
@@ -16357,10 +16179,10 @@ public class Client extends ClientBase {
 
                 public class PVEFs {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEFs(Client client, Object node) {
+                    protected PVEFs(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -16371,11 +16193,11 @@ public class Client extends ClientBase {
 
                     public class PVEItemName {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _name;
 
-                        protected PVEItemName(Client client, Object node, Object name) {
+                        protected PVEItemName(PveClient client, Object node, Object name) {
                             _client = client;
                             _node = node;
                             _name = name;
@@ -16420,7 +16242,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/ceph/fs/" + _name + "", null);
                         }
@@ -16461,10 +16282,10 @@ public class Client extends ClientBase {
 
                 public class PVEDisks {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEDisks(Client client, Object node) {
+                    protected PVEDisks(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -16501,7 +16322,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/ceph/disks", null);
                     }
@@ -16520,10 +16340,10 @@ public class Client extends ClientBase {
 
                 public class PVEConfig {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEConfig(Client client, Object node) {
+                    protected PVEConfig(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -16552,10 +16372,10 @@ public class Client extends ClientBase {
 
                 public class PVEConfigdb {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEConfigdb(Client client, Object node) {
+                    protected PVEConfigdb(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -16584,10 +16404,10 @@ public class Client extends ClientBase {
 
                 public class PVEInit {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEInit(Client client, Object node) {
+                    protected PVEInit(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -16658,7 +16478,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest() throws JSONException {
                         return _client.create("/nodes/" + _node + "/ceph/init", null);
                     }
@@ -16678,10 +16497,10 @@ public class Client extends ClientBase {
 
                 public class PVEStop {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEStop(Client client, Object node) {
+                    protected PVEStop(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -16716,7 +16535,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest() throws JSONException {
                         return _client.create("/nodes/" + _node + "/ceph/stop", null);
                     }
@@ -16735,10 +16553,10 @@ public class Client extends ClientBase {
 
                 public class PVEStart {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEStart(Client client, Object node) {
+                    protected PVEStart(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -16773,7 +16591,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest() throws JSONException {
                         return _client.create("/nodes/" + _node + "/ceph/start", null);
                     }
@@ -16792,10 +16609,10 @@ public class Client extends ClientBase {
 
                 public class PVERestart {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVERestart(Client client, Object node) {
+                    protected PVERestart(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -16830,7 +16647,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest() throws JSONException {
                         return _client.create("/nodes/" + _node + "/ceph/restart", null);
                     }
@@ -16849,10 +16665,10 @@ public class Client extends ClientBase {
 
                 public class PVEStatus {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEStatus(Client client, Object node) {
+                    protected PVEStatus(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -16881,10 +16697,10 @@ public class Client extends ClientBase {
 
                 public class PVEPools {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEPools(Client client, Object node) {
+                    protected PVEPools(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -16895,11 +16711,11 @@ public class Client extends ClientBase {
 
                     public class PVEItemName {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _name;
 
-                        protected PVEItemName(Client client, Object node, Object name) {
+                        protected PVEItemName(PveClient client, Object node, Object name) {
                             _client = client;
                             _node = node;
                             _name = name;
@@ -16940,7 +16756,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result deleteRest() throws JSONException {
                             return _client.delete("/nodes/" + _node + "/ceph/pools/" + _name + "", null);
                         }
@@ -16993,7 +16808,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String name, Boolean add_storages, String application, String crush_rule, Integer min_size, Integer pg_num, Integer size) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
@@ -17033,7 +16847,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String name) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
@@ -17055,10 +16868,10 @@ public class Client extends ClientBase {
 
                 public class PVEFlags {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEFlags(Client client, Object node) {
+                    protected PVEFlags(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -17069,11 +16882,11 @@ public class Client extends ClientBase {
 
                     public class PVEItemFlag {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _flag;
 
-                        protected PVEItemFlag(Client client, Object node, Object flag) {
+                        protected PVEItemFlag(PveClient client, Object node, Object flag) {
                             _client = client;
                             _node = node;
                             _flag = flag;
@@ -17105,7 +16918,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/ceph/flags/" + _flag + "", null);
                         }
@@ -17146,10 +16958,10 @@ public class Client extends ClientBase {
 
                 public class PVECrush {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVECrush(Client client, Object node) {
+                    protected PVECrush(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -17178,10 +16990,10 @@ public class Client extends ClientBase {
 
                 public class PVELog {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVELog(Client client, Object node) {
+                    protected PVELog(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -17219,7 +17031,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/ceph/log", null);
                     }
@@ -17238,10 +17049,10 @@ public class Client extends ClientBase {
 
                 public class PVERules {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVERules(Client client, Object node) {
+                    protected PVERules(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -17292,10 +17103,10 @@ public class Client extends ClientBase {
 
             public class PVEVzdump {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEVzdump(Client client, Object node) {
+                protected PVEVzdump(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -17312,10 +17123,10 @@ public class Client extends ClientBase {
 
                 public class PVEExtractconfig {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEExtractconfig(Client client, Object node) {
+                    protected PVEExtractconfig(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -17468,7 +17279,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest() throws JSONException {
                     return _client.create("/nodes/" + _node + "/vzdump", null);
                 }
@@ -17487,10 +17297,10 @@ public class Client extends ClientBase {
 
             public class PVEServices {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEServices(Client client, Object node) {
+                protected PVEServices(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -17501,11 +17311,11 @@ public class Client extends ClientBase {
 
                 public class PVEItemService {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
                     private final Object _service;
 
-                    protected PVEItemService(Client client, Object node, Object service) {
+                    protected PVEItemService(PveClient client, Object node, Object service) {
                         _client = client;
                         _node = node;
                         _service = service;
@@ -17559,11 +17369,11 @@ public class Client extends ClientBase {
 
                     public class PVEState {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _service;
 
-                        protected PVEState(Client client, Object node, Object service) {
+                        protected PVEState(PveClient client, Object node, Object service) {
                             _client = client;
                             _node = node;
                             _service = service;
@@ -17593,11 +17403,11 @@ public class Client extends ClientBase {
 
                     public class PVEStart {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _service;
 
-                        protected PVEStart(Client client, Object node, Object service) {
+                        protected PVEStart(PveClient client, Object node, Object service) {
                             _client = client;
                             _node = node;
                             _service = service;
@@ -17627,11 +17437,11 @@ public class Client extends ClientBase {
 
                     public class PVEStop {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _service;
 
-                        protected PVEStop(Client client, Object node, Object service) {
+                        protected PVEStop(PveClient client, Object node, Object service) {
                             _client = client;
                             _node = node;
                             _service = service;
@@ -17661,11 +17471,11 @@ public class Client extends ClientBase {
 
                     public class PVERestart {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _service;
 
-                        protected PVERestart(Client client, Object node, Object service) {
+                        protected PVERestart(PveClient client, Object node, Object service) {
                             _client = client;
                             _node = node;
                             _service = service;
@@ -17695,11 +17505,11 @@ public class Client extends ClientBase {
 
                     public class PVEReload {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _service;
 
-                        protected PVEReload(Client client, Object node, Object service) {
+                        protected PVEReload(PveClient client, Object node, Object service) {
                             _client = client;
                             _node = node;
                             _service = service;
@@ -17773,10 +17583,10 @@ public class Client extends ClientBase {
 
             public class PVESubscription {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVESubscription(Client client, Object node) {
+                protected PVESubscription(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -17809,7 +17619,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(Boolean force) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("force", force);
@@ -17834,7 +17643,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest() throws JSONException {
                     return _client.create("/nodes/" + _node + "/subscription", null);
                 }
@@ -17856,7 +17664,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest(String key) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("key", key);
@@ -17878,10 +17685,10 @@ public class Client extends ClientBase {
 
             public class PVENetwork {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVENetwork(Client client, Object node) {
+                protected PVENetwork(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -17892,11 +17699,11 @@ public class Client extends ClientBase {
 
                 public class PVEItemIface {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
                     private final Object _iface;
 
-                    protected PVEItemIface(Client client, Object node, Object iface) {
+                    protected PVEItemIface(PveClient client, Object node, Object iface) {
                         _client = client;
                         _node = node;
                         _iface = iface;
@@ -17928,7 +17735,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/network/" + _iface + "", null);
                     }
@@ -17982,7 +17788,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result setRest(String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments, String comments6, String delete, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("type", type);
@@ -18062,7 +17867,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result setRest(String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("type", type);
@@ -18111,7 +17915,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest(String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
@@ -18136,7 +17939,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/nodes/" + _node + "/network", null);
                 }
@@ -18190,7 +17992,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String iface, String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments, String comments6, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("iface", iface);
@@ -18271,7 +18072,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String iface, String type) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("iface", iface);
@@ -18298,7 +18098,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest() throws JSONException {
                     return _client.set("/nodes/" + _node + "/network", null);
                 }
@@ -18317,10 +18116,10 @@ public class Client extends ClientBase {
 
             public class PVETasks {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVETasks(Client client, Object node) {
+                protected PVETasks(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -18331,11 +18130,11 @@ public class Client extends ClientBase {
 
                 public class PVEItemUpid {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
                     private final Object _upid;
 
-                    protected PVEItemUpid(Client client, Object node, Object upid) {
+                    protected PVEItemUpid(PveClient client, Object node, Object upid) {
                         _client = client;
                         _node = node;
                         _upid = upid;
@@ -18362,11 +18161,11 @@ public class Client extends ClientBase {
 
                     public class PVELog {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _upid;
 
-                        protected PVELog(Client client, Object node, Object upid) {
+                        protected PVELog(PveClient client, Object node, Object upid) {
                             _client = client;
                             _node = node;
                             _upid = upid;
@@ -18405,7 +18204,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest() throws JSONException {
                             return _client.get("/nodes/" + _node + "/tasks/" + _upid + "/log", null);
                         }
@@ -18424,11 +18222,11 @@ public class Client extends ClientBase {
 
                     public class PVEStatus {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _upid;
 
-                        protected PVEStatus(Client client, Object node, Object upid) {
+                        protected PVEStatus(PveClient client, Object node, Object upid) {
                             _client = client;
                             _node = node;
                             _upid = upid;
@@ -18481,7 +18279,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/tasks/" + _upid + "", null);
                     }
@@ -18549,7 +18346,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/nodes/" + _node + "/tasks", null);
                 }
@@ -18568,10 +18364,10 @@ public class Client extends ClientBase {
 
             public class PVEScan {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEScan(Client client, Object node) {
+                protected PVEScan(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -18651,10 +18447,10 @@ public class Client extends ClientBase {
 
                 public class PVEZfs {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEZfs(Client client, Object node) {
+                    protected PVEZfs(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -18683,10 +18479,10 @@ public class Client extends ClientBase {
 
                 public class PVENfs {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVENfs(Client client, Object node) {
+                    protected PVENfs(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -18719,10 +18515,10 @@ public class Client extends ClientBase {
 
                 public class PVECifs {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVECifs(Client client, Object node) {
+                    protected PVECifs(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -18767,7 +18563,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest(String server) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("server", server);
@@ -18789,10 +18584,10 @@ public class Client extends ClientBase {
 
                 public class PVEGlusterfs {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEGlusterfs(Client client, Object node) {
+                    protected PVEGlusterfs(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -18825,10 +18620,10 @@ public class Client extends ClientBase {
 
                 public class PVEIscsi {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEIscsi(Client client, Object node) {
+                    protected PVEIscsi(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -18863,10 +18658,10 @@ public class Client extends ClientBase {
 
                 public class PVELvm {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVELvm(Client client, Object node) {
+                    protected PVELvm(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -18895,10 +18690,10 @@ public class Client extends ClientBase {
 
                 public class PVELvmthin {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVELvmthin(Client client, Object node) {
+                    protected PVELvmthin(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -18931,10 +18726,10 @@ public class Client extends ClientBase {
 
                 public class PVEUsb {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEUsb(Client client, Object node) {
+                    protected PVEUsb(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -18985,10 +18780,10 @@ public class Client extends ClientBase {
 
             public class PVEHardware {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEHardware(Client client, Object node) {
+                protected PVEHardware(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -19005,10 +18800,10 @@ public class Client extends ClientBase {
 
                 public class PVEPci {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEPci(Client client, Object node) {
+                    protected PVEPci(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -19019,11 +18814,11 @@ public class Client extends ClientBase {
 
                     public class PVEItemPciid {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _pciid;
 
-                        protected PVEItemPciid(Client client, Object node, Object pciid) {
+                        protected PVEItemPciid(PveClient client, Object node, Object pciid) {
                             _client = client;
                             _node = node;
                             _pciid = pciid;
@@ -19041,11 +18836,11 @@ public class Client extends ClientBase {
 
                         public class PVEMdev {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _pciid;
 
-                            protected PVEMdev(Client client, Object node, Object pciid) {
+                            protected PVEMdev(PveClient client, Object node, Object pciid) {
                                 _client = client;
                                 _node = node;
                                 _pciid = pciid;
@@ -19138,7 +18933,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/hardware/pci", null);
                     }
@@ -19179,10 +18973,10 @@ public class Client extends ClientBase {
 
             public class PVEStorage {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEStorage(Client client, Object node) {
+                protected PVEStorage(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -19193,11 +18987,11 @@ public class Client extends ClientBase {
 
                 public class PVEItemStorage {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
                     private final Object _storage;
 
-                    protected PVEItemStorage(Client client, Object node, Object storage) {
+                    protected PVEItemStorage(PveClient client, Object node, Object storage) {
                         _client = client;
                         _node = node;
                         _storage = storage;
@@ -19251,11 +19045,11 @@ public class Client extends ClientBase {
 
                     public class PVEContent {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _storage;
 
-                        protected PVEContent(Client client, Object node, Object storage) {
+                        protected PVEContent(PveClient client, Object node, Object storage) {
                             _client = client;
                             _node = node;
                             _storage = storage;
@@ -19267,12 +19061,12 @@ public class Client extends ClientBase {
 
                         public class PVEItemVolume {
 
-                            private final Client _client;
+                            private final PveClient _client;
                             private final Object _node;
                             private final Object _storage;
                             private final Object _volume;
 
-                            protected PVEItemVolume(Client client, Object node, Object storage, Object volume) {
+                            protected PVEItemVolume(PveClient client, Object node, Object storage, Object volume) {
                                 _client = client;
                                 _node = node;
                                 _storage = storage;
@@ -19305,7 +19099,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result getRest() throws JSONException {
                                 return _client.get("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", null);
                             }
@@ -19330,7 +19123,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String target, String target_node) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("target", target);
@@ -19360,7 +19152,6 @@ public class Client extends ClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-
                             public Result createRest(String target) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("target", target);
@@ -19414,7 +19205,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest() throws JSONException {
                             return _client.get("/nodes/" + _node + "/storage/" + _storage + "/content", null);
                         }
@@ -19441,7 +19231,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(String filename, String size, int vmid, String format) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("filename", filename);
@@ -19478,7 +19267,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(String filename, String size, int vmid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("filename", filename);
@@ -19506,11 +19294,11 @@ public class Client extends ClientBase {
 
                     public class PVEStatus {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _storage;
 
-                        protected PVEStatus(Client client, Object node, Object storage) {
+                        protected PVEStatus(PveClient client, Object node, Object storage) {
                             _client = client;
                             _node = node;
                             _storage = storage;
@@ -19540,11 +19328,11 @@ public class Client extends ClientBase {
 
                     public class PVERrd {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _storage;
 
-                        protected PVERrd(Client client, Object node, Object storage) {
+                        protected PVERrd(PveClient client, Object node, Object storage) {
                             _client = client;
                             _node = node;
                             _storage = storage;
@@ -19596,7 +19384,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest(String ds, String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
@@ -19622,11 +19409,11 @@ public class Client extends ClientBase {
 
                     public class PVERrddata {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _storage;
 
-                        protected PVERrddata(Client client, Object node, Object storage) {
+                        protected PVERrddata(PveClient client, Object node, Object storage) {
                             _client = client;
                             _node = node;
                             _storage = storage;
@@ -19671,7 +19458,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest(String timeframe) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
@@ -19694,11 +19480,11 @@ public class Client extends ClientBase {
 
                     public class PVEUpload {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _storage;
 
-                        protected PVEUpload(Client client, Object node, Object storage) {
+                        protected PVEUpload(PveClient client, Object node, Object storage) {
                             _client = client;
                             _node = node;
                             _storage = storage;
@@ -19748,7 +19534,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(String content, String filename) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("content", content);
@@ -19840,7 +19625,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/nodes/" + _node + "/storage", null);
                 }
@@ -19859,10 +19643,10 @@ public class Client extends ClientBase {
 
             public class PVEDisks {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEDisks(Client client, Object node) {
+                protected PVEDisks(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -19933,10 +19717,10 @@ public class Client extends ClientBase {
 
                 public class PVELvm {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVELvm(Client client, Object node) {
+                    protected PVELvm(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -19972,7 +19756,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String device, String name, Boolean add_storage) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
@@ -20005,7 +19788,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String device, String name) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
@@ -20030,10 +19812,10 @@ public class Client extends ClientBase {
 
                 public class PVELvmthin {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVELvmthin(Client client, Object node) {
+                    protected PVELvmthin(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -20068,7 +19850,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String device, String name, Boolean add_storage) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
@@ -20100,7 +19881,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String device, String name) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
@@ -20125,10 +19905,10 @@ public class Client extends ClientBase {
 
                 public class PVEDirectory {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEDirectory(Client client, Object node) {
+                    protected PVEDirectory(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -20165,7 +19945,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String device, String name, Boolean add_storage, String filesystem) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
@@ -20201,7 +19980,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String device, String name) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
@@ -20227,10 +20005,10 @@ public class Client extends ClientBase {
 
                 public class PVEZfs {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEZfs(Client client, Object node) {
+                    protected PVEZfs(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -20241,11 +20019,11 @@ public class Client extends ClientBase {
 
                     public class PVEItemName {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _name;
 
-                        protected PVEItemName(Client client, Object node, Object name) {
+                        protected PVEItemName(PveClient client, Object node, Object name) {
                             _client = client;
                             _node = node;
                             _name = name;
@@ -20308,7 +20086,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String devices, String name, String raidlevel, Boolean add_storage, Integer ashift, String compression) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("devices", devices);
@@ -20350,7 +20127,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String devices, String name, String raidlevel) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("devices", devices);
@@ -20378,10 +20154,10 @@ public class Client extends ClientBase {
 
                 public class PVEList {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEList(Client client, Object node) {
+                    protected PVEList(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -20421,7 +20197,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/disks/list", null);
                     }
@@ -20440,10 +20215,10 @@ public class Client extends ClientBase {
 
                 public class PVESmart {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVESmart(Client client, Object node) {
+                    protected PVESmart(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -20482,7 +20257,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest(String disk) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("disk", disk);
@@ -20504,10 +20278,10 @@ public class Client extends ClientBase {
 
                 public class PVEInitgpt {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEInitgpt(Client client, Object node) {
+                    protected PVEInitgpt(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -20546,7 +20320,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String disk) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("disk", disk);
@@ -20590,10 +20363,10 @@ public class Client extends ClientBase {
 
             public class PVEApt {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEApt(Client client, Object node) {
+                protected PVEApt(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -20628,10 +20401,10 @@ public class Client extends ClientBase {
 
                 public class PVEUpdate {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEUpdate(Client client, Object node) {
+                    protected PVEUpdate(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -20667,7 +20440,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(Boolean notify, Boolean quiet) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("notify", notify);
@@ -20697,7 +20469,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest() throws JSONException {
                         return _client.create("/nodes/" + _node + "/apt/update", null);
                     }
@@ -20717,10 +20488,10 @@ public class Client extends ClientBase {
 
                 public class PVEChangelog {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEChangelog(Client client, Object node) {
+                    protected PVEChangelog(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -20759,7 +20530,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest(String name) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
@@ -20781,10 +20551,10 @@ public class Client extends ClientBase {
 
                 public class PVEVersions {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEVersions(Client client, Object node) {
+                    protected PVEVersions(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -20835,10 +20605,10 @@ public class Client extends ClientBase {
 
             public class PVEFirewall {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEFirewall(Client client, Object node) {
+                protected PVEFirewall(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -20873,10 +20643,10 @@ public class Client extends ClientBase {
 
                 public class PVERules {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVERules(Client client, Object node) {
+                    protected PVERules(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -20887,11 +20657,11 @@ public class Client extends ClientBase {
 
                     public class PVEItemPos {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _pos;
 
-                        protected PVEItemPos(Client client, Object node, Object pos) {
+                        protected PVEItemPos(PveClient client, Object node, Object pos) {
                             _client = client;
                             _node = node;
                             _pos = pos;
@@ -20931,7 +20701,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result deleteRest() throws JSONException {
                             return _client.delete("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
                         }
@@ -20952,7 +20721,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest() throws JSONException {
                             return _client.get("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
                         }
@@ -21020,7 +20788,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest(String action, String comment, String delete, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer moveto, String proto, String source, String sport, String type) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("action", action);
@@ -21104,7 +20871,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest() throws JSONException {
                             return _client.set("/nodes/" + _node + "/firewall/rules/" + _pos + "", null);
                         }
@@ -21189,7 +20955,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String action, String type, String comment, String dest, String digest, String dport, Integer enable, String iface, String log, String macro, Integer pos, String proto, String source, String sport) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
@@ -21270,7 +21035,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String action, String type) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
@@ -21295,10 +21059,10 @@ public class Client extends ClientBase {
 
                 public class PVEOptions {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEOptions(Client client, Object node) {
+                    protected PVEOptions(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -21355,7 +21119,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result setRest(String delete, String digest, Boolean enable, String log_level_in, String log_level_out, Boolean log_nf_conntrack, Boolean ndp, Boolean nf_conntrack_allow_invalid, Integer nf_conntrack_max, Integer nf_conntrack_tcp_timeout_established, Boolean nosmurfs, String smurf_log_level, String tcp_flags_log_level, Boolean tcpflags) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("delete", delete);
@@ -21417,7 +21180,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result setRest() throws JSONException {
                         return _client.set("/nodes/" + _node + "/firewall/options", null);
                     }
@@ -21436,10 +21198,10 @@ public class Client extends ClientBase {
 
                 public class PVELog {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVELog(Client client, Object node) {
+                    protected PVELog(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -21477,7 +21239,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result getRest() throws JSONException {
                         return _client.get("/nodes/" + _node + "/firewall/log", null);
                     }
@@ -21518,10 +21279,10 @@ public class Client extends ClientBase {
 
             public class PVEReplication {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEReplication(Client client, Object node) {
+                protected PVEReplication(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -21532,11 +21293,11 @@ public class Client extends ClientBase {
 
                 public class PVEItemId {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
                     private final Object _id;
 
-                    protected PVEItemId(Client client, Object node, Object id) {
+                    protected PVEItemId(PveClient client, Object node, Object id) {
                         _client = client;
                         _node = node;
                         _id = id;
@@ -21572,11 +21333,11 @@ public class Client extends ClientBase {
 
                     public class PVEStatus {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _id;
 
-                        protected PVEStatus(Client client, Object node, Object id) {
+                        protected PVEStatus(PveClient client, Object node, Object id) {
                             _client = client;
                             _node = node;
                             _id = id;
@@ -21606,11 +21367,11 @@ public class Client extends ClientBase {
 
                     public class PVELog {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _id;
 
-                        protected PVELog(Client client, Object node, Object id) {
+                        protected PVELog(PveClient client, Object node, Object id) {
                             _client = client;
                             _node = node;
                             _id = id;
@@ -21649,7 +21410,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result getRest() throws JSONException {
                             return _client.get("/nodes/" + _node + "/replication/" + _id + "/log", null);
                         }
@@ -21668,11 +21428,11 @@ public class Client extends ClientBase {
 
                     public class PVEScheduleNow {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
                         private final Object _id;
 
-                        protected PVEScheduleNow(Client client, Object node, Object id) {
+                        protected PVEScheduleNow(PveClient client, Object node, Object id) {
                             _client = client;
                             _node = node;
                             _id = id;
@@ -21754,7 +21514,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/nodes/" + _node + "/replication", null);
                 }
@@ -21773,10 +21532,10 @@ public class Client extends ClientBase {
 
             public class PVECertificates {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVECertificates(Client client, Object node) {
+                protected PVECertificates(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -21811,10 +21570,10 @@ public class Client extends ClientBase {
 
                 public class PVEAcme {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEAcme(Client client, Object node) {
+                    protected PVEAcme(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -21831,10 +21590,10 @@ public class Client extends ClientBase {
 
                     public class PVECertificate {
 
-                        private final Client _client;
+                        private final PveClient _client;
                         private final Object _node;
 
-                        protected PVECertificate(Client client, Object node) {
+                        protected PVECertificate(PveClient client, Object node) {
                             _client = client;
                             _node = node;
                         }
@@ -21866,7 +21625,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest(Boolean force) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("force", force);
@@ -21890,7 +21648,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result createRest() throws JSONException {
                             return _client.create("/nodes/" + _node + "/certificates/acme/certificate", null);
                         }
@@ -21913,7 +21670,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest(Boolean force) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("force", force);
@@ -21938,7 +21694,6 @@ public class Client extends ClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-
                         public Result setRest() throws JSONException {
                             return _client.set("/nodes/" + _node + "/certificates/acme/certificate", null);
                         }
@@ -21979,10 +21734,10 @@ public class Client extends ClientBase {
 
                 public class PVEInfo {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVEInfo(Client client, Object node) {
+                    protected PVEInfo(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -22011,10 +21766,10 @@ public class Client extends ClientBase {
 
                 public class PVECustom {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _node;
 
-                    protected PVECustom(Client client, Object node) {
+                    protected PVECustom(PveClient client, Object node) {
                         _client = client;
                         _node = node;
                     }
@@ -22049,7 +21804,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result deleteRest() throws JSONException {
                         return _client.delete("/nodes/" + _node + "/certificates/custom", null);
                     }
@@ -22075,7 +21829,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String certificates, Boolean force, String key, Boolean restart) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("certificates", certificates);
@@ -22107,7 +21860,6 @@ public class Client extends ClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-
                     public Result createRest(String certificates) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("certificates", certificates);
@@ -22151,10 +21903,10 @@ public class Client extends ClientBase {
 
             public class PVEConfig {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEConfig(Client client, Object node) {
+                protected PVEConfig(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -22192,7 +21944,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest(String acme, String delete, String description, String digest, String wakeonlan) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("acme", acme);
@@ -22226,7 +21977,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest() throws JSONException {
                     return _client.set("/nodes/" + _node + "/config", null);
                 }
@@ -22245,10 +21995,10 @@ public class Client extends ClientBase {
 
             public class PVEVersion {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEVersion(Client client, Object node) {
+                protected PVEVersion(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -22277,10 +22027,10 @@ public class Client extends ClientBase {
 
             public class PVEStatus {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEStatus(Client client, Object node) {
+                protected PVEStatus(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -22312,7 +22062,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String command) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("command", command);
@@ -22334,10 +22083,10 @@ public class Client extends ClientBase {
 
             public class PVENetstat {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVENetstat(Client client, Object node) {
+                protected PVENetstat(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -22366,10 +22115,10 @@ public class Client extends ClientBase {
 
             public class PVEExecute {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEExecute(Client client, Object node) {
+                protected PVEExecute(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -22402,10 +22151,10 @@ public class Client extends ClientBase {
 
             public class PVEWakeonlan {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEWakeonlan(Client client, Object node) {
+                protected PVEWakeonlan(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -22434,10 +22183,10 @@ public class Client extends ClientBase {
 
             public class PVERrd {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVERrd(Client client, Object node) {
+                protected PVERrd(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -22483,7 +22232,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest(String ds, String timeframe) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ds", ds);
@@ -22508,10 +22256,10 @@ public class Client extends ClientBase {
 
             public class PVERrddata {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVERrddata(Client client, Object node) {
+                protected PVERrddata(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -22553,7 +22301,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest(String timeframe) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("timeframe", timeframe);
@@ -22576,10 +22323,10 @@ public class Client extends ClientBase {
 
             public class PVESyslog {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVESyslog(Client client, Object node) {
+                protected PVESyslog(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -22626,7 +22373,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/nodes/" + _node + "/syslog", null);
                 }
@@ -22645,10 +22391,10 @@ public class Client extends ClientBase {
 
             public class PVEJournal {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEJournal(Client client, Object node) {
+                protected PVEJournal(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -22705,7 +22451,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/nodes/" + _node + "/journal", null);
                 }
@@ -22724,10 +22469,10 @@ public class Client extends ClientBase {
 
             public class PVEVncshell {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEVncshell(Client client, Object node) {
+                protected PVEVncshell(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -22778,7 +22523,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest() throws JSONException {
                     return _client.create("/nodes/" + _node + "/vncshell", null);
                 }
@@ -22797,10 +22541,10 @@ public class Client extends ClientBase {
 
             public class PVETermproxy {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVETermproxy(Client client, Object node) {
+                protected PVETermproxy(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -22842,7 +22586,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest() throws JSONException {
                     return _client.create("/nodes/" + _node + "/termproxy", null);
                 }
@@ -22861,10 +22604,10 @@ public class Client extends ClientBase {
 
             public class PVEVncwebsocket {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEVncwebsocket(Client client, Object node) {
+                protected PVEVncwebsocket(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -22900,10 +22643,10 @@ public class Client extends ClientBase {
 
             public class PVESpiceshell {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVESpiceshell(Client client, Object node) {
+                protected PVESpiceshell(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -22960,7 +22703,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest() throws JSONException {
                     return _client.create("/nodes/" + _node + "/spiceshell", null);
                 }
@@ -22979,10 +22721,10 @@ public class Client extends ClientBase {
 
             public class PVEDns {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEDns(Client client, Object node) {
+                protected PVEDns(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -23017,7 +22759,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest(String search, String dns1, String dns2, String dns3) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("search", search);
@@ -23048,7 +22789,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest(String search) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("search", search);
@@ -23070,10 +22810,10 @@ public class Client extends ClientBase {
 
             public class PVETime {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVETime(Client client, Object node) {
+                protected PVETime(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -23107,7 +22847,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest(String timezone) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("timezone", timezone);
@@ -23131,10 +22870,10 @@ public class Client extends ClientBase {
 
             public class PVEAplinfo {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEAplinfo(Client client, Object node) {
+                protected PVEAplinfo(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -23167,7 +22906,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String storage, String template) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("storage", storage);
@@ -23191,10 +22929,10 @@ public class Client extends ClientBase {
 
             public class PVEReport {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEReport(Client client, Object node) {
+                protected PVEReport(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -23223,10 +22961,10 @@ public class Client extends ClientBase {
 
             public class PVEStartall {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEStartall(Client client, Object node) {
+                protected PVEStartall(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -23264,7 +23002,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest() throws JSONException {
                     return _client.create("/nodes/" + _node + "/startall", null);
                 }
@@ -23283,10 +23020,10 @@ public class Client extends ClientBase {
 
             public class PVEStopall {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEStopall(Client client, Object node) {
+                protected PVEStopall(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -23321,7 +23058,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest() throws JSONException {
                     return _client.create("/nodes/" + _node + "/stopall", null);
                 }
@@ -23340,10 +23076,10 @@ public class Client extends ClientBase {
 
             public class PVEMigrateall {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEMigrateall(Client client, Object node) {
+                protected PVEMigrateall(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -23389,7 +23125,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String target) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("target", target);
@@ -23411,10 +23146,10 @@ public class Client extends ClientBase {
 
             public class PVEHosts {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _node;
 
-                protected PVEHosts(Client client, Object node) {
+                protected PVEHosts(PveClient client, Object node) {
                     _client = client;
                     _node = node;
                 }
@@ -23449,7 +23184,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String data, String digest) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("data", data);
@@ -23478,7 +23212,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result createRest(String data) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("data", data);
@@ -23544,9 +23277,9 @@ public class Client extends ClientBase {
 
     public class PVEStorage {
 
-        private final Client _client;
+        private final PveClient _client;
 
-        protected PVEStorage(Client client) {
+        protected PVEStorage(PveClient client) {
             _client = client;
 
         }
@@ -23557,10 +23290,10 @@ public class Client extends ClientBase {
 
         public class PVEItemStorage {
 
-            private final Client _client;
+            private final PveClient _client;
             private final Object _storage;
 
-            protected PVEItemStorage(Client client, Object storage) {
+            protected PVEItemStorage(PveClient client, Object storage) {
                 _client = client;
                 _storage = storage;
             }
@@ -23591,7 +23324,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result getRest() throws JSONException {
                 return _client.get("/storage/" + _storage + "", null);
             }
@@ -23658,7 +23390,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result setRest(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String format, Boolean fuse, String is_mountpoint, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String password, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("blocksize", blocksize);
@@ -23760,7 +23491,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result setRest() throws JSONException {
                 return _client.set("/storage/" + _storage + "", null);
             }
@@ -23809,7 +23539,6 @@ public class Client extends ClientBase {
          * @return Result
          * @throws JSONException
          */
-
         public Result getRest() throws JSONException {
             return _client.get("/storage", null);
         }
@@ -23884,7 +23613,6 @@ public class Client extends ClientBase {
          * @return Result
          * @throws JSONException
          */
-
         public Result createRest(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, Boolean disable, String domain, String export, String format, Boolean fuse, String is_mountpoint, String iscsiprovider, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String nodes, Boolean nowritecache, String options, String password, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("storage", storage);
@@ -24008,7 +23736,6 @@ public class Client extends ClientBase {
          * @return Result
          * @throws JSONException
          */
-
         public Result createRest(String storage, String type) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("storage", storage);
@@ -24033,9 +23760,9 @@ public class Client extends ClientBase {
 
     public class PVEAccess {
 
-        private final Client _client;
+        private final PveClient _client;
 
-        protected PVEAccess(Client client) {
+        protected PVEAccess(PveClient client) {
             _client = client;
 
         }
@@ -24115,9 +23842,9 @@ public class Client extends ClientBase {
 
         public class PVEUsers {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVEUsers(Client client) {
+            protected PVEUsers(PveClient client) {
                 _client = client;
 
             }
@@ -24128,10 +23855,10 @@ public class Client extends ClientBase {
 
             public class PVEItemUserid {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _userid;
 
-                protected PVEItemUserid(Client client, Object userid) {
+                protected PVEItemUserid(PveClient client, Object userid) {
                     _client = client;
                     _userid = userid;
                 }
@@ -24148,10 +23875,10 @@ public class Client extends ClientBase {
 
                 public class PVETfa {
 
-                    private final Client _client;
+                    private final PveClient _client;
                     private final Object _userid;
 
-                    protected PVETfa(Client client, Object userid) {
+                    protected PVETfa(PveClient client, Object userid) {
                         _client = client;
                         _userid = userid;
                     }
@@ -24204,7 +23931,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/access/users/" + _userid + "", null);
                 }
@@ -24236,7 +23962,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest(Boolean append, String comment, String email, Boolean enable, Integer expire, String firstname, String groups, String keys, String lastname) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("append", append);
@@ -24278,7 +24003,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest() throws JSONException {
                     return _client.set("/access/users/" + _userid + "", null);
                 }
@@ -24325,7 +24049,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result getRest() throws JSONException {
                 return _client.get("/access/users", null);
             }
@@ -24358,7 +24081,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String userid, String comment, String email, Boolean enable, Integer expire, String firstname, String groups, String keys, String lastname, String password) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("userid", userid);
@@ -24403,7 +24125,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String userid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("userid", userid);
@@ -24425,9 +24146,9 @@ public class Client extends ClientBase {
 
         public class PVEGroups {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVEGroups(Client client) {
+            protected PVEGroups(PveClient client) {
                 _client = client;
 
             }
@@ -24438,10 +24159,10 @@ public class Client extends ClientBase {
 
             public class PVEItemGroupid {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _groupid;
 
-                protected PVEItemGroupid(Client client, Object groupid) {
+                protected PVEItemGroupid(PveClient client, Object groupid) {
                     _client = client;
                     _groupid = groupid;
                 }
@@ -24472,7 +24193,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/access/groups/" + _groupid + "", null);
                 }
@@ -24494,7 +24214,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest(String comment) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("comment", comment);
@@ -24518,7 +24237,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest() throws JSONException {
                     return _client.set("/access/groups/" + _groupid + "", null);
                 }
@@ -24563,7 +24281,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String groupid, String comment) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("groupid", groupid);
@@ -24590,7 +24307,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String groupid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("groupid", groupid);
@@ -24612,9 +24328,9 @@ public class Client extends ClientBase {
 
         public class PVERoles {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVERoles(Client client) {
+            protected PVERoles(PveClient client) {
                 _client = client;
 
             }
@@ -24625,10 +24341,10 @@ public class Client extends ClientBase {
 
             public class PVEItemRoleid {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _roleid;
 
-                protected PVEItemRoleid(Client client, Object roleid) {
+                protected PVEItemRoleid(PveClient client, Object roleid) {
                     _client = client;
                     _roleid = roleid;
                 }
@@ -24659,7 +24375,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/access/roles/" + _roleid + "", null);
                 }
@@ -24682,7 +24397,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest(Boolean append, String privs) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("append", append);
@@ -24708,7 +24422,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest() throws JSONException {
                     return _client.set("/access/roles/" + _roleid + "", null);
                 }
@@ -24753,7 +24466,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String roleid, String privs) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("roleid", roleid);
@@ -24780,7 +24492,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String roleid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("roleid", roleid);
@@ -24802,9 +24513,9 @@ public class Client extends ClientBase {
 
         public class PVEAcl {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVEAcl(Client client) {
+            protected PVEAcl(PveClient client) {
                 _client = client;
 
             }
@@ -24841,7 +24552,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result setRest(String path, String roles, Boolean delete, String groups, Boolean propagate, String users) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("path", path);
@@ -24877,7 +24587,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result setRest(String path, String roles) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("path", path);
@@ -24901,9 +24610,9 @@ public class Client extends ClientBase {
 
         public class PVEDomains {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVEDomains(Client client) {
+            protected PVEDomains(PveClient client) {
                 _client = client;
 
             }
@@ -24914,10 +24623,10 @@ public class Client extends ClientBase {
 
             public class PVEItemRealm {
 
-                private final Client _client;
+                private final PveClient _client;
                 private final Object _realm;
 
-                protected PVEItemRealm(Client client, Object realm) {
+                protected PVEItemRealm(PveClient client, Object realm) {
                     _client = client;
                     _realm = realm;
                 }
@@ -24948,7 +24657,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result getRest() throws JSONException {
                     return _client.get("/access/domains/" + _realm + "", null);
                 }
@@ -24988,7 +24696,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest(String base_dn, String bind_dn, String capath, String cert, String certkey, String comment, Boolean default_, String delete, String digest, String domain, Integer port, Boolean secure, String server1, String server2, String tfa, String user_attr, Boolean verify) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("base_dn", base_dn);
@@ -25046,7 +24753,6 @@ public class Client extends ClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-
                 public Result setRest() throws JSONException {
                     return _client.set("/access/domains/" + _realm + "", null);
                 }
@@ -25106,7 +24812,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String realm, String type, String base_dn, String bind_dn, String capath, String cert, String certkey, String comment, Boolean default_, String domain, Integer port, Boolean secure, String server1, String server2, String tfa, String user_attr, Boolean verify) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("realm", realm);
@@ -25164,7 +24869,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String realm, String type) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("realm", realm);
@@ -25188,9 +24892,9 @@ public class Client extends ClientBase {
 
         public class PVETicket {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVETicket(Client client) {
+            protected PVETicket(PveClient client) {
                 _client = client;
 
             }
@@ -25232,7 +24936,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String password, String username, String otp, String path, String privs, String realm) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("password", password);
@@ -25274,7 +24977,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result createRest(String password, String username) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("password", password);
@@ -25299,9 +25001,9 @@ public class Client extends ClientBase {
 
         public class PVEPassword {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVEPassword(Client client) {
+            protected PVEPassword(PveClient client) {
                 _client = client;
 
             }
@@ -25337,9 +25039,9 @@ public class Client extends ClientBase {
 
         public class PVETfa {
 
-            private final Client _client;
+            private final PveClient _client;
 
-            protected PVETfa(Client client) {
+            protected PVETfa(PveClient client) {
                 _client = client;
 
             }
@@ -25385,7 +25087,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result setRest(String action, String userid, String config, String key, String password, String response) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("action", action);
@@ -25424,7 +25125,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result setRest(String action, String userid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("action", action);
@@ -25470,9 +25170,9 @@ public class Client extends ClientBase {
 
     public class PVEPools {
 
-        private final Client _client;
+        private final PveClient _client;
 
-        protected PVEPools(Client client) {
+        protected PVEPools(PveClient client) {
             _client = client;
 
         }
@@ -25483,10 +25183,10 @@ public class Client extends ClientBase {
 
         public class PVEItemPoolid {
 
-            private final Client _client;
+            private final PveClient _client;
             private final Object _poolid;
 
-            protected PVEItemPoolid(Client client, Object poolid) {
+            protected PVEItemPoolid(PveClient client, Object poolid) {
                 _client = client;
                 _poolid = poolid;
             }
@@ -25517,7 +25217,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result getRest() throws JSONException {
                 return _client.get("/pools/" + _poolid + "", null);
             }
@@ -25542,7 +25241,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result setRest(String comment, Boolean delete, String storage, String vms) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("comment", comment);
@@ -25572,7 +25270,6 @@ public class Client extends ClientBase {
              * @return Result
              * @throws JSONException
              */
-
             public Result setRest() throws JSONException {
                 return _client.set("/pools/" + _poolid + "", null);
             }
@@ -25617,7 +25314,6 @@ public class Client extends ClientBase {
          * @return Result
          * @throws JSONException
          */
-
         public Result createRest(String poolid, String comment) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("poolid", poolid);
@@ -25644,7 +25340,6 @@ public class Client extends ClientBase {
          * @return Result
          * @throws JSONException
          */
-
         public Result createRest(String poolid) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("poolid", poolid);
@@ -25666,9 +25361,9 @@ public class Client extends ClientBase {
 
     public class PVEVersion {
 
-        private final Client _client;
+        private final PveClient _client;
 
-        protected PVEVersion(Client client) {
+        protected PVEVersion(PveClient client) {
             _client = client;
 
         }

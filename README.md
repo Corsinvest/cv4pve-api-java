@@ -1,10 +1,10 @@
 # cv4pve-api-java
 
-ProxmoVE Client API JAVA
+Proxmox VE Client API JAVA
 
 [![License](https://img.shields.io/github/license/Corsinvest/cv4pve-api-java.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html) ![GitHub release](https://img.shields.io/github/release/Corsinvest/cv4pve-api-java.svg) [![Donate to this project using Paypal](https://img.shields.io/badge/paypal-donate-yellow.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=PPM9JHLQLRV2S&item_name=Open+Source+Project&currency_code=EUR&source=url)
 
-[ProxmoxVE Api](https://pve.proxmox.com/pve-docs/api-viewer/)
+[Proxmox VE Api](https://pve.proxmox.com/pve-docs/api-viewer/)
 
 # **Donations**
 
@@ -24,14 +24,14 @@ Corsinvest for Proxmox VE Api Client  (Made in Italy)
 
 ## General
 
-The client is generated from a JSON Api on ProxmoxVE.
+The client is generated from a JSON Api on Proxmox VE.
 
 ## Result
 
 The result is class **Result** and contain methods:
 
-* **getResponse()** returned from ProxmoxVE (data,errors,...) JSONObject
-* **responseInError** (bool) : Contains errors from ProxmoxVE.
+* **getResponse()** returned from Proxmox VE (data,errors,...) JSONObject
+* **responseInError** (bool) : Contains errors from Proxmox VE.
 * **getStatusCode()** (int) : Status code of the HTTP response.
 * **getReasonPhrase()** (string): The reason phrase which typically is sent by servers together with the status code.
 * **isSuccessStatusCode()** (bool) : Gets a value that indicates if the HTTP response was successful.
@@ -53,16 +53,16 @@ The result is class **Result** and contain methods:
   * client.getNodes().get("pve1").getQemu().vmlist().getResponse().getJSONArray("data")
 * Return data Proxmox VE
 * Debug Level show to console information
-* Return result status
-  * getStatusCode
-  * getReasonPhrase
-  * isSuccessStatusCode
+* Return result
+  * Request
+  * Response
+  * Status
 * Last result action
 * Wait task finish task
   * waitForTaskToFinish
   * taskIsRunning
   * getExitStatusTask
-* Method directry access
+* Method directly access
   * get
   * set
   * create
@@ -75,7 +75,7 @@ The result is class **Result** and contain methods:
 ## Usage
 
 ```java
-Client client = new Client("10.92.90.91", 8006);
+PveClient client = new PveClient("10.92.90.91", 8006);
 if (client.login("root", "password", "pam")) {
         //version
         System.out.println(client.getVersion().version().getResponse().get("data"));
@@ -88,7 +88,7 @@ if (client.login("root", "password", "pam")) {
         }
 
         //loop nodes for each
-        Client.<JSONObject>JSONArrayToList(client.getNodes().index().getResponse().getJSONArray("data")).forEach((node) -> {
+        PveClient.<JSONObject>JSONArrayToList(client.getNodes().index().getResponse().getJSONArray("data")).forEach((node) -> {
                 System.out.println(node);
         });
 
@@ -98,7 +98,7 @@ if (client.login("root", "password", "pam")) {
                 System.out.println(vms.get(i));
         }
 
-        //loop snashots
+        //loop snapshots
         JSONArray snapshots = client.getNodes().get("pve1")
                 .getQemu().get(100).getSnapshot().snapshotList().getResponse().getJSONArray("data");
         for (int i = 0; i < snapshots.length(); i++) {
@@ -115,7 +115,7 @@ if (client.login("root", "password", "pam")) {
         client.waitForTaskToFinish("pve1", retCreateSnap.getString("data"), 500, 10000);
 
         //delete snapshot
-        Client.Result retDeleSnap = client.getNodes().get("pve1").getQemu().get(100).getSnapshot().get("pippo").delsnapshot();
+        Result retDeleSnap = client.getNodes().get("pve1").getQemu().get(100).getSnapshot().get("pippo").delsnapshot();
         System.out.println(retDeleSnap.getResponse().get("data"));
 }
 ```

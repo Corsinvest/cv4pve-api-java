@@ -1,5 +1,22 @@
+/*
+ * This file is part of the cv4pve-api-java https://github.com/Corsinvest/cv4pve-api-java,
+ * Copyright (C) 2016 Corsinvest Srl
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-import it.corsinvest.proxmoxve.api.Client;
+import it.corsinvest.proxmoxve.api.PveClient;
 import it.corsinvest.proxmoxve.api.Result;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -8,8 +25,8 @@ import org.json.JSONObject;
 public class Test {
 
     public static void main(String[] args) throws JSONException {
-        Client client = new Client("10.92.90.91", 8006);
-        if (client.login("root@pam", "password")) {
+        PveClient client = new PveClient("10.92.90.91", 8006);
+        if (client.login("test@pam", "test")) {
             //version
             System.out.println(client.getVersion().version().getResponse().get("data"));
 
@@ -21,7 +38,7 @@ public class Test {
             }
 
             //loop nodes for each
-            Client.<JSONObject>JSONArrayToList(client.getNodes().index().getResponse().getJSONArray("data")).forEach((node) -> {
+            PveClient.<JSONObject>JSONArrayToList(client.getNodes().index().getResponse().getJSONArray("data")).forEach((node) -> {
                 System.out.println(node);
             });
 
@@ -31,7 +48,7 @@ public class Test {
                 System.out.println(vms.get(i));
             }
 
-            //loop snashots
+            //loop snapshots
             JSONArray snapshots = client.getNodes().get("pve1")
                     .getQemu().get(100).getSnapshot().snapshotList().getResponse().getJSONArray("data");
             for (int i = 0; i < snapshots.length(); i++) {

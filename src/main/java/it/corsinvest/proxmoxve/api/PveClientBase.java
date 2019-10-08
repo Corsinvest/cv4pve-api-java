@@ -1,3 +1,20 @@
+/*
+ * This file is part of the cv4pve-api-java https://github.com/Corsinvest/cv4pve-api-java,
+ * Copyright (C) 2016 Corsinvest Srl
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package it.corsinvest.proxmoxve.api;
 
 import java.io.BufferedReader;
@@ -11,6 +28,7 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,7 +48,7 @@ import org.json.JSONObject;
 /**
  * Proxmox VE Client Base
  */
-public class ClientBase {
+public class PveClientBase {
 
     private String _ticketCSRFPreventionToken;
     private String _ticketPVEAuthCookie;
@@ -38,8 +56,9 @@ public class ClientBase {
     private final int _port;
     private int _debugLevel;
     private Result _lastResult;
+    private ResponseType _responseType = ResponseType.JSON;
 
-    public ClientBase(String hostname, int port) {
+    public PveClientBase(String hostname, int port) {
         _hostname = hostname;
         _port = port;
     }
@@ -60,6 +79,26 @@ public class ClientBase {
      */
     public int getPort() {
         return _port;
+    }
+
+    /**
+     * Get the response type that is going to be returned when doing requests
+     * (json, png).
+     *
+     * @return
+     */
+    public ResponseType getResponseType() {
+        return _responseType;
+    }
+
+    /**
+     * Set the response type that is going to be returned when doing requests
+     * (json, png).
+     *
+     * @param responseType
+     */
+    public void setResponseType(ResponseType responseType) {
+        _responseType = responseType;
     }
 
     /**
@@ -91,14 +130,10 @@ public class ClientBase {
      * @throws JSONException
      */
     public boolean login(String userName, String password, String realm) throws JSONException {
-        Result result = create("/access/ticket",
-                new HashMap<String, Object>() {
+        Result result = create("/access/ticket", new HashMap<String, Object>() {
             {
                 put("password", password);
                 put("username", userName);
-                put("otp", null);
-                put("path", null);
-                put("privs", null);
                 put("realm", realm);
             }
         });
@@ -134,7 +169,7 @@ public class ClientBase {
      * @throws JSONException
      */
     public Result get(String resource, Map<String, Object> parameters) throws JSONException {
-        return executeAction(resource, HttpMethod.GET, parameters);
+        return executeAction(resource, MethodType.GET, parameters);
     }
 
     /**
@@ -146,7 +181,7 @@ public class ClientBase {
      * @throws JSONException
      */
     public Result set(String resource, Map<String, Object> parameters) throws JSONException {
-        return executeAction(resource, HttpMethod.PUT, parameters);
+        return executeAction(resource, MethodType.SET, parameters);
     }
 
     /**
@@ -158,7 +193,7 @@ public class ClientBase {
      * @throws JSONException
      */
     public Result create(String resource, Map<String, Object> parameters) throws JSONException {
-        return executeAction(resource, HttpMethod.POST, parameters);
+        return executeAction(resource, MethodType.CREATE, parameters);
     }
 
     /**
@@ -170,7 +205,7 @@ public class ClientBase {
      * @throws JSONException
      */
     public Result delete(String resource, Map<String, Object> parameters) throws JSONException {
-        return executeAction(resource, HttpMethod.DELETE, parameters);
+        return executeAction(resource, MethodType.DELETE, parameters);
     }
 
     /**
@@ -198,8 +233,32 @@ public class ClientBase {
         }
     }
 
-    private Result executeAction(String resource, HttpMethod method, Map<String, Object> parameters) throws JSONException {
+    private Result executeAction(String resource, MethodType methodType, Map<String, Object> parameters)
+            throws JSONException {
         String url = getApiUrl() + resource;
+
+        //decode http method
+        HttpMethod httpMethod;
+        switch (methodType) {
+            case GET:
+                httpMethod = HttpMethod.GET;
+                break;
+
+            case SET:
+                httpMethod = HttpMethod.PUT;
+                break;
+
+            case CREATE:
+                httpMethod = HttpMethod.POST;
+                break;
+
+            case DELETE:
+                httpMethod = HttpMethod.DELETE;
+                break;
+
+            default:
+                throw new AssertionError();
+        }
 
         Map params = new LinkedHashMap<>();
         if (parameters != null) {
@@ -226,8 +285,7 @@ public class ClientBase {
             @Override
             public void checkServerTrusted(X509Certificate[] certs, String authType) {
             }
-        }
-        };
+        }};
 
         // Install the all-trusting trust manager
         try {
@@ -235,7 +293,7 @@ public class ClientBase {
             sc.init(null, trustAllCerts, new java.security.SecureRandom());
             HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
         } catch (NoSuchAlgorithmException | KeyManagementException ex) {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(PveClientBase.class.getName()).log(Level.SEVERE, null, ex);
         }
 
         // Create all-trusting host name verifier
@@ -250,18 +308,16 @@ public class ClientBase {
         HttpURLConnection httpCon = null;
 
         try {
-            switch (method) {
+            switch (httpMethod) {
                 case GET: {
                     if (!params.isEmpty()) {
                         StringBuilder urlParams = new StringBuilder();
                         params.forEach((key, value) -> {
                             try {
-                                urlParams.append(urlParams.length() > 0 ? "&" : "")
-                                        .append(key)
-                                        .append("=")
+                                urlParams.append(urlParams.length() > 0 ? "&" : "").append(key).append("=")
                                         .append(URLEncoder.encode((String) value, "UTF-8"));
                             } catch (UnsupportedEncodingException ex) {
-                                Logger.getLogger(ClientBase.class.getName()).log(Level.SEVERE, null, ex);
+                                Logger.getLogger(PveClientBase.class.getName()).log(Level.SEVERE, null, ex);
                             }
                         });
                         url += "?" + urlParams.toString();
@@ -277,15 +333,12 @@ public class ClientBase {
                 case POST: {
                     StringBuilder postData = new StringBuilder();
                     params.forEach((key, value) -> {
-                        postData.append(postData.length() > 0 ? "&" : "")
-                                .append(key)
-                                .append("=")
-                                .append(value);
+                        postData.append(postData.length() > 0 ? "&" : "").append(key).append("=").append(value);
                     });
 
                     byte[] postDataBytes = postData.toString().getBytes("UTF-8");
                     httpCon = (HttpURLConnection) new URL(url).openConnection();
-                    httpCon.setRequestMethod(method + "");
+                    httpCon.setRequestMethod(httpMethod + "");
                     httpCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
                     httpCon.setRequestProperty("Content-Length", String.valueOf(postDataBytes.length));
                     setToken(httpCon);
@@ -304,10 +357,10 @@ public class ClientBase {
                 }
             }
 
-            //httpCon.setRequestProperty("User-Agent", "Mozilla/5.0");
+            // httpCon.setRequestProperty("User-Agent", "Mozilla/5.0");
             if (getDebugLevel() >= 1) {
-                System.out.println("Method: " + method + " , Url: " + url);
-                if (method != HttpMethod.GET) {
+                System.out.println("Method: " + httpMethod + " , Url: " + url);
+                if (httpMethod != HttpMethod.GET) {
                     System.out.println("Parameters:");
                     params.forEach((key, value) -> {
                         System.out.println(key + " : " + value);
@@ -324,13 +377,34 @@ public class ClientBase {
                 while ((line = reader.readLine()) != null) {
                     sb.append(line).append("\n");
                 }
-                response = new JSONObject(sb.toString());
+
+                switch (getResponseType()) {
+                    case JSON:
+                        response = new JSONObject(sb.toString());
+                        break;
+
+                    case PNG:
+                        response = new JSONObject("data:image/png;base64,"
+                                + new String(Base64.getEncoder().encode(sb.toString().getBytes())));
+                        break;
+
+                    default:
+                        throw new AssertionError();
+                }
+
             }
         } catch (IOException ex) {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(PveClientBase.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        _lastResult = new Result(response, statusCode, reasonPhrase);
+        _lastResult = new Result(response,
+                statusCode,
+                reasonPhrase,
+                resource,
+                parameters,
+                methodType,
+                getResponseType());
+
         if (getDebugLevel() >= 2) {
             System.out.println(response.toString(2));
             System.out.println("StatusCode:          " + _lastResult.getStatusCode());
@@ -357,7 +431,7 @@ public class ClientBase {
      *
      * @param parameters Parameters
      * @param name Name parameter
-     * @param value Calues
+     * @param value Values
      */
     public static void addIndexedParameter(Map<String, Object> parameters, String name, Map<Integer, String> value) {
         value.entrySet().forEach((entry) -> {
@@ -372,9 +446,10 @@ public class ClientBase {
      * @param task Task identifier
      * @param wait Millisecond wait next check
      * @param timeOut Millisecond timeout
+     * @return 0 Success
      * @throws JSONException
      */
-    public void waitForTaskToFinish(String node, String task, long wait, long timeOut) throws JSONException {
+    public int waitForTaskToFinish(String node, String task, long wait, long timeOut) throws JSONException {
         Boolean isRunning = true;
         if (wait <= 0) {
             wait = 500;
@@ -390,10 +465,25 @@ public class ClientBase {
                 isRunning = taskIsRunning(node, task);
             }
         }
+
+        return timeStart - System.currentTimeMillis() < timeOut ? 0 : 1;
     }
 
     /**
-     * Cherck task is running
+     * Wait for task to finish
+     *
+     * @param task Task identifier
+     * @param wait Millisecond wait next check
+     * @param timeOut Millisecond timeout
+     * @return 0 Success
+     * @throws JSONException
+     */
+    public int waitForTaskToFinish(String task, long wait, long timeOut) throws JSONException {
+        return waitForTaskToFinish(task.split(":")[1], task, wait, timeOut);
+    }
+
+    /**
+     * Check task is running
      *
      * @param node Node identifier
      * @param task Task identifier
@@ -435,5 +525,4 @@ public class ClientBase {
     private Result readTaskStatus(String node, String task) throws JSONException {
         return get("/nodes/" + node + "/tasks/" + task + "/status", null);
     }
-
 }
