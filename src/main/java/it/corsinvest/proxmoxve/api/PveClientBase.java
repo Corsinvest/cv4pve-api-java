@@ -1,19 +1,13 @@
 /*
  * This file is part of the cv4pve-api-java https://github.com/Corsinvest/cv4pve-api-java,
- * Copyright (C) 2016 Corsinvest Srl
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * This source file is available under two different licenses:
+ * - GNU General Public License version 3 (GPLv3)
+ * - Corsinvest Enterprise License (CEL)
+ * Full copyright and license information is available in
+ * LICENSE.md which is distributed with this source code.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Copyright (C) 2016 Corsinvest Srl	GPLv3 and CEL
  */
 package it.corsinvest.proxmoxve.api;
 
@@ -104,36 +98,36 @@ public class PveClientBase {
     /**
      * Creation ticket from login.
      *
-     * @param userName user name or &lt;username&gt;@&lt;realm&gt;
+     * @param username user name or &lt;username&gt;@&lt;realm&gt;
      * @param password password connection
      * @return
      * @throws JSONException
      */
-    public boolean login(String userName, String password) throws JSONException {
+    public boolean login(String username, String password) throws JSONException {
         String realm = "pam";
-        String[] data = userName.split("@");
+        String[] data = username.split("@");
         if (data.length > 1) {
-            userName = data[0];
+            username = data[0];
             realm = data[1];
         }
 
-        return login(userName, password, realm);
+        return login(username, password, realm);
     }
 
     /**
      * Creation ticket from login.
      *
-     * @param userName user name
+     * @param username user name
      * @param password password connection
      * @param realm pam/pve or custom
      * @return
      * @throws JSONException
      */
-    public boolean login(String userName, String password, String realm) throws JSONException {
+    public boolean login(String username, String password, String realm) throws JSONException {
         Result result = create("/access/ticket", new HashMap<String, Object>() {
             {
                 put("password", password);
-                put("username", userName);
+                put("username", username);
                 put("realm", realm);
             }
         });
@@ -154,10 +148,6 @@ public class PveClientBase {
      */
     public String getApiUrl() {
         return "https://" + getHostname() + ":" + getPort() + "/api2/json";
-    }
-
-    private enum HttpMethod {
-        GET, POST, PUT, DELETE
     }
 
     /**
@@ -238,22 +228,22 @@ public class PveClientBase {
         String url = getApiUrl() + resource;
 
         //decode http method
-        HttpMethod httpMethod;
+        String httpMethod = "";
         switch (methodType) {
             case GET:
-                httpMethod = HttpMethod.GET;
+                httpMethod = "GET";
                 break;
 
             case SET:
-                httpMethod = HttpMethod.PUT;
+                httpMethod = "PUT";
                 break;
 
             case CREATE:
-                httpMethod = HttpMethod.POST;
+                httpMethod = "POST";
                 break;
 
             case DELETE:
-                httpMethod = HttpMethod.DELETE;
+                httpMethod = "DELETE";
                 break;
 
             default:
@@ -308,7 +298,7 @@ public class PveClientBase {
         HttpURLConnection httpCon = null;
 
         try {
-            switch (httpMethod) {
+            switch (methodType) {
                 case GET: {
                     if (!params.isEmpty()) {
                         StringBuilder urlParams = new StringBuilder();
@@ -329,8 +319,8 @@ public class PveClientBase {
                     break;
                 }
 
-                case PUT:
-                case POST: {
+                case SET:
+                case CREATE: {
                     StringBuilder postData = new StringBuilder();
                     params.forEach((key, value) -> {
                         postData.append(postData.length() > 0 ? "&" : "").append(key).append("=").append(value);
@@ -338,7 +328,7 @@ public class PveClientBase {
 
                     byte[] postDataBytes = postData.toString().getBytes("UTF-8");
                     httpCon = (HttpURLConnection) new URL(url).openConnection();
-                    httpCon.setRequestMethod(httpMethod + "");
+                    httpCon.setRequestMethod(httpMethod);
                     httpCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
                     httpCon.setRequestProperty("Content-Length", String.valueOf(postDataBytes.length));
                     setToken(httpCon);
@@ -357,10 +347,9 @@ public class PveClientBase {
                 }
             }
 
-            // httpCon.setRequestProperty("User-Agent", "Mozilla/5.0");
             if (getDebugLevel() >= 1) {
                 System.out.println("Method: " + httpMethod + " , Url: " + url);
-                if (httpMethod != HttpMethod.GET) {
+                if (methodType != MethodType.GET) {
                     System.out.println("Parameters:");
                     params.forEach((key, value) -> {
                         System.out.println(key + " : " + value);
