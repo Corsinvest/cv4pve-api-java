@@ -78,6 +78,8 @@ The result is class **Result** and contain methods:
 ## Usage
 
 ```java
+//if you want use lite version only get/set/create/delete use PveClientBase
+
 PveClient client = new PveClient("10.92.90.91", 8006);
 if (client.login("root", "password", "pam")) {
         //version
