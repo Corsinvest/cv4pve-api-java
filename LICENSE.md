@@ -18,7 +18,7 @@ If you decide to choose the GPLv3 license, you must comply with the following te
 
 Alternatively, commercial and supported versions of the program - also known as
 Enterprise Distributions - must be used in accordance with the terms and conditions
-contained in a separate written agreement between you and Corsinvest Srl. For more information about the Corsinvest Enterprise License (CEL) please visit [site](https://www.corsinvest.it/cv4pve-tools)
+contained in a separate written agreement between you and Corsinvest Srl. For more information about the Corsinvest Enterprise License (CEL) please visit [site](https://www.cv4pve-tools.com)
 
 Please see also (files in this directory):  
 [GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 - gpl-3.0.txt](gpl-3.0.txt)  
