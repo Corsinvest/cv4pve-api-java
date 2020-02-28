@@ -8456,9 +8456,9 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Get current virtual machine configuration. This does
-                         * not include pending configuration changes (see
-                         * 'pending' API).
+                         * Get the virtual machine configuration with pending
+                         * configuration changes applied. Set the 'current'
+                         * parameter to get the current configuration instead.
                          *
                          * @param current Get current values (instead of pending
                          * values).
@@ -8475,9 +8475,9 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Get current virtual machine configuration. This does
-                         * not include pending configuration changes (see
-                         * 'pending' API).
+                         * Get the virtual machine configuration with pending
+                         * configuration changes applied. Set the 'current'
+                         * parameter to get the current configuration instead.
                          *
                          * @param current Get current values (instead of pending
                          * values).
@@ -8491,9 +8491,9 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Get current virtual machine configuration. This does
-                         * not include pending configuration changes (see
-                         * 'pending' API).
+                         * Get the virtual machine configuration with pending
+                         * configuration changes applied. Set the 'current'
+                         * parameter to get the current configuration instead.
                          *
                          * @return Result
                          * @throws JSONException
@@ -8504,9 +8504,9 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Get current virtual machine configuration. This does
-                         * not include pending configuration changes (see
-                         * 'pending' API).
+                         * Get the virtual machine configuration with pending
+                         * configuration changes applied. Set the 'current'
+                         * parameter to get the current configuration instead.
                          *
                          * @return Result
                          * @throws JSONException
@@ -8641,7 +8641,7 @@ public class PveClient extends PveClientBase {
                          * @param sataN Use volume as SATA hard disk or CD-ROM
                          * (n is 0 to 5).
                          * @param scsiN Use volume as SCSI hard disk or CD-ROM
-                         * (n is 0 to 13).
+                         * (n is 0 to 30).
                          * @param scsihw SCSI controller model Enum:
                          * lsi,lsi53c810,virtio-scsi-pci,virtio-scsi-single,megasas,pvscsi
                          * @param searchdomain cloud-init: Sets DNS search
@@ -8906,7 +8906,7 @@ public class PveClient extends PveClientBase {
                          * @param sataN Use volume as SATA hard disk or CD-ROM
                          * (n is 0 to 5).
                          * @param scsiN Use volume as SCSI hard disk or CD-ROM
-                         * (n is 0 to 13).
+                         * (n is 0 to 30).
                          * @param scsihw SCSI controller model Enum:
                          * lsi,lsi53c810,virtio-scsi-pci,virtio-scsi-single,megasas,pvscsi
                          * @param searchdomain cloud-init: Sets DNS search
@@ -9111,7 +9111,7 @@ public class PveClient extends PveClientBase {
                          * @param sataN Use volume as SATA hard disk or CD-ROM
                          * (n is 0 to 5).
                          * @param scsiN Use volume as SCSI hard disk or CD-ROM
-                         * (n is 0 to 13).
+                         * (n is 0 to 30).
                          * @param scsihw SCSI controller model Enum:
                          * lsi,lsi53c810,virtio-scsi-pci,virtio-scsi-single,megasas,pvscsi
                          * @param searchdomain cloud-init: Sets DNS search
@@ -9374,7 +9374,7 @@ public class PveClient extends PveClientBase {
                          * @param sataN Use volume as SATA hard disk or CD-ROM
                          * (n is 0 to 5).
                          * @param scsiN Use volume as SCSI hard disk or CD-ROM
-                         * (n is 0 to 13).
+                         * (n is 0 to 30).
                          * @param scsihw SCSI controller model Enum:
                          * lsi,lsi53c810,virtio-scsi-pci,virtio-scsi-single,megasas,pvscsi
                          * @param searchdomain cloud-init: Sets DNS search
@@ -9473,8 +9473,8 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Get virtual machine configuration, including pending
-                         * changes.
+                         * Get the virtual machine configuration with both
+                         * current and pending values.
                          *
                          * @return Result
                          * @throws JSONException
@@ -9484,8 +9484,8 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Get virtual machine configuration, including pending
-                         * changes.
+                         * Get the virtual machine configuration with both
+                         * current and pending values.
                          *
                          * @return Result
                          * @throws JSONException
@@ -9960,10 +9960,11 @@ public class PveClient extends PveClientBase {
                              * @param targetstorage Target storage for the
                              * migration. (Can be '1' to use the same storage id
                              * as on the source node.)
+                             * @param timeout Wait maximal timeout seconds.
                              * @return Result
                              * @throws JSONException
                              */
-                            public Result createRest(String machine, String migratedfrom, String migration_network, String migration_type, Boolean skiplock, String stateuri, String targetstorage) throws JSONException {
+                            public Result createRest(String machine, String migratedfrom, String migration_network, String migration_type, Boolean skiplock, String stateuri, String targetstorage, Integer timeout) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("machine", machine);
                                 parameters.put("migratedfrom", migratedfrom);
@@ -9972,6 +9973,7 @@ public class PveClient extends PveClientBase {
                                 parameters.put("skiplock", skiplock);
                                 parameters.put("stateuri", stateuri);
                                 parameters.put("targetstorage", targetstorage);
+                                parameters.put("timeout", timeout);
                                 return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/status/start", parameters);
                             }
 
@@ -9994,11 +9996,12 @@ public class PveClient extends PveClientBase {
                              * @param targetstorage Target storage for the
                              * migration. (Can be '1' to use the same storage id
                              * as on the source node.)
+                             * @param timeout Wait maximal timeout seconds.
                              * @return Result
                              * @throws JSONException
                              */
-                            public Result vmStart(String machine, String migratedfrom, String migration_network, String migration_type, Boolean skiplock, String stateuri, String targetstorage) throws JSONException {
-                                return createRest(machine, migratedfrom, migration_network, migration_type, skiplock, stateuri, targetstorage);
+                            public Result vmStart(String machine, String migratedfrom, String migration_network, String migration_type, Boolean skiplock, String stateuri, String targetstorage, Integer timeout) throws JSONException {
+                                return createRest(machine, migratedfrom, migration_network, migration_type, skiplock, stateuri, targetstorage, timeout);
                             }
 
                             /**
@@ -10733,7 +10736,7 @@ public class PveClient extends PveClientBase {
                          * Move volume to different storage.
                          *
                          * @param disk The disk you want to move. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          * @param storage Target storage.
                          * @param bwlimit Override I/O bandwidth limit (in
                          * KiB/s).
@@ -10762,7 +10765,7 @@ public class PveClient extends PveClientBase {
                          * Move volume to different storage.
                          *
                          * @param disk The disk you want to move. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          * @param storage Target storage.
                          * @param bwlimit Override I/O bandwidth limit (in
                          * KiB/s).
@@ -10784,7 +10787,7 @@ public class PveClient extends PveClientBase {
                          * Move volume to different storage.
                          *
                          * @param disk The disk you want to move. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          * @param storage Target storage.
                          * @return Result
                          * @throws JSONException
@@ -10801,7 +10804,7 @@ public class PveClient extends PveClientBase {
                          * Move volume to different storage.
                          *
                          * @param disk The disk you want to move. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          * @param storage Target storage.
                          * @return Result
                          * @throws JSONException
@@ -11016,7 +11019,7 @@ public class PveClient extends PveClientBase {
                          * Extend volume size.
                          *
                          * @param disk The disk you want to resize. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          * @param size The new size. With the `+` sign the value
                          * is added to the actual size of the volume and without
                          * it, the value is taken as an absolute one. Shrinking
@@ -11042,7 +11045,7 @@ public class PveClient extends PveClientBase {
                          * Extend volume size.
                          *
                          * @param disk The disk you want to resize. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          * @param size The new size. With the `+` sign the value
                          * is added to the actual size of the volume and without
                          * it, the value is taken as an absolute one. Shrinking
@@ -11063,7 +11066,7 @@ public class PveClient extends PveClientBase {
                          * Extend volume size.
                          *
                          * @param disk The disk you want to resize. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          * @param size The new size. With the `+` sign the value
                          * is added to the actual size of the volume and without
                          * it, the value is taken as an absolute one. Shrinking
@@ -11083,7 +11086,7 @@ public class PveClient extends PveClientBase {
                          * Extend volume size.
                          *
                          * @param disk The disk you want to resize. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          * @param size The new size. With the `+` sign the value
                          * is added to the actual size of the volume and without
                          * it, the value is taken as an absolute one. Shrinking
@@ -11429,7 +11432,7 @@ public class PveClient extends PveClientBase {
                          *
                          * @param disk If you want to convert only 1 disk to
                          * base image. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          * @return Result
                          * @throws JSONException
                          */
@@ -11444,7 +11447,7 @@ public class PveClient extends PveClientBase {
                          *
                          * @param disk If you want to convert only 1 disk to
                          * base image. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
                          * @return Result
                          * @throws JSONException
                          */
@@ -11761,7 +11764,7 @@ public class PveClient extends PveClientBase {
                  * @param sataN Use volume as SATA hard disk or CD-ROM (n is 0
                  * to 5).
                  * @param scsiN Use volume as SCSI hard disk or CD-ROM (n is 0
-                 * to 13).
+                 * to 30).
                  * @param scsihw SCSI controller model Enum:
                  * lsi,lsi53c810,virtio-scsi-pci,virtio-scsi-single,megasas,pvscsi
                  * @param searchdomain cloud-init: Sets DNS search domains for a
@@ -12003,7 +12006,7 @@ public class PveClient extends PveClientBase {
                  * @param sataN Use volume as SATA hard disk or CD-ROM (n is 0
                  * to 5).
                  * @param scsiN Use volume as SCSI hard disk or CD-ROM (n is 0
-                 * to 13).
+                 * to 30).
                  * @param scsihw SCSI controller model Enum:
                  * lsi,lsi53c810,virtio-scsi-pci,virtio-scsi-single,megasas,pvscsi
                  * @param searchdomain cloud-init: Sets DNS search domains for a
@@ -18433,6 +18436,8 @@ public class PveClient extends PveClientBase {
                      * @param address IP address.
                      * @param address6 IP address.
                      * @param autostart Automatically start interface on boot.
+                     * @param bond_primary Specify the primary interface for
+                     * active-backup bond.
                      * @param bond_mode Bonding mode. Enum:
                      * balance-rr,active-backup,balance-xor,broadcast,802.3ad,balance-tlb,balance-alb,balance-slb,lacp-balance-slb,lacp-balance-tcp
                      * @param bond_xmit_hash_policy Selects the transmit hash
@@ -18448,6 +18453,7 @@ public class PveClient extends PveClientBase {
                      * @param delete A list of settings you want to delete.
                      * @param gateway Default gateway address.
                      * @param gateway6 Default ipv6 gateway address.
+                     * @param mtu MTU.
                      * @param netmask Network mask.
                      * @param netmask6 Network mask.
                      * @param ovs_bonds Specify the interfaces used by the
@@ -18461,16 +18467,21 @@ public class PveClient extends PveClientBase {
                      * OVSIntPort, OVSBond)
                      * @param slaves Specify the interfaces used by the bonding
                      * device.
+                     * @param vlan_id vlan-id for a custom named vlan interface
+                     * (ifupdown2 only).
+                     * @param vlan_raw_device Specify the raw interface for the
+                     * vlan interface.
                      * @return Result
                      * @throws JSONException
                      */
 
-                    public Result setRest(String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments, String comments6, String delete, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
+                    public Result setRest(String type, String address, String address6, Boolean autostart, String bond_primary, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments, String comments6, String delete, String gateway, String gateway6, Integer mtu, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves, Integer vlan_id, String vlan_raw_device) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("type", type);
                         parameters.put("address", address);
                         parameters.put("address6", address6);
                         parameters.put("autostart", autostart);
+                        parameters.put("bond-primary", bond_primary);
                         parameters.put("bond_mode", bond_mode);
                         parameters.put("bond_xmit_hash_policy", bond_xmit_hash_policy);
                         parameters.put("bridge_ports", bridge_ports);
@@ -18482,6 +18493,7 @@ public class PveClient extends PveClientBase {
                         parameters.put("delete", delete);
                         parameters.put("gateway", gateway);
                         parameters.put("gateway6", gateway6);
+                        parameters.put("mtu", mtu);
                         parameters.put("netmask", netmask);
                         parameters.put("netmask6", netmask6);
                         parameters.put("ovs_bonds", ovs_bonds);
@@ -18490,6 +18502,8 @@ public class PveClient extends PveClientBase {
                         parameters.put("ovs_ports", ovs_ports);
                         parameters.put("ovs_tag", ovs_tag);
                         parameters.put("slaves", slaves);
+                        parameters.put("vlan-id", vlan_id);
+                        parameters.put("vlan-raw-device", vlan_raw_device);
                         return _client.set("/nodes/" + _node + "/network/" + _iface + "", parameters);
                     }
 
@@ -18501,6 +18515,8 @@ public class PveClient extends PveClientBase {
                      * @param address IP address.
                      * @param address6 IP address.
                      * @param autostart Automatically start interface on boot.
+                     * @param bond_primary Specify the primary interface for
+                     * active-backup bond.
                      * @param bond_mode Bonding mode. Enum:
                      * balance-rr,active-backup,balance-xor,broadcast,802.3ad,balance-tlb,balance-alb,balance-slb,lacp-balance-slb,lacp-balance-tcp
                      * @param bond_xmit_hash_policy Selects the transmit hash
@@ -18516,6 +18532,7 @@ public class PveClient extends PveClientBase {
                      * @param delete A list of settings you want to delete.
                      * @param gateway Default gateway address.
                      * @param gateway6 Default ipv6 gateway address.
+                     * @param mtu MTU.
                      * @param netmask Network mask.
                      * @param netmask6 Network mask.
                      * @param ovs_bonds Specify the interfaces used by the
@@ -18529,11 +18546,15 @@ public class PveClient extends PveClientBase {
                      * OVSIntPort, OVSBond)
                      * @param slaves Specify the interfaces used by the bonding
                      * device.
+                     * @param vlan_id vlan-id for a custom named vlan interface
+                     * (ifupdown2 only).
+                     * @param vlan_raw_device Specify the raw interface for the
+                     * vlan interface.
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result updateNetwork(String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments, String comments6, String delete, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
-                        return setRest(type, address, address6, autostart, bond_mode, bond_xmit_hash_policy, bridge_ports, bridge_vlan_aware, cidr, cidr6, comments, comments6, delete, gateway, gateway6, netmask, netmask6, ovs_bonds, ovs_bridge, ovs_options, ovs_ports, ovs_tag, slaves);
+                    public Result updateNetwork(String type, String address, String address6, Boolean autostart, String bond_primary, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments, String comments6, String delete, String gateway, String gateway6, Integer mtu, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves, Integer vlan_id, String vlan_raw_device) throws JSONException {
+                        return setRest(type, address, address6, autostart, bond_primary, bond_mode, bond_xmit_hash_policy, bridge_ports, bridge_vlan_aware, cidr, cidr6, comments, comments6, delete, gateway, gateway6, mtu, netmask, netmask6, ovs_bonds, ovs_bridge, ovs_options, ovs_ports, ovs_tag, slaves, vlan_id, vlan_raw_device);
                     }
 
                     /**
@@ -18642,6 +18663,8 @@ public class PveClient extends PveClientBase {
                  * @param address IP address.
                  * @param address6 IP address.
                  * @param autostart Automatically start interface on boot.
+                 * @param bond_primary Specify the primary interface for
+                 * active-backup bond.
                  * @param bond_mode Bonding mode. Enum:
                  * balance-rr,active-backup,balance-xor,broadcast,802.3ad,balance-tlb,balance-alb,balance-slb,lacp-balance-slb,lacp-balance-tcp
                  * @param bond_xmit_hash_policy Selects the transmit hash policy
@@ -18656,6 +18679,7 @@ public class PveClient extends PveClientBase {
                  * @param comments6 Comments
                  * @param gateway Default gateway address.
                  * @param gateway6 Default ipv6 gateway address.
+                 * @param mtu MTU.
                  * @param netmask Network mask.
                  * @param netmask6 Network mask.
                  * @param ovs_bonds Specify the interfaces used by the bonding
@@ -18669,17 +18693,22 @@ public class PveClient extends PveClientBase {
                  * OVSIntPort, OVSBond)
                  * @param slaves Specify the interfaces used by the bonding
                  * device.
+                 * @param vlan_id vlan-id for a custom named vlan interface
+                 * (ifupdown2 only).
+                 * @param vlan_raw_device Specify the raw interface for the vlan
+                 * interface.
                  * @return Result
                  * @throws JSONException
                  */
 
-                public Result createRest(String iface, String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments, String comments6, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
+                public Result createRest(String iface, String type, String address, String address6, Boolean autostart, String bond_primary, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments, String comments6, String gateway, String gateway6, Integer mtu, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves, Integer vlan_id, String vlan_raw_device) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("iface", iface);
                     parameters.put("type", type);
                     parameters.put("address", address);
                     parameters.put("address6", address6);
                     parameters.put("autostart", autostart);
+                    parameters.put("bond-primary", bond_primary);
                     parameters.put("bond_mode", bond_mode);
                     parameters.put("bond_xmit_hash_policy", bond_xmit_hash_policy);
                     parameters.put("bridge_ports", bridge_ports);
@@ -18690,6 +18719,7 @@ public class PveClient extends PveClientBase {
                     parameters.put("comments6", comments6);
                     parameters.put("gateway", gateway);
                     parameters.put("gateway6", gateway6);
+                    parameters.put("mtu", mtu);
                     parameters.put("netmask", netmask);
                     parameters.put("netmask6", netmask6);
                     parameters.put("ovs_bonds", ovs_bonds);
@@ -18698,6 +18728,8 @@ public class PveClient extends PveClientBase {
                     parameters.put("ovs_ports", ovs_ports);
                     parameters.put("ovs_tag", ovs_tag);
                     parameters.put("slaves", slaves);
+                    parameters.put("vlan-id", vlan_id);
+                    parameters.put("vlan-raw-device", vlan_raw_device);
                     return _client.create("/nodes/" + _node + "/network", parameters);
                 }
 
@@ -18710,6 +18742,8 @@ public class PveClient extends PveClientBase {
                  * @param address IP address.
                  * @param address6 IP address.
                  * @param autostart Automatically start interface on boot.
+                 * @param bond_primary Specify the primary interface for
+                 * active-backup bond.
                  * @param bond_mode Bonding mode. Enum:
                  * balance-rr,active-backup,balance-xor,broadcast,802.3ad,balance-tlb,balance-alb,balance-slb,lacp-balance-slb,lacp-balance-tcp
                  * @param bond_xmit_hash_policy Selects the transmit hash policy
@@ -18724,6 +18758,7 @@ public class PveClient extends PveClientBase {
                  * @param comments6 Comments
                  * @param gateway Default gateway address.
                  * @param gateway6 Default ipv6 gateway address.
+                 * @param mtu MTU.
                  * @param netmask Network mask.
                  * @param netmask6 Network mask.
                  * @param ovs_bonds Specify the interfaces used by the bonding
@@ -18737,11 +18772,15 @@ public class PveClient extends PveClientBase {
                  * OVSIntPort, OVSBond)
                  * @param slaves Specify the interfaces used by the bonding
                  * device.
+                 * @param vlan_id vlan-id for a custom named vlan interface
+                 * (ifupdown2 only).
+                 * @param vlan_raw_device Specify the raw interface for the vlan
+                 * interface.
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createNetwork(String iface, String type, String address, String address6, Boolean autostart, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments, String comments6, String gateway, String gateway6, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves) throws JSONException {
-                    return createRest(iface, type, address, address6, autostart, bond_mode, bond_xmit_hash_policy, bridge_ports, bridge_vlan_aware, cidr, cidr6, comments, comments6, gateway, gateway6, netmask, netmask6, ovs_bonds, ovs_bridge, ovs_options, ovs_ports, ovs_tag, slaves);
+                public Result createNetwork(String iface, String type, String address, String address6, Boolean autostart, String bond_primary, String bond_mode, String bond_xmit_hash_policy, String bridge_ports, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments, String comments6, String gateway, String gateway6, Integer mtu, String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports, Integer ovs_tag, String slaves, Integer vlan_id, String vlan_raw_device) throws JSONException {
+                    return createRest(iface, type, address, address6, autostart, bond_primary, bond_mode, bond_xmit_hash_policy, bridge_ports, bridge_vlan_aware, cidr, cidr6, comments, comments6, gateway, gateway6, mtu, netmask, netmask6, ovs_bonds, ovs_bridge, ovs_options, ovs_ports, ovs_tag, slaves, vlan_id, vlan_raw_device);
                 }
 
                 /**
@@ -23299,7 +23338,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * login,ceph_install,upgrade
+                 * upgrade,login,ceph_install
                  * @param height sets the height of the console in pixels.
                  * @param upgrade Deprecated, use the 'cmd' property instead!
                  * Run 'apt-get dist-upgrade' instead of normal shell.
@@ -23322,7 +23361,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * login,ceph_install,upgrade
+                 * upgrade,login,ceph_install
                  * @param height sets the height of the console in pixels.
                  * @param upgrade Deprecated, use the 'cmd' property instead!
                  * Run 'apt-get dist-upgrade' instead of normal shell.
@@ -23372,7 +23411,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * login,ceph_install,upgrade
+                 * upgrade,login,ceph_install
                  * @param upgrade Deprecated, use the 'cmd' property instead!
                  * Run 'apt-get dist-upgrade' instead of normal shell.
                  * @return Result
@@ -23389,7 +23428,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * login,ceph_install,upgrade
+                 * upgrade,login,ceph_install
                  * @param upgrade Deprecated, use the 'cmd' property instead!
                  * Run 'apt-get dist-upgrade' instead of normal shell.
                  * @return Result
@@ -23475,7 +23514,7 @@ public class PveClient extends PveClientBase {
                  * Creates a SPICE shell.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * login,ceph_install,upgrade
+                 * upgrade,login,ceph_install
                  * @param proxy SPICE proxy server. This can be used by the
                  * client to specify the proxy server. All nodes in a cluster
                  * runs 'spiceproxy', so it is up to the client to choose one.
@@ -23500,7 +23539,7 @@ public class PveClient extends PveClientBase {
                  * Creates a SPICE shell.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * login,ceph_install,upgrade
+                 * upgrade,login,ceph_install
                  * @param proxy SPICE proxy server. This can be used by the
                  * client to specify the proxy server. All nodes in a cluster
                  * runs 'spiceproxy', so it is up to the client to choose one.
@@ -23927,14 +23966,17 @@ public class PveClient extends PveClientBase {
                  * If not set use 'max_workers' from datacenter.cfg, one of both
                  * must be set!
                  * @param vms Only consider Guests with these IDs.
+                 * @param with_local_disks Enable live storage migration for
+                 * local disk
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createRest(String target, Integer maxworkers, String vms) throws JSONException {
+                public Result createRest(String target, Integer maxworkers, String vms, Boolean with_local_disks) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("target", target);
                     parameters.put("maxworkers", maxworkers);
                     parameters.put("vms", vms);
+                    parameters.put("with-local-disks", with_local_disks);
                     return _client.create("/nodes/" + _node + "/migrateall", parameters);
                 }
 
@@ -23946,11 +23988,13 @@ public class PveClient extends PveClientBase {
                  * If not set use 'max_workers' from datacenter.cfg, one of both
                  * must be set!
                  * @param vms Only consider Guests with these IDs.
+                 * @param with_local_disks Enable live storage migration for
+                 * local disk
                  * @return Result
                  * @throws JSONException
                  */
-                public Result migrateall(String target, Integer maxworkers, String vms) throws JSONException {
-                    return createRest(target, maxworkers, vms);
+                public Result migrateall(String target, Integer maxworkers, String vms, Boolean with_local_disks) throws JSONException {
+                    return createRest(target, maxworkers, vms, with_local_disks);
                 }
 
                 /**
@@ -24689,6 +24733,15 @@ public class PveClient extends PveClientBase {
 
             return _tfa;
         }
+        private PVEPermissions _permissions;
+
+        public PVEPermissions getPermissions() {
+            if (_permissions == null) {
+                _permissions = new PVEPermissions(_client);
+            }
+
+            return _permissions;
+        }
 
         public class PVEUsers {
 
@@ -24722,6 +24775,15 @@ public class PveClient extends PveClientBase {
 
                     return _tfa;
                 }
+                private PVEToken _token;
+
+                public PVEToken getToken() {
+                    if (_token == null) {
+                        _token = new PVEToken(_client, _userid);
+                    }
+
+                    return _token;
+                }
 
                 public class PVETfa {
 
@@ -24750,6 +24812,221 @@ public class PveClient extends PveClientBase {
                      * @throws JSONException
                      */
                     public Result readUserTfaType() throws JSONException {
+                        return getRest();
+                    }
+
+                }
+
+                public class PVEToken {
+
+                    private final PveClient _client;
+                    private final Object _userid;
+
+                    protected PVEToken(PveClient client, Object userid) {
+                        _client = client;
+                        _userid = userid;
+                    }
+
+                    public PVEItemTokenid get(Object tokenid) {
+                        return new PVEItemTokenid(_client, _userid, tokenid);
+                    }
+
+                    public class PVEItemTokenid {
+
+                        private final PveClient _client;
+                        private final Object _userid;
+                        private final Object _tokenid;
+
+                        protected PVEItemTokenid(PveClient client, Object userid, Object tokenid) {
+                            _client = client;
+                            _userid = userid;
+                            _tokenid = tokenid;
+                        }
+
+                        /**
+                         * Remove API token for a specific user.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest() throws JSONException {
+                            return _client.delete("/access/users/" + _userid + "/token/" + _tokenid + "", null);
+                        }
+
+                        /**
+                         * Remove API token for a specific user.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result removeToken() throws JSONException {
+                            return deleteRest();
+                        }
+
+                        /**
+                         * Get specific API token information.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result getRest() throws JSONException {
+                            return _client.get("/access/users/" + _userid + "/token/" + _tokenid + "", null);
+                        }
+
+                        /**
+                         * Get specific API token information.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result readToken() throws JSONException {
+                            return getRest();
+                        }
+
+                        /**
+                         * Generate a new API token for a specific user. NOTE:
+                         * returns API token value, which needs to be stored as
+                         * it cannot be retrieved afterwards!
+                         *
+                         * @param comment
+                         * @param expire API token expiration date (seconds
+                         * since epoch). '0' means no expiration date.
+                         * @param privsep Restrict API token privileges with
+                         * separate ACLs (default), or give full privileges of
+                         * corresponding user.
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result createRest(String comment, Integer expire, Boolean privsep) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("comment", comment);
+                            parameters.put("expire", expire);
+                            parameters.put("privsep", privsep);
+                            return _client.create("/access/users/" + _userid + "/token/" + _tokenid + "", parameters);
+                        }
+
+                        /**
+                         * Generate a new API token for a specific user. NOTE:
+                         * returns API token value, which needs to be stored as
+                         * it cannot be retrieved afterwards!
+                         *
+                         * @param comment
+                         * @param expire API token expiration date (seconds
+                         * since epoch). '0' means no expiration date.
+                         * @param privsep Restrict API token privileges with
+                         * separate ACLs (default), or give full privileges of
+                         * corresponding user.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result generateToken(String comment, Integer expire, Boolean privsep) throws JSONException {
+                            return createRest(comment, expire, privsep);
+                        }
+
+                        /**
+                         * Generate a new API token for a specific user. NOTE:
+                         * returns API token value, which needs to be stored as
+                         * it cannot be retrieved afterwards!
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result createRest() throws JSONException {
+                            return _client.create("/access/users/" + _userid + "/token/" + _tokenid + "", null);
+                        }
+
+                        /**
+                         * Generate a new API token for a specific user. NOTE:
+                         * returns API token value, which needs to be stored as
+                         * it cannot be retrieved afterwards!
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result generateToken() throws JSONException {
+                            return createRest();
+                        }
+
+                        /**
+                         * Update API token for a specific user.
+                         *
+                         * @param comment
+                         * @param expire API token expiration date (seconds
+                         * since epoch). '0' means no expiration date.
+                         * @param privsep Restrict API token privileges with
+                         * separate ACLs (default), or give full privileges of
+                         * corresponding user.
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result setRest(String comment, Integer expire, Boolean privsep) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("comment", comment);
+                            parameters.put("expire", expire);
+                            parameters.put("privsep", privsep);
+                            return _client.set("/access/users/" + _userid + "/token/" + _tokenid + "", parameters);
+                        }
+
+                        /**
+                         * Update API token for a specific user.
+                         *
+                         * @param comment
+                         * @param expire API token expiration date (seconds
+                         * since epoch). '0' means no expiration date.
+                         * @param privsep Restrict API token privileges with
+                         * separate ACLs (default), or give full privileges of
+                         * corresponding user.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result updateTokenInfo(String comment, Integer expire, Boolean privsep) throws JSONException {
+                            return setRest(comment, expire, privsep);
+                        }
+
+                        /**
+                         * Update API token for a specific user.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result setRest() throws JSONException {
+                            return _client.set("/access/users/" + _userid + "/token/" + _tokenid + "", null);
+                        }
+
+                        /**
+                         * Update API token for a specific user.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result updateTokenInfo() throws JSONException {
+                            return setRest();
+                        }
+
+                    }
+
+                    /**
+                     * Get user API tokens.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/access/users/" + _userid + "/token", null);
+                    }
+
+                    /**
+                     * Get user API tokens.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result tokenIndex() throws JSONException {
                         return getRest();
                     }
 
@@ -24876,12 +25153,14 @@ public class PveClient extends PveClientBase {
              * User index.
              *
              * @param enabled Optional filter for enable property.
+             * @param full Include group and token information.
              * @return Result
              * @throws JSONException
              */
-            public Result getRest(Boolean enabled) throws JSONException {
+            public Result getRest(Boolean enabled, Boolean full) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("enabled", enabled);
+                parameters.put("full", full);
                 return _client.get("/access/users", parameters);
             }
 
@@ -24889,11 +25168,12 @@ public class PveClient extends PveClientBase {
              * User index.
              *
              * @param enabled Optional filter for enable property.
+             * @param full Include group and token information.
              * @return Result
              * @throws JSONException
              */
-            public Result index(Boolean enabled) throws JSONException {
-                return getRest(enabled);
+            public Result index(Boolean enabled, Boolean full) throws JSONException {
+                return getRest(enabled, full);
             }
 
             /**
@@ -25414,18 +25694,20 @@ public class PveClient extends PveClientBase {
              * @param delete Remove permissions (instead of adding it).
              * @param groups List of groups.
              * @param propagate Allow to propagate (inherit) permissions.
+             * @param tokens List of API tokens.
              * @param users List of users.
              * @return Result
              * @throws JSONException
              */
 
-            public Result setRest(String path, String roles, Boolean delete, String groups, Boolean propagate, String users) throws JSONException {
+            public Result setRest(String path, String roles, Boolean delete, String groups, Boolean propagate, String tokens, String users) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("path", path);
                 parameters.put("roles", roles);
                 parameters.put("delete", delete);
                 parameters.put("groups", groups);
                 parameters.put("propagate", propagate);
+                parameters.put("tokens", tokens);
                 parameters.put("users", users);
                 return _client.set("/access/acl", parameters);
             }
@@ -25438,12 +25720,13 @@ public class PveClient extends PveClientBase {
              * @param delete Remove permissions (instead of adding it).
              * @param groups List of groups.
              * @param propagate Allow to propagate (inherit) permissions.
+             * @param tokens List of API tokens.
              * @param users List of users.
              * @return Result
              * @throws JSONException
              */
-            public Result updateAcl(String path, String roles, Boolean delete, String groups, Boolean propagate, String users) throws JSONException {
-                return setRest(path, roles, delete, groups, propagate, users);
+            public Result updateAcl(String path, String roles, Boolean delete, String groups, Boolean propagate, String tokens, String users) throws JSONException {
+                return setRest(path, roles, delete, groups, propagate, tokens, users);
             }
 
             /**
@@ -26031,6 +26314,65 @@ public class PveClient extends PveClientBase {
              */
             public Result changeTfa(String action, String userid) throws JSONException {
                 return setRest(action, userid);
+            }
+
+        }
+
+        public class PVEPermissions {
+
+            private final PveClient _client;
+
+            protected PVEPermissions(PveClient client) {
+                _client = client;
+
+            }
+
+            /**
+             * Retrieve effective permissions of given user/token.
+             *
+             * @param path Only dump this specific path, not the whole tree.
+             * @param userid User ID or full API token ID
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest(String path, String userid) throws JSONException {
+                Map<String, Object> parameters = new HashMap<>();
+                parameters.put("path", path);
+                parameters.put("userid", userid);
+                return _client.get("/access/permissions", parameters);
+            }
+
+            /**
+             * Retrieve effective permissions of given user/token.
+             *
+             * @param path Only dump this specific path, not the whole tree.
+             * @param userid User ID or full API token ID
+             * @return Result
+             * @throws JSONException
+             */
+            public Result permissions(String path, String userid) throws JSONException {
+                return getRest(path, userid);
+            }
+
+            /**
+             * Retrieve effective permissions of given user/token.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+
+            public Result getRest() throws JSONException {
+                return _client.get("/access/permissions", null);
+            }
+
+            /**
+             * Retrieve effective permissions of given user/token.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result permissions() throws JSONException {
+                return getRest();
             }
 
         }
