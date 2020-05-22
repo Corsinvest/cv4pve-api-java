@@ -360,7 +360,7 @@ public class PveClientBase {
             statusCode = httpCon.getResponseCode();
             reasonPhrase = httpCon.getResponseMessage();
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpCon.getInputStream()))) {
+            try ( BufferedReader reader = new BufferedReader(new InputStreamReader(httpCon.getInputStream()))) {
                 StringBuilder sb = new StringBuilder();
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -423,9 +423,11 @@ public class PveClientBase {
      * @param value Values
      */
     public static void addIndexedParameter(Map<String, Object> parameters, String name, Map<Integer, String> value) {
-        value.entrySet().forEach((entry) -> {
-            parameters.put(name + entry.getKey(), entry.getValue());
-        });
+        if (value != null) {
+            value.entrySet().forEach((entry) -> {
+                parameters.put(name + entry.getKey(), entry.getValue());
+            });
+        }
     }
 
     /**
