@@ -51,6 +51,7 @@ public class PveClientBase {
     private int _debugLevel;
     private Result _lastResult;
     private ResponseType _responseType = ResponseType.JSON;
+    private String _apiToken;
 
     public PveClientBase(String hostname, int port) {
         _hostname = hostname;
@@ -216,10 +217,32 @@ public class PveClientBase {
         return _debugLevel;
     }
 
+    /**
+     * Return Api Token
+     *
+     * @return
+     */
+    public String getApiToken() {
+        return _apiToken;
+    }
+
+    /**
+     * Set Api Token format USER@REALM!TOKENID=UUID
+     *
+     * @param apiToken
+     */
+    public void setApiToken(String apiToken) {
+        _apiToken = apiToken;
+    }
+
     private void setToken(HttpURLConnection httpCon) {
         if (_ticketCSRFPreventionToken != null) {
             httpCon.setRequestProperty("CSRFPreventionToken", _ticketCSRFPreventionToken);
             httpCon.setRequestProperty("Cookie", "PVEAuthCookie=" + _ticketPVEAuthCookie);
+        }
+
+        if (_apiToken != null && !_apiToken.isEmpty()) {
+            httpCon.setRequestProperty ("Authorization", "PVEAPIToken " + _apiToken);
         }
     }
 
@@ -360,7 +383,7 @@ public class PveClientBase {
             statusCode = httpCon.getResponseCode();
             reasonPhrase = httpCon.getResponseMessage();
 
-            try ( BufferedReader reader = new BufferedReader(new InputStreamReader(httpCon.getInputStream()))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpCon.getInputStream()))) {
                 StringBuilder sb = new StringBuilder();
                 String line;
                 while ((line = reader.readLine()) != null) {

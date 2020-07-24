@@ -127,6 +127,15 @@ public class PveClient extends PveClientBase {
 
             return _backup;
         }
+        private PVEBackupinfo _backupinfo;
+
+        public PVEBackupinfo getBackupinfo() {
+            if (_backupinfo == null) {
+                _backupinfo = new PVEBackupinfo(_client);
+            }
+
+            return _backupinfo;
+        }
         private PVEHa _ha;
 
         public PVEHa getHa() {
@@ -2896,6 +2905,50 @@ public class PveClient extends PveClientBase {
                     _id = id;
                 }
 
+                private PVEIncludedVolumes _includedVolumes;
+
+                public PVEIncludedVolumes getIncludedVolumes() {
+                    if (_includedVolumes == null) {
+                        _includedVolumes = new PVEIncludedVolumes(_client, _id);
+                    }
+
+                    return _includedVolumes;
+                }
+
+                public class PVEIncludedVolumes {
+
+                    private final PveClient _client;
+                    private final Object _id;
+
+                    protected PVEIncludedVolumes(PveClient client, Object id) {
+                        _client = client;
+                        _id = id;
+                    }
+
+                    /**
+                     * Returns included guests and the backup status of their
+                     * disks. Optimized to be used in ExtJS tree views.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getRest() throws JSONException {
+                        return _client.get("/cluster/backup/" + _id + "/included_volumes", null);
+                    }
+
+                    /**
+                     * Returns included guests and the backup status of their
+                     * disks. Optimized to be used in ExtJS tree views.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getVolumeBackupIncluded() throws JSONException {
+                        return getRest();
+                    }
+
+                }
+
                 /**
                  * Delete vzdump backup job definition.
                  *
@@ -3268,6 +3321,78 @@ public class PveClient extends PveClientBase {
              */
             public Result createJob(String starttime) throws JSONException {
                 return createRest(starttime);
+            }
+
+        }
+
+        public class PVEBackupinfo {
+
+            private final PveClient _client;
+
+            protected PVEBackupinfo(PveClient client) {
+                _client = client;
+
+            }
+
+            private PVENotBackedUp _notBackedUp;
+
+            public PVENotBackedUp getNotBackedUp() {
+                if (_notBackedUp == null) {
+                    _notBackedUp = new PVENotBackedUp(_client);
+                }
+
+                return _notBackedUp;
+            }
+
+            public class PVENotBackedUp {
+
+                private final PveClient _client;
+
+                protected PVENotBackedUp(PveClient client) {
+                    _client = client;
+
+                }
+
+                /**
+                 * Shows all guests which are not covered by any backup job.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/backupinfo/not_backed_up", null);
+                }
+
+                /**
+                 * Shows all guests which are not covered by any backup job.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getGuestsNotInBackup() throws JSONException {
+                    return getRest();
+                }
+
+            }
+
+            /**
+             * Stub, waits for future use.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/cluster/backupinfo", null);
+            }
+
+            /**
+             * Stub, waits for future use.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getBackupinfo() throws JSONException {
+                return getRest();
             }
 
         }
@@ -4103,6 +4228,15 @@ public class PveClient extends PveClientBase {
 
                 return _directories;
             }
+            private PVEChallenge_Schema _challenge_Schema;
+
+            public PVEChallenge_Schema getChallenge_Schema() {
+                if (_challenge_Schema == null) {
+                    _challenge_Schema = new PVEChallenge_Schema(_client);
+                }
+
+                return _challenge_Schema;
+            }
 
             public class PVEPlugins {
 
@@ -4172,7 +4306,7 @@ public class PveClient extends PveClientBase {
                      * Update ACME plugin configuration.
                      *
                      * @param api API plugin name Enum:
-                     * acmedns,acmeproxy,active24,ad,ali,autodns,aws,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hexonet,hostingde,infoblox,internetbs,inwx,ispconfig,jd,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,nic,nsd,nsone,nsupdate,nw,one,online,openprovider,opnsense,ovh,pdns,pleskxml,pointhq,rackspace,rcode0,regru,schlundtech,selectel,servercow,tele3,ultra,unoeuro,variomedia,vscale,vultr,yandex,zilore,zone,zonomi
+                     * acmedns,acmeproxy,active24,ad,ali,autodns,aws,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,df,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hexonet,hostingde,infoblox,internetbs,inwx,ispconfig,jd,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,nic,nsd,nsone,nsupdate,nw,one,online,openprovider,opnsense,ovh,pdns,pleskxml,pointhq,rackspace,rcode0,regru,schlundtech,selectel,servercow,tele3,ultra,unoeuro,variomedia,vscale,vultr,yandex,zilore,zone,zonomi
                      * @param data DNS plugin data. (base64 encoded)
                      * @param delete A list of settings you want to delete.
                      * @param digest Prevent changes if current configuration
@@ -4203,7 +4337,7 @@ public class PveClient extends PveClientBase {
                      * Update ACME plugin configuration.
                      *
                      * @param api API plugin name Enum:
-                     * acmedns,acmeproxy,active24,ad,ali,autodns,aws,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hexonet,hostingde,infoblox,internetbs,inwx,ispconfig,jd,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,nic,nsd,nsone,nsupdate,nw,one,online,openprovider,opnsense,ovh,pdns,pleskxml,pointhq,rackspace,rcode0,regru,schlundtech,selectel,servercow,tele3,ultra,unoeuro,variomedia,vscale,vultr,yandex,zilore,zone,zonomi
+                     * acmedns,acmeproxy,active24,ad,ali,autodns,aws,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,df,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hexonet,hostingde,infoblox,internetbs,inwx,ispconfig,jd,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,nic,nsd,nsone,nsupdate,nw,one,online,openprovider,opnsense,ovh,pdns,pleskxml,pointhq,rackspace,rcode0,regru,schlundtech,selectel,servercow,tele3,ultra,unoeuro,variomedia,vscale,vultr,yandex,zilore,zone,zonomi
                      * @param data DNS plugin data. (base64 encoded)
                      * @param delete A list of settings you want to delete.
                      * @param digest Prevent changes if current configuration
@@ -4297,7 +4431,7 @@ public class PveClient extends PveClientBase {
                  * @param id ACME Plugin ID name
                  * @param type ACME challenge type. Enum: dns,standalone
                  * @param api API plugin name Enum:
-                 * acmedns,acmeproxy,active24,ad,ali,autodns,aws,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hexonet,hostingde,infoblox,internetbs,inwx,ispconfig,jd,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,nic,nsd,nsone,nsupdate,nw,one,online,openprovider,opnsense,ovh,pdns,pleskxml,pointhq,rackspace,rcode0,regru,schlundtech,selectel,servercow,tele3,ultra,unoeuro,variomedia,vscale,vultr,yandex,zilore,zone,zonomi
+                 * acmedns,acmeproxy,active24,ad,ali,autodns,aws,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,df,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hexonet,hostingde,infoblox,internetbs,inwx,ispconfig,jd,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,nic,nsd,nsone,nsupdate,nw,one,online,openprovider,opnsense,ovh,pdns,pleskxml,pointhq,rackspace,rcode0,regru,schlundtech,selectel,servercow,tele3,ultra,unoeuro,variomedia,vscale,vultr,yandex,zilore,zone,zonomi
                  * @param data DNS plugin data. (base64 encoded)
                  * @param disable Flag to disable the config.
                  * @param nodes List of cluster node names.
@@ -4326,7 +4460,7 @@ public class PveClient extends PveClientBase {
                  * @param id ACME Plugin ID name
                  * @param type ACME challenge type. Enum: dns,standalone
                  * @param api API plugin name Enum:
-                 * acmedns,acmeproxy,active24,ad,ali,autodns,aws,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hexonet,hostingde,infoblox,internetbs,inwx,ispconfig,jd,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,nic,nsd,nsone,nsupdate,nw,one,online,openprovider,opnsense,ovh,pdns,pleskxml,pointhq,rackspace,rcode0,regru,schlundtech,selectel,servercow,tele3,ultra,unoeuro,variomedia,vscale,vultr,yandex,zilore,zone,zonomi
+                 * acmedns,acmeproxy,active24,ad,ali,autodns,aws,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,df,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hexonet,hostingde,infoblox,internetbs,inwx,ispconfig,jd,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,nic,nsd,nsone,nsupdate,nw,one,online,openprovider,opnsense,ovh,pdns,pleskxml,pointhq,rackspace,rcode0,regru,schlundtech,selectel,servercow,tele3,ultra,unoeuro,variomedia,vscale,vultr,yandex,zilore,zone,zonomi
                  * @param data DNS plugin data. (base64 encoded)
                  * @param disable Flag to disable the config.
                  * @param nodes List of cluster node names.
@@ -4655,6 +4789,37 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
                 public Result getDirectories() throws JSONException {
+                    return getRest();
+                }
+
+            }
+
+            public class PVEChallenge_Schema {
+
+                private final PveClient _client;
+
+                protected PVEChallenge_Schema(PveClient client) {
+                    _client = client;
+
+                }
+
+                /**
+                 * Get schema of ACME challenge types.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/cluster/acme/challenge-schema", null);
+                }
+
+                /**
+                 * Get schema of ACME challenge types.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result challengeschema() throws JSONException {
                     return getRest();
                 }
 
@@ -5115,12 +5280,14 @@ public class PveClient extends PveClientBase {
                      * @param ipv6 Anycast router ipv6 address.
                      * @param mac Anycast router mac address
                      * @param tag vlan or vxlan id
+                     * @param vlanaware Allow vm VLANs to pass through this
+                     * vnet.
                      * @param zone zone id
                      * @return Result
                      * @throws JSONException
                      */
 
-                    public Result setRest(String alias, String delete, String digest, String ipv4, String ipv6, String mac, Integer tag, String zone) throws JSONException {
+                    public Result setRest(String alias, String delete, String digest, String ipv4, String ipv6, String mac, Integer tag, Boolean vlanaware, String zone) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("alias", alias);
                         parameters.put("delete", delete);
@@ -5129,6 +5296,7 @@ public class PveClient extends PveClientBase {
                         parameters.put("ipv6", ipv6);
                         parameters.put("mac", mac);
                         parameters.put("tag", tag);
+                        parameters.put("vlanaware", vlanaware);
                         parameters.put("zone", zone);
                         return _client.set("/cluster/sdn/vnets/" + _vnet + "", parameters);
                     }
@@ -5145,12 +5313,14 @@ public class PveClient extends PveClientBase {
                      * @param ipv6 Anycast router ipv6 address.
                      * @param mac Anycast router mac address
                      * @param tag vlan or vxlan id
+                     * @param vlanaware Allow vm VLANs to pass through this
+                     * vnet.
                      * @param zone zone id
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result update(String alias, String delete, String digest, String ipv4, String ipv6, String mac, Integer tag, String zone) throws JSONException {
-                        return setRest(alias, delete, digest, ipv4, ipv6, mac, tag, zone);
+                    public Result update(String alias, String delete, String digest, String ipv4, String ipv6, String mac, Integer tag, Boolean vlanaware, String zone) throws JSONException {
+                        return setRest(alias, delete, digest, ipv4, ipv6, mac, tag, vlanaware, zone);
                     }
 
                     /**
@@ -5199,62 +5369,63 @@ public class PveClient extends PveClientBase {
                 /**
                  * Create a new sdn vnet object.
                  *
-                 * @param tag vlan or vxlan id
                  * @param vnet The SDN vnet object identifier.
                  * @param zone zone id
                  * @param alias alias name of the vnet
                  * @param ipv4 Anycast router ipv4 address.
                  * @param ipv6 Anycast router ipv6 address.
                  * @param mac Anycast router mac address
+                 * @param tag vlan or vxlan id
                  * @param type Type Enum: vnet
+                 * @param vlanaware Allow vm VLANs to pass through this vnet.
                  * @return Result
                  * @throws JSONException
                  */
 
-                public Result createRest(int tag, String vnet, String zone, String alias, String ipv4, String ipv6, String mac, String type) throws JSONException {
+                public Result createRest(String vnet, String zone, String alias, String ipv4, String ipv6, String mac, Integer tag, String type, Boolean vlanaware) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
-                    parameters.put("tag", tag);
                     parameters.put("vnet", vnet);
                     parameters.put("zone", zone);
                     parameters.put("alias", alias);
                     parameters.put("ipv4", ipv4);
                     parameters.put("ipv6", ipv6);
                     parameters.put("mac", mac);
+                    parameters.put("tag", tag);
                     parameters.put("type", type);
+                    parameters.put("vlanaware", vlanaware);
                     return _client.create("/cluster/sdn/vnets", parameters);
                 }
 
                 /**
                  * Create a new sdn vnet object.
                  *
-                 * @param tag vlan or vxlan id
                  * @param vnet The SDN vnet object identifier.
                  * @param zone zone id
                  * @param alias alias name of the vnet
                  * @param ipv4 Anycast router ipv4 address.
                  * @param ipv6 Anycast router ipv6 address.
                  * @param mac Anycast router mac address
+                 * @param tag vlan or vxlan id
                  * @param type Type Enum: vnet
+                 * @param vlanaware Allow vm VLANs to pass through this vnet.
                  * @return Result
                  * @throws JSONException
                  */
-                public Result create(int tag, String vnet, String zone, String alias, String ipv4, String ipv6, String mac, String type) throws JSONException {
-                    return createRest(tag, vnet, zone, alias, ipv4, ipv6, mac, type);
+                public Result create(String vnet, String zone, String alias, String ipv4, String ipv6, String mac, Integer tag, String type, Boolean vlanaware) throws JSONException {
+                    return createRest(vnet, zone, alias, ipv4, ipv6, mac, tag, type, vlanaware);
                 }
 
                 /**
                  * Create a new sdn vnet object.
                  *
-                 * @param tag vlan or vxlan id
                  * @param vnet The SDN vnet object identifier.
                  * @param zone zone id
                  * @return Result
                  * @throws JSONException
                  */
 
-                public Result createRest(int tag, String vnet, String zone) throws JSONException {
+                public Result createRest(String vnet, String zone) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
-                    parameters.put("tag", tag);
                     parameters.put("vnet", vnet);
                     parameters.put("zone", zone);
                     return _client.create("/cluster/sdn/vnets", parameters);
@@ -5263,14 +5434,13 @@ public class PveClient extends PveClientBase {
                 /**
                  * Create a new sdn vnet object.
                  *
-                 * @param tag vlan or vxlan id
                  * @param vnet The SDN vnet object identifier.
                  * @param zone zone id
                  * @return Result
                  * @throws JSONException
                  */
-                public Result create(int tag, String vnet, String zone) throws JSONException {
-                    return createRest(tag, vnet, zone);
+                public Result create(String vnet, String zone) throws JSONException {
+                    return createRest(vnet, zone);
                 }
 
             }
@@ -5349,16 +5519,17 @@ public class PveClient extends PveClientBase {
                      * file has different SHA1 digest. This can be used to
                      * prevent concurrent modifications.
                      * @param dp_id Faucet dataplane id
-                     * @param mtu mtu
+                     * @param mtu MTU
                      * @param nodes List of cluster node names.
                      * @param peers peers address list.
-                     * @param tag vlan tag
+                     * @param tag Service-VLAN Tag
+                     * @param vlan_protocol Enum: 802.1q,802.1ad
                      * @param vrf_vxlan l3vni.
                      * @return Result
                      * @throws JSONException
                      */
 
-                    public Result setRest(String bridge, String controller, String delete, String digest, Integer dp_id, Integer mtu, String nodes, String peers, Integer tag, Integer vrf_vxlan) throws JSONException {
+                    public Result setRest(String bridge, String controller, String delete, String digest, Integer dp_id, Integer mtu, String nodes, String peers, Integer tag, String vlan_protocol, Integer vrf_vxlan) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("bridge", bridge);
                         parameters.put("controller", controller);
@@ -5369,6 +5540,7 @@ public class PveClient extends PveClientBase {
                         parameters.put("nodes", nodes);
                         parameters.put("peers", peers);
                         parameters.put("tag", tag);
+                        parameters.put("vlan-protocol", vlan_protocol);
                         parameters.put("vrf-vxlan", vrf_vxlan);
                         return _client.set("/cluster/sdn/zones/" + _zone + "", parameters);
                     }
@@ -5383,16 +5555,17 @@ public class PveClient extends PveClientBase {
                      * file has different SHA1 digest. This can be used to
                      * prevent concurrent modifications.
                      * @param dp_id Faucet dataplane id
-                     * @param mtu mtu
+                     * @param mtu MTU
                      * @param nodes List of cluster node names.
                      * @param peers peers address list.
-                     * @param tag vlan tag
+                     * @param tag Service-VLAN Tag
+                     * @param vlan_protocol Enum: 802.1q,802.1ad
                      * @param vrf_vxlan l3vni.
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result update(String bridge, String controller, String delete, String digest, Integer dp_id, Integer mtu, String nodes, String peers, Integer tag, Integer vrf_vxlan) throws JSONException {
-                        return setRest(bridge, controller, delete, digest, dp_id, mtu, nodes, peers, tag, vrf_vxlan);
+                    public Result update(String bridge, String controller, String delete, String digest, Integer dp_id, Integer mtu, String nodes, String peers, Integer tag, String vlan_protocol, Integer vrf_vxlan) throws JSONException {
+                        return setRest(bridge, controller, delete, digest, dp_id, mtu, nodes, peers, tag, vlan_protocol, vrf_vxlan);
                     }
 
                     /**
@@ -5422,7 +5595,7 @@ public class PveClient extends PveClientBase {
                  * SDN zones index.
                  *
                  * @param type Only list sdn zones of specific type Enum:
-                 * evpn,faucet,qinq,vlan,vxlan
+                 * evpn,faucet,qinq,simple,vlan,vxlan
                  * @return Result
                  * @throws JSONException
                  */
@@ -5436,7 +5609,7 @@ public class PveClient extends PveClientBase {
                  * SDN zones index.
                  *
                  * @param type Only list sdn zones of specific type Enum:
-                 * evpn,faucet,qinq,vlan,vxlan
+                 * evpn,faucet,qinq,simple,vlan,vxlan
                  * @return Result
                  * @throws JSONException
                  */
@@ -5468,21 +5641,23 @@ public class PveClient extends PveClientBase {
                 /**
                  * Create a new sdn zone object.
                  *
-                 * @param type Plugin type. Enum: evpn,faucet,qinq,vlan,vxlan
+                 * @param type Plugin type. Enum:
+                 * evpn,faucet,qinq,simple,vlan,vxlan
                  * @param zone The SDN zone object identifier.
                  * @param bridge
                  * @param controller Frr router name
                  * @param dp_id Faucet dataplane id
-                 * @param mtu mtu
+                 * @param mtu MTU
                  * @param nodes List of cluster node names.
                  * @param peers peers address list.
-                 * @param tag vlan tag
+                 * @param tag Service-VLAN Tag
+                 * @param vlan_protocol Enum: 802.1q,802.1ad
                  * @param vrf_vxlan l3vni.
                  * @return Result
                  * @throws JSONException
                  */
 
-                public Result createRest(String type, String zone, String bridge, String controller, Integer dp_id, Integer mtu, String nodes, String peers, Integer tag, Integer vrf_vxlan) throws JSONException {
+                public Result createRest(String type, String zone, String bridge, String controller, Integer dp_id, Integer mtu, String nodes, String peers, Integer tag, String vlan_protocol, Integer vrf_vxlan) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     parameters.put("zone", zone);
@@ -5493,6 +5668,7 @@ public class PveClient extends PveClientBase {
                     parameters.put("nodes", nodes);
                     parameters.put("peers", peers);
                     parameters.put("tag", tag);
+                    parameters.put("vlan-protocol", vlan_protocol);
                     parameters.put("vrf-vxlan", vrf_vxlan);
                     return _client.create("/cluster/sdn/zones", parameters);
                 }
@@ -5500,27 +5676,30 @@ public class PveClient extends PveClientBase {
                 /**
                  * Create a new sdn zone object.
                  *
-                 * @param type Plugin type. Enum: evpn,faucet,qinq,vlan,vxlan
+                 * @param type Plugin type. Enum:
+                 * evpn,faucet,qinq,simple,vlan,vxlan
                  * @param zone The SDN zone object identifier.
                  * @param bridge
                  * @param controller Frr router name
                  * @param dp_id Faucet dataplane id
-                 * @param mtu mtu
+                 * @param mtu MTU
                  * @param nodes List of cluster node names.
                  * @param peers peers address list.
-                 * @param tag vlan tag
+                 * @param tag Service-VLAN Tag
+                 * @param vlan_protocol Enum: 802.1q,802.1ad
                  * @param vrf_vxlan l3vni.
                  * @return Result
                  * @throws JSONException
                  */
-                public Result create(String type, String zone, String bridge, String controller, Integer dp_id, Integer mtu, String nodes, String peers, Integer tag, Integer vrf_vxlan) throws JSONException {
-                    return createRest(type, zone, bridge, controller, dp_id, mtu, nodes, peers, tag, vrf_vxlan);
+                public Result create(String type, String zone, String bridge, String controller, Integer dp_id, Integer mtu, String nodes, String peers, Integer tag, String vlan_protocol, Integer vrf_vxlan) throws JSONException {
+                    return createRest(type, zone, bridge, controller, dp_id, mtu, nodes, peers, tag, vlan_protocol, vrf_vxlan);
                 }
 
                 /**
                  * Create a new sdn zone object.
                  *
-                 * @param type Plugin type. Enum: evpn,faucet,qinq,vlan,vxlan
+                 * @param type Plugin type. Enum:
+                 * evpn,faucet,qinq,simple,vlan,vxlan
                  * @param zone The SDN zone object identifier.
                  * @return Result
                  * @throws JSONException
@@ -5536,7 +5715,8 @@ public class PveClient extends PveClientBase {
                 /**
                  * Create a new sdn zone object.
                  *
-                 * @param type Plugin type. Enum: evpn,faucet,qinq,vlan,vxlan
+                 * @param type Plugin type. Enum:
+                 * evpn,faucet,qinq,simple,vlan,vxlan
                  * @param zone The SDN zone object identifier.
                  * @return Result
                  * @throws JSONException
@@ -6281,6 +6461,15 @@ public class PveClient extends PveClientBase {
                 }
 
                 return _qemu;
+            }
+            private PVECpu _cpu;
+
+            public PVECpu getCpu() {
+                if (_cpu == null) {
+                    _cpu = new PVECpu(_client, _node);
+                }
+
+                return _cpu;
             }
             private PVELxc _lxc;
 
@@ -10853,13 +11042,16 @@ public class PveClient extends PveClientBase {
                         /**
                          * Creates a TCP VNC proxy connections.
                          *
+                         * @param generate_password Generates a random password
+                         * to be used as ticket instead of the API ticket.
                          * @param websocket starts websockify instead of
                          * vncproxy
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest(Boolean websocket) throws JSONException {
+                        public Result createRest(Boolean generate_password, Boolean websocket) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("generate-password", generate_password);
                             parameters.put("websocket", websocket);
                             return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/vncproxy", parameters);
                         }
@@ -10867,13 +11059,15 @@ public class PveClient extends PveClientBase {
                         /**
                          * Creates a TCP VNC proxy connections.
                          *
+                         * @param generate_password Generates a random password
+                         * to be used as ticket instead of the API ticket.
                          * @param websocket starts websockify instead of
                          * vncproxy
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result vncproxy(Boolean websocket) throws JSONException {
-                            return createRest(websocket);
+                        public Result vncproxy(Boolean generate_password, Boolean websocket) throws JSONException {
+                            return createRest(generate_password, websocket);
                         }
 
                         /**
@@ -13379,6 +13573,38 @@ public class PveClient extends PveClientBase {
 
             }
 
+            public class PVECpu {
+
+                private final PveClient _client;
+                private final Object _node;
+
+                protected PVECpu(PveClient client, Object node) {
+                    _client = client;
+                    _node = node;
+                }
+
+                /**
+                 * List all custom and default CPU models.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/nodes/" + _node + "/cpu", null);
+                }
+
+                /**
+                 * List all custom and default CPU models.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result index() throws JSONException {
+                    return getRest();
+                }
+
+            }
+
             public class PVELxc {
 
                 private final PveClient _client;
@@ -13698,6 +13924,11 @@ public class PveClient extends PveClientBase {
                          * @param tags Tags of the Container. This is only meta
                          * information.
                          * @param template Enable/disable Template.
+                         * @param timezone Time zone to use in the container. If
+                         * option isn't set, then nothing will be done. Can be
+                         * set to 'host' to match the host time zone, or an
+                         * arbitrary time zone option from
+                         * /usr/share/zoneinfo/zone.tab
                          * @param tty Specify the number of tty available to the
                          * container
                          * @param unprivileged Makes the container run as
@@ -13708,7 +13939,7 @@ public class PveClient extends PveClientBase {
                          * @throws JSONException
                          */
 
-                        public Result setRest(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String revert, String rootfs, String searchdomain, String startup, Integer swap, String tags, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                        public Result setRest(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String revert, String rootfs, String searchdomain, String startup, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("arch", arch);
                             parameters.put("cmode", cmode);
@@ -13735,6 +13966,7 @@ public class PveClient extends PveClientBase {
                             parameters.put("swap", swap);
                             parameters.put("tags", tags);
                             parameters.put("template", template);
+                            parameters.put("timezone", timezone);
                             parameters.put("tty", tty);
                             parameters.put("unprivileged", unprivileged);
                             addIndexedParameter(parameters, "mp", mpN);
@@ -13818,6 +14050,11 @@ public class PveClient extends PveClientBase {
                          * @param tags Tags of the Container. This is only meta
                          * information.
                          * @param template Enable/disable Template.
+                         * @param timezone Time zone to use in the container. If
+                         * option isn't set, then nothing will be done. Can be
+                         * set to 'host' to match the host time zone, or an
+                         * arbitrary time zone option from
+                         * /usr/share/zoneinfo/zone.tab
                          * @param tty Specify the number of tty available to the
                          * container
                          * @param unprivileged Makes the container run as
@@ -13827,8 +14064,8 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result updateVm(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String revert, String rootfs, String searchdomain, String startup, Integer swap, String tags, Boolean template, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
-                            return setRest(arch, cmode, console, cores, cpulimit, cpuunits, delete, description, digest, features, hookscript, hostname, lock_, memory, mpN, nameserver, netN, onboot, ostype, protection, revert, rootfs, searchdomain, startup, swap, tags, template, tty, unprivileged, unusedN);
+                        public Result updateVm(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String revert, String rootfs, String searchdomain, String startup, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                            return setRest(arch, cmode, console, cores, cpulimit, cpuunits, delete, description, digest, features, hookscript, hostname, lock_, memory, mpN, nameserver, netN, onboot, ostype, protection, revert, rootfs, searchdomain, startup, swap, tags, template, timezone, tty, unprivileged, unusedN);
                         }
 
                         /**
@@ -17144,6 +17381,10 @@ public class PveClient extends PveClientBase {
                  * @param tags Tags of the Container. This is only meta
                  * information.
                  * @param template Enable/disable Template.
+                 * @param timezone Time zone to use in the container. If option
+                 * isn't set, then nothing will be done. Can be set to 'host' to
+                 * match the host time zone, or an arbitrary time zone option
+                 * from /usr/share/zoneinfo/zone.tab
                  * @param tty Specify the number of tty available to the
                  * container
                  * @param unique Assign a unique random ethernet address.
@@ -17155,7 +17396,7 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result createRest(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, String tags, Boolean template, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                public Result createRest(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ostemplate", ostemplate);
                     parameters.put("vmid", vmid);
@@ -17190,6 +17431,7 @@ public class PveClient extends PveClientBase {
                     parameters.put("swap", swap);
                     parameters.put("tags", tags);
                     parameters.put("template", template);
+                    parameters.put("timezone", timezone);
                     parameters.put("tty", tty);
                     parameters.put("unique", unique);
                     parameters.put("unprivileged", unprivileged);
@@ -17274,6 +17516,10 @@ public class PveClient extends PveClientBase {
                  * @param tags Tags of the Container. This is only meta
                  * information.
                  * @param template Enable/disable Template.
+                 * @param timezone Time zone to use in the container. If option
+                 * isn't set, then nothing will be done. Can be set to 'host' to
+                 * match the host time zone, or an arbitrary time zone option
+                 * from /usr/share/zoneinfo/zone.tab
                  * @param tty Specify the number of tty available to the
                  * container
                  * @param unique Assign a unique random ethernet address.
@@ -17284,8 +17530,8 @@ public class PveClient extends PveClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createVm(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, String tags, Boolean template, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
-                    return createRest(ostemplate, vmid, arch, bwlimit, cmode, console, cores, cpulimit, cpuunits, description, features, force, hookscript, hostname, ignore_unpack_errors, lock_, memory, mpN, nameserver, netN, onboot, ostype, password, pool, protection, restore, rootfs, searchdomain, ssh_public_keys, start, startup, storage, swap, tags, template, tty, unique, unprivileged, unusedN);
+                public Result createVm(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                    return createRest(ostemplate, vmid, arch, bwlimit, cmode, console, cores, cpulimit, cpuunits, description, features, force, hookscript, hostname, ignore_unpack_errors, lock_, memory, mpN, nameserver, netN, onboot, ostype, password, pool, protection, restore, rootfs, searchdomain, ssh_public_keys, start, startup, storage, swap, tags, template, timezone, tty, unique, unprivileged, unusedN);
                 }
 
                 /**
@@ -19573,11 +19819,32 @@ public class PveClient extends PveClientBase {
                 }
 
                 /**
+                 * Delete subscription key of this node.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result deleteRest() throws JSONException {
+                    return _client.delete("/nodes/" + _node + "/subscription", null);
+                }
+
+                /**
+                 * Delete subscription key of this node.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result delete() throws JSONException {
+                    return deleteRest();
+                }
+
+                /**
                  * Read subscription info.
                  *
                  * @return Result
                  * @throws JSONException
                  */
+
                 public Result getRest() throws JSONException {
                     return _client.get("/nodes/" + _node + "/subscription", null);
                 }
@@ -24801,7 +25068,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * upgrade,ceph_install,login
+                 * login,ceph_install,upgrade
                  * @param height sets the height of the console in pixels.
                  * @param upgrade Deprecated, use the 'cmd' property instead!
                  * Run 'apt-get dist-upgrade' instead of normal shell.
@@ -24824,7 +25091,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * upgrade,ceph_install,login
+                 * login,ceph_install,upgrade
                  * @param height sets the height of the console in pixels.
                  * @param upgrade Deprecated, use the 'cmd' property instead!
                  * Run 'apt-get dist-upgrade' instead of normal shell.
@@ -24874,7 +25141,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * upgrade,ceph_install,login
+                 * login,ceph_install,upgrade
                  * @param upgrade Deprecated, use the 'cmd' property instead!
                  * Run 'apt-get dist-upgrade' instead of normal shell.
                  * @return Result
@@ -24891,7 +25158,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * upgrade,ceph_install,login
+                 * login,ceph_install,upgrade
                  * @param upgrade Deprecated, use the 'cmd' property instead!
                  * Run 'apt-get dist-upgrade' instead of normal shell.
                  * @return Result
@@ -24977,7 +25244,7 @@ public class PveClient extends PveClientBase {
                  * Creates a SPICE shell.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * upgrade,ceph_install,login
+                 * login,ceph_install,upgrade
                  * @param proxy SPICE proxy server. This can be used by the
                  * client to specify the proxy server. All nodes in a cluster
                  * runs 'spiceproxy', so it is up to the client to choose one.
@@ -25002,7 +25269,7 @@ public class PveClient extends PveClientBase {
                  * Creates a SPICE shell.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * upgrade,ceph_install,login
+                 * login,ceph_install,upgrade
                  * @param proxy SPICE proxy server. This can be used by the
                  * client to specify the proxy server. All nodes in a cluster
                  * runs 'spiceproxy', so it is up to the client to choose one.
@@ -25699,6 +25966,8 @@ public class PveClient extends PveClientBase {
              * modifications.
              * @param disable Flag to disable the storage.
              * @param domain CIFS domain.
+             * @param encryption_key Encryption key. Use 'autogen' to generate
+             * one automatically without passphrase.
              * @param fingerprint Certificate SHA 256 fingerprint.
              * @param format Default image format.
              * @param fuse Mount CephFS through FUSE.
@@ -25716,7 +25985,7 @@ public class PveClient extends PveClientBase {
              * @param nodes List of cluster node names.
              * @param nowritecache disable write caching on the target
              * @param options NFS mount options (see 'man nfs')
-             * @param password Password for CIFS share.
+             * @param password Password for accessing the share/datastore.
              * @param pool Pool.
              * @param redundancy The redundancy count specifies the number of
              * nodes to which the resource should be deployed. It must be at
@@ -25739,7 +26008,7 @@ public class PveClient extends PveClientBase {
              * @throws JSONException
              */
 
-            public Result setRest(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String fingerprint, String format, Boolean fuse, String is_mountpoint, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
+            public Result setRest(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String encryption_key, String fingerprint, String format, Boolean fuse, String is_mountpoint, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("blocksize", blocksize);
                 parameters.put("bwlimit", bwlimit);
@@ -25750,6 +26019,7 @@ public class PveClient extends PveClientBase {
                 parameters.put("digest", digest);
                 parameters.put("disable", disable);
                 parameters.put("domain", domain);
+                parameters.put("encryption-key", encryption_key);
                 parameters.put("fingerprint", fingerprint);
                 parameters.put("format", format);
                 parameters.put("fuse", fuse);
@@ -25795,6 +26065,8 @@ public class PveClient extends PveClientBase {
              * modifications.
              * @param disable Flag to disable the storage.
              * @param domain CIFS domain.
+             * @param encryption_key Encryption key. Use 'autogen' to generate
+             * one automatically without passphrase.
              * @param fingerprint Certificate SHA 256 fingerprint.
              * @param format Default image format.
              * @param fuse Mount CephFS through FUSE.
@@ -25812,7 +26084,7 @@ public class PveClient extends PveClientBase {
              * @param nodes List of cluster node names.
              * @param nowritecache disable write caching on the target
              * @param options NFS mount options (see 'man nfs')
-             * @param password Password for CIFS share.
+             * @param password Password for accessing the share/datastore.
              * @param pool Pool.
              * @param redundancy The redundancy count specifies the number of
              * nodes to which the resource should be deployed. It must be at
@@ -25834,8 +26106,8 @@ public class PveClient extends PveClientBase {
              * @return Result
              * @throws JSONException
              */
-            public Result update(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String fingerprint, String format, Boolean fuse, String is_mountpoint, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
-                return setRest(blocksize, bwlimit, comstar_hg, comstar_tg, content, delete, digest, disable, domain, fingerprint, format, fuse, is_mountpoint, krbd, lio_tpg, maxfiles, mkdir, monhost, mountpoint, nodes, nowritecache, options, password, pool, redundancy, saferemove, saferemove_throughput, server, server2, shared, smbversion, sparse, subdir, tagged_only, transport, username);
+            public Result update(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String encryption_key, String fingerprint, String format, Boolean fuse, String is_mountpoint, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
+                return setRest(blocksize, bwlimit, comstar_hg, comstar_tg, content, delete, digest, disable, domain, encryption_key, fingerprint, format, fuse, is_mountpoint, krbd, lio_tpg, maxfiles, mkdir, monhost, mountpoint, nodes, nowritecache, options, password, pool, redundancy, saferemove, saferemove_throughput, server, server2, shared, smbversion, sparse, subdir, tagged_only, transport, username);
             }
 
             /**
@@ -25925,6 +26197,8 @@ public class PveClient extends PveClientBase {
          * @param datastore Proxmox backup server datastore name.
          * @param disable Flag to disable the storage.
          * @param domain CIFS domain.
+         * @param encryption_key Encryption key. Use 'autogen' to generate one
+         * automatically without passphrase.
          * @param export NFS export path.
          * @param fingerprint Certificate SHA 256 fingerprint.
          * @param format Default image format.
@@ -25944,7 +26218,7 @@ public class PveClient extends PveClientBase {
          * @param nodes List of cluster node names.
          * @param nowritecache disable write caching on the target
          * @param options NFS mount options (see 'man nfs')
-         * @param password Password for CIFS share.
+         * @param password Password for accessing the share/datastore.
          * @param path File system path.
          * @param pool Pool.
          * @param portal iSCSI portal (IP or DNS name with optional port).
@@ -25972,7 +26246,7 @@ public class PveClient extends PveClientBase {
          * @throws JSONException
          */
 
-        public Result createRest(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String datastore, Boolean disable, String domain, String export, String fingerprint, String format, Boolean fuse, String is_mountpoint, String iscsiprovider, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
+        public Result createRest(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String datastore, Boolean disable, String domain, String encryption_key, String export, String fingerprint, String format, Boolean fuse, String is_mountpoint, String iscsiprovider, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("storage", storage);
             parameters.put("type", type);
@@ -25986,6 +26260,7 @@ public class PveClient extends PveClientBase {
             parameters.put("datastore", datastore);
             parameters.put("disable", disable);
             parameters.put("domain", domain);
+            parameters.put("encryption-key", encryption_key);
             parameters.put("export", export);
             parameters.put("fingerprint", fingerprint);
             parameters.put("format", format);
@@ -26042,6 +26317,8 @@ public class PveClient extends PveClientBase {
          * @param datastore Proxmox backup server datastore name.
          * @param disable Flag to disable the storage.
          * @param domain CIFS domain.
+         * @param encryption_key Encryption key. Use 'autogen' to generate one
+         * automatically without passphrase.
          * @param export NFS export path.
          * @param fingerprint Certificate SHA 256 fingerprint.
          * @param format Default image format.
@@ -26061,7 +26338,7 @@ public class PveClient extends PveClientBase {
          * @param nodes List of cluster node names.
          * @param nowritecache disable write caching on the target
          * @param options NFS mount options (see 'man nfs')
-         * @param password Password for CIFS share.
+         * @param password Password for accessing the share/datastore.
          * @param path File system path.
          * @param pool Pool.
          * @param portal iSCSI portal (IP or DNS name with optional port).
@@ -26088,8 +26365,8 @@ public class PveClient extends PveClientBase {
          * @return Result
          * @throws JSONException
          */
-        public Result create(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String datastore, Boolean disable, String domain, String export, String fingerprint, String format, Boolean fuse, String is_mountpoint, String iscsiprovider, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
-            return createRest(storage, type, authsupported, base_, blocksize, bwlimit, comstar_hg, comstar_tg, content, datastore, disable, domain, export, fingerprint, format, fuse, is_mountpoint, iscsiprovider, krbd, lio_tpg, maxfiles, mkdir, monhost, mountpoint, nodes, nowritecache, options, password, path, pool, portal, redundancy, saferemove, saferemove_throughput, server, server2, share, shared, smbversion, sparse, subdir, tagged_only, target, thinpool, transport, username, vgname, volume);
+        public Result create(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String datastore, Boolean disable, String domain, String encryption_key, String export, String fingerprint, String format, Boolean fuse, String is_mountpoint, String iscsiprovider, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
+            return createRest(storage, type, authsupported, base_, blocksize, bwlimit, comstar_hg, comstar_tg, content, datastore, disable, domain, encryption_key, export, fingerprint, format, fuse, is_mountpoint, iscsiprovider, krbd, lio_tpg, maxfiles, mkdir, monhost, mountpoint, nodes, nowritecache, options, password, path, pool, portal, redundancy, saferemove, saferemove_throughput, server, server2, share, shared, smbversion, sparse, subdir, tagged_only, target, thinpool, transport, username, vgname, volume);
         }
 
         /**
