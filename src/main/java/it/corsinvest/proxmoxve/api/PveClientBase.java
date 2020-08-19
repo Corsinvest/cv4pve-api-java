@@ -242,7 +242,7 @@ public class PveClientBase {
         }
 
         if (_apiToken != null && !_apiToken.isEmpty()) {
-            httpCon.setRequestProperty ("Authorization", "PVEAPIToken " + _apiToken);
+            httpCon.setRequestProperty("Authorization", "PVEAPIToken " + _apiToken);
         }
     }
 
@@ -383,7 +383,7 @@ public class PveClientBase {
             statusCode = httpCon.getResponseCode();
             reasonPhrase = httpCon.getResponseMessage();
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpCon.getInputStream()))) {
+            try ( BufferedReader reader = new BufferedReader(new InputStreamReader(httpCon.getInputStream()))) {
                 StringBuilder sb = new StringBuilder();
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -463,7 +463,7 @@ public class PveClientBase {
      * @return 0 Success
      * @throws JSONException
      */
-    public int waitForTaskToFinish(String node, String task, long wait, long timeOut) throws JSONException {
+    public boolean waitForTaskToFinish(String node, String task, long wait, long timeOut) throws JSONException {
         Boolean isRunning = true;
         if (wait <= 0) {
             wait = 500;
@@ -473,14 +473,14 @@ public class PveClientBase {
         }
         long timeStart = System.currentTimeMillis();
         long waitTime = System.currentTimeMillis();
-        while (isRunning && (timeStart - System.currentTimeMillis()) < timeOut) {
+        while (isRunning && (System.currentTimeMillis() - timeStart) < timeOut) {
             if ((System.currentTimeMillis() - waitTime) >= wait) {
                 waitTime = System.currentTimeMillis();
                 isRunning = taskIsRunning(node, task);
             }
         }
 
-        return timeStart - System.currentTimeMillis() < timeOut ? 0 : 1;
+        return System.currentTimeMillis() - timeStart < timeOut;
     }
 
     /**
@@ -492,7 +492,7 @@ public class PveClientBase {
      * @return 0 Success
      * @throws JSONException
      */
-    public int waitForTaskToFinish(String task, long wait, long timeOut) throws JSONException {
+    public boolean waitForTaskToFinish(String task, long wait, long timeOut) throws JSONException {
         return waitForTaskToFinish(task.split(":")[1], task, wait, timeOut);
     }
 
