@@ -3020,6 +3020,8 @@ public class PveClient extends PveClientBase {
                  * uses half of cores, N&amp;gt;1 uses N as thread count.
                  * @param pool Backup all known guest systems included in the
                  * specified pool.
+                 * @param prune_backups Use these retention options instead of
+                 * those from the storage configuration.
                  * @param quiet Be quiet.
                  * @param remove Remove old backup files if there are more than
                  * 'maxfiles' backup files.
@@ -3038,7 +3040,7 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result setRest(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+                public Result setRest(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, String prune_backups, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("starttime", starttime);
                     parameters.put("all", all);
@@ -3059,6 +3061,7 @@ public class PveClient extends PveClientBase {
                     parameters.put("node", node);
                     parameters.put("pigz", pigz);
                     parameters.put("pool", pool);
+                    parameters.put("prune-backups", prune_backups);
                     parameters.put("quiet", quiet);
                     parameters.put("remove", remove);
                     parameters.put("script", script);
@@ -3103,6 +3106,8 @@ public class PveClient extends PveClientBase {
                  * uses half of cores, N&amp;gt;1 uses N as thread count.
                  * @param pool Backup all known guest systems included in the
                  * specified pool.
+                 * @param prune_backups Use these retention options instead of
+                 * those from the storage configuration.
                  * @param quiet Be quiet.
                  * @param remove Remove old backup files if there are more than
                  * 'maxfiles' backup files.
@@ -3120,8 +3125,8 @@ public class PveClient extends PveClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result updateJob(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
-                    return setRest(starttime, all, bwlimit, compress, delete, dow, dumpdir, enabled, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, node, pigz, pool, quiet, remove, script, size, stdexcludes, stop, stopwait, storage, tmpdir, vmid, zstd);
+                public Result updateJob(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, String prune_backups, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+                    return setRest(starttime, all, bwlimit, compress, delete, dow, dumpdir, enabled, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, node, pigz, pool, prune_backups, quiet, remove, script, size, stdexcludes, stop, stopwait, storage, tmpdir, vmid, zstd);
                 }
 
                 /**
@@ -3198,6 +3203,8 @@ public class PveClient extends PveClientBase {
              * half of cores, N&amp;gt;1 uses N as thread count.
              * @param pool Backup all known guest systems included in the
              * specified pool.
+             * @param prune_backups Use these retention options instead of those
+             * from the storage configuration.
              * @param quiet Be quiet.
              * @param remove Remove old backup files if there are more than
              * 'maxfiles' backup files.
@@ -3216,7 +3223,7 @@ public class PveClient extends PveClientBase {
              * @throws JSONException
              */
 
-            public Result createRest(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+            public Result createRest(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, String prune_backups, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("starttime", starttime);
                 parameters.put("all", all);
@@ -3236,6 +3243,7 @@ public class PveClient extends PveClientBase {
                 parameters.put("node", node);
                 parameters.put("pigz", pigz);
                 parameters.put("pool", pool);
+                parameters.put("prune-backups", prune_backups);
                 parameters.put("quiet", quiet);
                 parameters.put("remove", remove);
                 parameters.put("script", script);
@@ -3277,6 +3285,8 @@ public class PveClient extends PveClientBase {
              * half of cores, N&amp;gt;1 uses N as thread count.
              * @param pool Backup all known guest systems included in the
              * specified pool.
+             * @param prune_backups Use these retention options instead of those
+             * from the storage configuration.
              * @param quiet Be quiet.
              * @param remove Remove old backup files if there are more than
              * 'maxfiles' backup files.
@@ -3294,8 +3304,8 @@ public class PveClient extends PveClientBase {
              * @return Result
              * @throws JSONException
              */
-            public Result createJob(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
-                return createRest(starttime, all, bwlimit, compress, dow, dumpdir, enabled, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, node, pigz, pool, quiet, remove, script, size, stdexcludes, stop, stopwait, storage, tmpdir, vmid, zstd);
+            public Result createJob(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, String prune_backups, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+                return createRest(starttime, all, bwlimit, compress, dow, dumpdir, enabled, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, node, pigz, pool, prune_backups, quiet, remove, script, size, stdexcludes, stop, stopwait, storage, tmpdir, vmid, zstd);
             }
 
             /**
@@ -13875,6 +13885,8 @@ public class PveClient extends PveClientBase {
                          * relative to the weights of all the other running VMs.
                          * NOTE: You can disable fair-scheduler configuration by
                          * setting this to 0.
+                         * @param debug Try to be more verbose. For now this
+                         * only enables debug log-level on start.
                          * @param delete A list of settings you want to delete.
                          * @param description Container description. Only used
                          * on the configuration web interface.
@@ -13939,7 +13951,7 @@ public class PveClient extends PveClientBase {
                          * @throws JSONException
                          */
 
-                        public Result setRest(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String revert, String rootfs, String searchdomain, String startup, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                        public Result setRest(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, Boolean debug, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String revert, String rootfs, String searchdomain, String startup, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("arch", arch);
                             parameters.put("cmode", cmode);
@@ -13947,6 +13959,7 @@ public class PveClient extends PveClientBase {
                             parameters.put("cores", cores);
                             parameters.put("cpulimit", cpulimit);
                             parameters.put("cpuunits", cpuunits);
+                            parameters.put("debug", debug);
                             parameters.put("delete", delete);
                             parameters.put("description", description);
                             parameters.put("digest", digest);
@@ -14001,6 +14014,8 @@ public class PveClient extends PveClientBase {
                          * relative to the weights of all the other running VMs.
                          * NOTE: You can disable fair-scheduler configuration by
                          * setting this to 0.
+                         * @param debug Try to be more verbose. For now this
+                         * only enables debug log-level on start.
                          * @param delete A list of settings you want to delete.
                          * @param description Container description. Only used
                          * on the configuration web interface.
@@ -14064,8 +14079,8 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result updateVm(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String revert, String rootfs, String searchdomain, String startup, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
-                            return setRest(arch, cmode, console, cores, cpulimit, cpuunits, delete, description, digest, features, hookscript, hostname, lock_, memory, mpN, nameserver, netN, onboot, ostype, protection, revert, rootfs, searchdomain, startup, swap, tags, template, timezone, tty, unprivileged, unusedN);
+                        public Result updateVm(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, Boolean debug, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String revert, String rootfs, String searchdomain, String startup, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                            return setRest(arch, cmode, console, cores, cpulimit, cpuunits, debug, delete, description, digest, features, hookscript, hostname, lock_, memory, mpN, nameserver, netN, onboot, ostype, protection, revert, rootfs, searchdomain, startup, swap, tags, template, timezone, tty, unprivileged, unusedN);
                         }
 
                         /**
@@ -14216,13 +14231,16 @@ public class PveClient extends PveClientBase {
                             /**
                              * Start the container.
                              *
+                             * @param debug If set, enables very verbose debug
+                             * log-level on start.
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
                              * @return Result
                              * @throws JSONException
                              */
-                            public Result createRest(Boolean skiplock) throws JSONException {
+                            public Result createRest(Boolean debug, Boolean skiplock) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
+                                parameters.put("debug", debug);
                                 parameters.put("skiplock", skiplock);
                                 return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/status/start", parameters);
                             }
@@ -14230,13 +14248,15 @@ public class PveClient extends PveClientBase {
                             /**
                              * Start the container.
                              *
+                             * @param debug If set, enables very verbose debug
+                             * log-level on start.
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
                              * @return Result
                              * @throws JSONException
                              */
-                            public Result vmStart(Boolean skiplock) throws JSONException {
-                                return createRest(skiplock);
+                            public Result vmStart(Boolean debug, Boolean skiplock) throws JSONException {
+                                return createRest(debug, skiplock);
                             }
 
                             /**
@@ -17332,6 +17352,8 @@ public class PveClient extends PveClientBase {
                  * time this VM gets. Number is relative to the weights of all
                  * the other running VMs. NOTE: You can disable fair-scheduler
                  * configuration by setting this to 0.
+                 * @param debug Try to be more verbose. For now this only
+                 * enables debug log-level on start.
                  * @param description Container description. Only used on the
                  * configuration web interface.
                  * @param features Allow containers access to advanced features.
@@ -17396,7 +17418,7 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result createRest(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                public Result createRest(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, Boolean debug, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ostemplate", ostemplate);
                     parameters.put("vmid", vmid);
@@ -17407,6 +17429,7 @@ public class PveClient extends PveClientBase {
                     parameters.put("cores", cores);
                     parameters.put("cpulimit", cpulimit);
                     parameters.put("cpuunits", cpuunits);
+                    parameters.put("debug", debug);
                     parameters.put("description", description);
                     parameters.put("features", features);
                     parameters.put("force", force);
@@ -17467,6 +17490,8 @@ public class PveClient extends PveClientBase {
                  * time this VM gets. Number is relative to the weights of all
                  * the other running VMs. NOTE: You can disable fair-scheduler
                  * configuration by setting this to 0.
+                 * @param debug Try to be more verbose. For now this only
+                 * enables debug log-level on start.
                  * @param description Container description. Only used on the
                  * configuration web interface.
                  * @param features Allow containers access to advanced features.
@@ -17530,8 +17555,8 @@ public class PveClient extends PveClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createVm(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
-                    return createRest(ostemplate, vmid, arch, bwlimit, cmode, console, cores, cpulimit, cpuunits, description, features, force, hookscript, hostname, ignore_unpack_errors, lock_, memory, mpN, nameserver, netN, onboot, ostype, password, pool, protection, restore, rootfs, searchdomain, ssh_public_keys, start, startup, storage, swap, tags, template, timezone, tty, unique, unprivileged, unusedN);
+                public Result createVm(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, Boolean debug, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                    return createRest(ostemplate, vmid, arch, bwlimit, cmode, console, cores, cpulimit, cpuunits, debug, description, features, force, hookscript, hostname, ignore_unpack_errors, lock_, memory, mpN, nameserver, netN, onboot, ostype, password, pool, protection, restore, rootfs, searchdomain, ssh_public_keys, start, startup, storage, swap, tags, template, timezone, tty, unique, unprivileged, unusedN);
                 }
 
                 /**
@@ -17993,6 +18018,8 @@ public class PveClient extends PveClientBase {
                      * Create OSD
                      *
                      * @param dev Block device name.
+                     * @param crush_device_class Set the device class of the OSD
+                     * in crush.
                      * @param db_dev Block device name for block.db.
                      * @param db_size Size in GiB for block.db.
                      * @param encrypted Enables encryption of the OSD.
@@ -18002,9 +18029,10 @@ public class PveClient extends PveClientBase {
                      * @throws JSONException
                      */
 
-                    public Result createRest(String dev, String db_dev, Integer db_size, Boolean encrypted, String wal_dev, Integer wal_size) throws JSONException {
+                    public Result createRest(String dev, String crush_device_class, String db_dev, Integer db_size, Boolean encrypted, String wal_dev, Integer wal_size) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("dev", dev);
+                        parameters.put("crush-device-class", crush_device_class);
                         parameters.put("db_dev", db_dev);
                         parameters.put("db_size", db_size);
                         parameters.put("encrypted", encrypted);
@@ -18017,6 +18045,8 @@ public class PveClient extends PveClientBase {
                      * Create OSD
                      *
                      * @param dev Block device name.
+                     * @param crush_device_class Set the device class of the OSD
+                     * in crush.
                      * @param db_dev Block device name for block.db.
                      * @param db_size Size in GiB for block.db.
                      * @param encrypted Enables encryption of the OSD.
@@ -18025,8 +18055,8 @@ public class PveClient extends PveClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result createosd(String dev, String db_dev, Integer db_size, Boolean encrypted, String wal_dev, Integer wal_size) throws JSONException {
-                        return createRest(dev, db_dev, db_size, encrypted, wal_dev, wal_size);
+                    public Result createosd(String dev, String crush_device_class, String db_dev, Integer db_size, Boolean encrypted, String wal_dev, Integer wal_size) throws JSONException {
+                        return createRest(dev, crush_device_class, db_dev, db_size, encrypted, wal_dev, wal_size);
                     }
 
                     /**
@@ -19403,6 +19433,8 @@ public class PveClient extends PveClientBase {
                  * uses half of cores, N&amp;gt;1 uses N as thread count.
                  * @param pool Backup all known guest systems included in the
                  * specified pool.
+                 * @param prune_backups Use these retention options instead of
+                 * those from the storage configuration.
                  * @param quiet Be quiet.
                  * @param remove Remove old backup files if there are more than
                  * 'maxfiles' backup files.
@@ -19421,7 +19453,7 @@ public class PveClient extends PveClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createRest(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, Integer pigz, String pool, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+                public Result createRest(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, Integer pigz, String pool, String prune_backups, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("all", all);
                     parameters.put("bwlimit", bwlimit);
@@ -19437,6 +19469,7 @@ public class PveClient extends PveClientBase {
                     parameters.put("mode", mode);
                     parameters.put("pigz", pigz);
                     parameters.put("pool", pool);
+                    parameters.put("prune-backups", prune_backups);
                     parameters.put("quiet", quiet);
                     parameters.put("remove", remove);
                     parameters.put("script", script);
@@ -19477,6 +19510,8 @@ public class PveClient extends PveClientBase {
                  * uses half of cores, N&amp;gt;1 uses N as thread count.
                  * @param pool Backup all known guest systems included in the
                  * specified pool.
+                 * @param prune_backups Use these retention options instead of
+                 * those from the storage configuration.
                  * @param quiet Be quiet.
                  * @param remove Remove old backup files if there are more than
                  * 'maxfiles' backup files.
@@ -19495,8 +19530,8 @@ public class PveClient extends PveClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result vzdump(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, Integer pigz, String pool, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
-                    return createRest(all, bwlimit, compress, dumpdir, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, pigz, pool, quiet, remove, script, size, stdexcludes, stdout, stop, stopwait, storage, tmpdir, vmid, zstd);
+                public Result vzdump(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, Integer pigz, String pool, String prune_backups, Boolean quiet, Boolean remove, String script, Integer size, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+                    return createRest(all, bwlimit, compress, dumpdir, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, pigz, pool, prune_backups, quiet, remove, script, size, stdexcludes, stdout, stop, stopwait, storage, tmpdir, vmid, zstd);
                 }
 
                 /**
@@ -19709,7 +19744,8 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Restart service.
+                         * Hard restart service. Use reload if you want to
+                         * reduce interruptions.
                          *
                          * @return Result
                          * @throws JSONException
@@ -19719,7 +19755,8 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Restart service.
+                         * Hard restart service. Use reload if you want to
+                         * reduce interruptions.
                          *
                          * @return Result
                          * @throws JSONException
@@ -19743,7 +19780,8 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Reload service.
+                         * Reload service. Falls back to restart if service
+                         * cannot be reloaded.
                          *
                          * @return Result
                          * @throws JSONException
@@ -19753,7 +19791,8 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Reload service.
+                         * Reload service. Falls back to restart if service
+                         * cannot be reloaded.
                          *
                          * @return Result
                          * @throws JSONException
@@ -21297,6 +21336,15 @@ public class PveClient extends PveClientBase {
                         _storage = storage;
                     }
 
+                    private PVEPrunebackups _prunebackups;
+
+                    public PVEPrunebackups getPrunebackups() {
+                        if (_prunebackups == null) {
+                            _prunebackups = new PVEPrunebackups(_client, _node, _storage);
+                        }
+
+                        return _prunebackups;
+                    }
                     private PVEContent _content;
 
                     public PVEContent getContent() {
@@ -21341,6 +21389,147 @@ public class PveClient extends PveClientBase {
                         }
 
                         return _upload;
+                    }
+
+                    public class PVEPrunebackups {
+
+                        private final PveClient _client;
+                        private final Object _node;
+                        private final Object _storage;
+
+                        protected PVEPrunebackups(PveClient client, Object node, Object storage) {
+                            _client = client;
+                            _node = node;
+                            _storage = storage;
+                        }
+
+                        /**
+                         * Prune backups. Only those using the standard naming
+                         * scheme are considered.
+                         *
+                         * @param prune_backups Use these retention options
+                         * instead of those from the storage configuration.
+                         * @param type Either 'qemu' or 'lxc'. Only consider
+                         * backups for guests of this type. Enum: qemu,lxc
+                         * @param vmid Only prune backups for this VM.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest(String prune_backups, String type, Integer vmid) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("prune-backups", prune_backups);
+                            parameters.put("type", type);
+                            parameters.put("vmid", vmid);
+                            return _client.delete("/nodes/" + _node + "/storage/" + _storage + "/prunebackups", parameters);
+                        }
+
+                        /**
+                         * Prune backups. Only those using the standard naming
+                         * scheme are considered.
+                         *
+                         * @param prune_backups Use these retention options
+                         * instead of those from the storage configuration.
+                         * @param type Either 'qemu' or 'lxc'. Only consider
+                         * backups for guests of this type. Enum: qemu,lxc
+                         * @param vmid Only prune backups for this VM.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result delete(String prune_backups, String type, Integer vmid) throws JSONException {
+                            return deleteRest(prune_backups, type, vmid);
+                        }
+
+                        /**
+                         * Prune backups. Only those using the standard naming
+                         * scheme are considered.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result deleteRest() throws JSONException {
+                            return _client.delete("/nodes/" + _node + "/storage/" + _storage + "/prunebackups", null);
+                        }
+
+                        /**
+                         * Prune backups. Only those using the standard naming
+                         * scheme are considered.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result delete() throws JSONException {
+                            return deleteRest();
+                        }
+
+                        /**
+                         * Get prune information for backups. NOTE: this is only
+                         * a preview and might not be exactly what a subsequent
+                         * prune call does, if the hour changes or if backups
+                         * are removed/added in the meantime.
+                         *
+                         * @param prune_backups Use these retention options
+                         * instead of those from the storage configuration.
+                         * @param type Either 'qemu' or 'lxc'. Only consider
+                         * backups for guests of this type. Enum: qemu,lxc
+                         * @param vmid Only consider backups for this guest.
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result getRest(String prune_backups, String type, Integer vmid) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("prune-backups", prune_backups);
+                            parameters.put("type", type);
+                            parameters.put("vmid", vmid);
+                            return _client.get("/nodes/" + _node + "/storage/" + _storage + "/prunebackups", parameters);
+                        }
+
+                        /**
+                         * Get prune information for backups. NOTE: this is only
+                         * a preview and might not be exactly what a subsequent
+                         * prune call does, if the hour changes or if backups
+                         * are removed/added in the meantime.
+                         *
+                         * @param prune_backups Use these retention options
+                         * instead of those from the storage configuration.
+                         * @param type Either 'qemu' or 'lxc'. Only consider
+                         * backups for guests of this type. Enum: qemu,lxc
+                         * @param vmid Only consider backups for this guest.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result dryrun(String prune_backups, String type, Integer vmid) throws JSONException {
+                            return getRest(prune_backups, type, vmid);
+                        }
+
+                        /**
+                         * Get prune information for backups. NOTE: this is only
+                         * a preview and might not be exactly what a subsequent
+                         * prune call does, if the hour changes or if backups
+                         * are removed/added in the meantime.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result getRest() throws JSONException {
+                            return _client.get("/nodes/" + _node + "/storage/" + _storage + "/prunebackups", null);
+                        }
+
+                        /**
+                         * Get prune information for backups. NOTE: this is only
+                         * a preview and might not be exactly what a subsequent
+                         * prune call does, if the hour changes or if backups
+                         * are removed/added in the meantime.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result dryrun() throws JSONException {
+                            return getRest();
+                        }
+
                     }
 
                     public class PVEContent {
@@ -25987,6 +26176,12 @@ public class PveClient extends PveClientBase {
              * @param options NFS mount options (see 'man nfs')
              * @param password Password for accessing the share/datastore.
              * @param pool Pool.
+             * @param prune_backups The retention options with shorter intervals
+             * are processed first with --keep-last being the very first one.
+             * Each option covers a specific period of time. We say that backups
+             * within this period are covered by this option. The next option
+             * does not take care of already covered backups and only considers
+             * older backups.
              * @param redundancy The redundancy count specifies the number of
              * nodes to which the resource should be deployed. It must be at
              * least 1 and at most the number of nodes in the cluster.
@@ -26008,7 +26203,7 @@ public class PveClient extends PveClientBase {
              * @throws JSONException
              */
 
-            public Result setRest(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String encryption_key, String fingerprint, String format, Boolean fuse, String is_mountpoint, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
+            public Result setRest(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String encryption_key, String fingerprint, String format, Boolean fuse, String is_mountpoint, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String pool, String prune_backups, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("blocksize", blocksize);
                 parameters.put("bwlimit", bwlimit);
@@ -26035,6 +26230,7 @@ public class PveClient extends PveClientBase {
                 parameters.put("options", options);
                 parameters.put("password", password);
                 parameters.put("pool", pool);
+                parameters.put("prune-backups", prune_backups);
                 parameters.put("redundancy", redundancy);
                 parameters.put("saferemove", saferemove);
                 parameters.put("saferemove_throughput", saferemove_throughput);
@@ -26086,6 +26282,12 @@ public class PveClient extends PveClientBase {
              * @param options NFS mount options (see 'man nfs')
              * @param password Password for accessing the share/datastore.
              * @param pool Pool.
+             * @param prune_backups The retention options with shorter intervals
+             * are processed first with --keep-last being the very first one.
+             * Each option covers a specific period of time. We say that backups
+             * within this period are covered by this option. The next option
+             * does not take care of already covered backups and only considers
+             * older backups.
              * @param redundancy The redundancy count specifies the number of
              * nodes to which the resource should be deployed. It must be at
              * least 1 and at most the number of nodes in the cluster.
@@ -26106,8 +26308,8 @@ public class PveClient extends PveClientBase {
              * @return Result
              * @throws JSONException
              */
-            public Result update(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String encryption_key, String fingerprint, String format, Boolean fuse, String is_mountpoint, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String pool, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
-                return setRest(blocksize, bwlimit, comstar_hg, comstar_tg, content, delete, digest, disable, domain, encryption_key, fingerprint, format, fuse, is_mountpoint, krbd, lio_tpg, maxfiles, mkdir, monhost, mountpoint, nodes, nowritecache, options, password, pool, redundancy, saferemove, saferemove_throughput, server, server2, shared, smbversion, sparse, subdir, tagged_only, transport, username);
+            public Result update(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String encryption_key, String fingerprint, String format, Boolean fuse, String is_mountpoint, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String pool, String prune_backups, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
+                return setRest(blocksize, bwlimit, comstar_hg, comstar_tg, content, delete, digest, disable, domain, encryption_key, fingerprint, format, fuse, is_mountpoint, krbd, lio_tpg, maxfiles, mkdir, monhost, mountpoint, nodes, nowritecache, options, password, pool, prune_backups, redundancy, saferemove, saferemove_throughput, server, server2, shared, smbversion, sparse, subdir, tagged_only, transport, username);
             }
 
             /**
@@ -26222,6 +26424,11 @@ public class PveClient extends PveClientBase {
          * @param path File system path.
          * @param pool Pool.
          * @param portal iSCSI portal (IP or DNS name with optional port).
+         * @param prune_backups The retention options with shorter intervals are
+         * processed first with --keep-last being the very first one. Each
+         * option covers a specific period of time. We say that backups within
+         * this period are covered by this option. The next option does not take
+         * care of already covered backups and only considers older backups.
          * @param redundancy The redundancy count specifies the number of nodes
          * to which the resource should be deployed. It must be at least 1 and
          * at most the number of nodes in the cluster.
@@ -26246,7 +26453,7 @@ public class PveClient extends PveClientBase {
          * @throws JSONException
          */
 
-        public Result createRest(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String datastore, Boolean disable, String domain, String encryption_key, String export, String fingerprint, String format, Boolean fuse, String is_mountpoint, String iscsiprovider, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
+        public Result createRest(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String datastore, Boolean disable, String domain, String encryption_key, String export, String fingerprint, String format, Boolean fuse, String is_mountpoint, String iscsiprovider, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String path, String pool, String portal, String prune_backups, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("storage", storage);
             parameters.put("type", type);
@@ -26280,6 +26487,7 @@ public class PveClient extends PveClientBase {
             parameters.put("path", path);
             parameters.put("pool", pool);
             parameters.put("portal", portal);
+            parameters.put("prune-backups", prune_backups);
             parameters.put("redundancy", redundancy);
             parameters.put("saferemove", saferemove);
             parameters.put("saferemove_throughput", saferemove_throughput);
@@ -26342,6 +26550,11 @@ public class PveClient extends PveClientBase {
          * @param path File system path.
          * @param pool Pool.
          * @param portal iSCSI portal (IP or DNS name with optional port).
+         * @param prune_backups The retention options with shorter intervals are
+         * processed first with --keep-last being the very first one. Each
+         * option covers a specific period of time. We say that backups within
+         * this period are covered by this option. The next option does not take
+         * care of already covered backups and only considers older backups.
          * @param redundancy The redundancy count specifies the number of nodes
          * to which the resource should be deployed. It must be at least 1 and
          * at most the number of nodes in the cluster.
@@ -26365,8 +26578,8 @@ public class PveClient extends PveClientBase {
          * @return Result
          * @throws JSONException
          */
-        public Result create(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String datastore, Boolean disable, String domain, String encryption_key, String export, String fingerprint, String format, Boolean fuse, String is_mountpoint, String iscsiprovider, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String path, String pool, String portal, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
-            return createRest(storage, type, authsupported, base_, blocksize, bwlimit, comstar_hg, comstar_tg, content, datastore, disable, domain, encryption_key, export, fingerprint, format, fuse, is_mountpoint, iscsiprovider, krbd, lio_tpg, maxfiles, mkdir, monhost, mountpoint, nodes, nowritecache, options, password, path, pool, portal, redundancy, saferemove, saferemove_throughput, server, server2, share, shared, smbversion, sparse, subdir, tagged_only, target, thinpool, transport, username, vgname, volume);
+        public Result create(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String datastore, Boolean disable, String domain, String encryption_key, String export, String fingerprint, String format, Boolean fuse, String is_mountpoint, String iscsiprovider, Boolean krbd, String lio_tpg, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String nodes, Boolean nowritecache, String options, String password, String path, String pool, String portal, String prune_backups, Integer redundancy, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
+            return createRest(storage, type, authsupported, base_, blocksize, bwlimit, comstar_hg, comstar_tg, content, datastore, disable, domain, encryption_key, export, fingerprint, format, fuse, is_mountpoint, iscsiprovider, krbd, lio_tpg, maxfiles, mkdir, monhost, mountpoint, nodes, nowritecache, options, password, path, pool, portal, prune_backups, redundancy, saferemove, saferemove_throughput, server, server2, share, shared, smbversion, sparse, subdir, tagged_only, target, thinpool, transport, username, vgname, volume);
         }
 
         /**
