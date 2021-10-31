@@ -266,7 +266,7 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result setRest(String comment, String delete, String digest, Boolean disable, Integer rate, String remove_job, String schedule, String source) throws JSONException {
+                public Result setRest(String comment, String delete, String digest, Boolean disable, Float rate, String remove_job, String schedule, String source) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("comment", comment);
                     parameters.put("delete", delete);
@@ -302,7 +302,7 @@ public class PveClient extends PveClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result update(String comment, String delete, String digest, Boolean disable, Integer rate, String remove_job, String schedule, String source) throws JSONException {
+                public Result update(String comment, String delete, String digest, Boolean disable, Float rate, String remove_job, String schedule, String source) throws JSONException {
                     return setRest(comment, delete, digest, disable, rate, remove_job, schedule, source);
                 }
 
@@ -373,7 +373,7 @@ public class PveClient extends PveClientBase {
              * @throws JSONException
              */
 
-            public Result createRest(String id, String target, String type, String comment, Boolean disable, Integer rate, String remove_job, String schedule, String source) throws JSONException {
+            public Result createRest(String id, String target, String type, String comment, Boolean disable, Float rate, String remove_job, String schedule, String source) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("id", id);
                 parameters.put("target", target);
@@ -410,7 +410,7 @@ public class PveClient extends PveClientBase {
              * @return Result
              * @throws JSONException
              */
-            public Result create(String id, String target, String type, String comment, Boolean disable, Integer rate, String remove_job, String schedule, String source) throws JSONException {
+            public Result create(String id, String target, String type, String comment, Boolean disable, Float rate, String remove_job, String schedule, String source) throws JSONException {
                 return createRest(id, target, type, comment, disable, rate, remove_job, schedule, source);
             }
 
@@ -10942,7 +10942,7 @@ public class PveClient extends PveClientBase {
                          * @throws JSONException
                          */
 
-                        public Result createRest(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                        public Result createRest(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
                             parameters.put("agent", agent);
@@ -11223,7 +11223,7 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result updateVmAsync(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                        public Result updateVmAsync(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                             return createRest(acpi, agent, arch, args, audio0, autostart, background_delay, balloon, bios, boot, bootdisk, cdrom, cicustom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, delete, description, digest, efidisk0, force, freeze, hookscript, hostpciN, hotplug, hugepages, ideN, ipconfigN, ivshmem, keephugepages, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, protection, reboot, revert, rng0, sataN, scsiN, scsihw, searchdomain, serialN, shares, skiplock, smbios1, smp, sockets, spice_enhancements, sshkeys, startdate, startup, tablet, tags, tdf, template, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
                         }
 
@@ -11444,7 +11444,7 @@ public class PveClient extends PveClientBase {
                          * @throws JSONException
                          */
 
-                        public Result setRest(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                        public Result setRest(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
                             parameters.put("agent", agent);
@@ -11723,7 +11723,7 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result updateVm(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                        public Result updateVm(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                             return setRest(acpi, agent, arch, args, audio0, autostart, balloon, bios, boot, bootdisk, cdrom, cicustom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, delete, description, digest, efidisk0, force, freeze, hookscript, hostpciN, hotplug, hugepages, ideN, ipconfigN, ivshmem, keephugepages, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, protection, reboot, revert, rng0, sataN, scsiN, scsihw, searchdomain, serialN, shares, skiplock, smbios1, smp, sockets, spice_enhancements, sshkeys, startdate, startup, tablet, tags, tdf, template, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
                         }
 
@@ -14120,7 +14120,7 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result createRest(int vmid, Boolean acpi, String agent, String arch, String archive, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean live_restore, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, String tags, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                public Result createRest(int vmid, Boolean acpi, String agent, String arch, String archive, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean live_restore, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, String tags, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vmid", vmid);
                     parameters.put("acpi", acpi);
@@ -14384,7 +14384,7 @@ public class PveClient extends PveClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createVm(int vmid, Boolean acpi, String agent, String arch, String archive, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Integer cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean live_restore, Boolean localtime, String lock_, String machine, Integer memory, Integer migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, String tags, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                public Result createVm(int vmid, Boolean acpi, String agent, String arch, String archive, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean live_restore, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, String tags, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                     return createRest(vmid, acpi, agent, arch, archive, args, audio0, autostart, balloon, bios, boot, bootdisk, bwlimit, cdrom, cicustom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, description, efidisk0, force, freeze, hookscript, hostpciN, hotplug, hugepages, ideN, ipconfigN, ivshmem, keephugepages, keyboard, kvm, live_restore, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, pool, protection, reboot, rng0, sataN, scsiN, scsihw, searchdomain, serialN, shares, smbios1, smp, sockets, spice_enhancements, sshkeys, start, startdate, startup, storage, tablet, tags, tdf, template, unique, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
                 }
 
@@ -14686,7 +14686,7 @@ public class PveClient extends PveClientBase {
                          * @throws JSONException
                          */
 
-                        public Result setRest(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, Boolean debug, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String revert, String rootfs, String searchdomain, String startup, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                        public Result setRest(String arch, String cmode, Boolean console, Integer cores, Float cpulimit, Integer cpuunits, Boolean debug, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String revert, String rootfs, String searchdomain, String startup, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("arch", arch);
                             parameters.put("cmode", cmode);
@@ -14817,7 +14817,7 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result updateVm(String arch, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, Boolean debug, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String revert, String rootfs, String searchdomain, String startup, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                        public Result updateVm(String arch, String cmode, Boolean console, Integer cores, Float cpulimit, Integer cpuunits, Boolean debug, String delete, String description, String digest, String features, String hookscript, String hostname, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, Boolean protection, String revert, String rootfs, String searchdomain, String startup, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                             return setRest(arch, cmode, console, cores, cpulimit, cpuunits, debug, delete, description, digest, features, hookscript, hostname, lock_, memory, mpN, nameserver, netN, onboot, ostype, protection, revert, rootfs, searchdomain, startup, swap, tags, template, timezone, tty, unprivileged, unusedN);
                         }
 
@@ -17432,7 +17432,7 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest(String target, Integer bwlimit, Boolean online, Boolean restart, Integer timeout) throws JSONException {
+                        public Result createRest(String target, Float bwlimit, Boolean online, Boolean restart, Integer timeout) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
                             parameters.put("bwlimit", bwlimit);
@@ -17456,7 +17456,7 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result migrateVm(String target, Integer bwlimit, Boolean online, Boolean restart, Integer timeout) throws JSONException {
+                        public Result migrateVm(String target, Float bwlimit, Boolean online, Boolean restart, Integer timeout) throws JSONException {
                             return createRest(target, bwlimit, online, restart, timeout);
                         }
 
@@ -17625,7 +17625,7 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest(int newid, Integer bwlimit, String description, Boolean full, String hostname, String pool, String snapname, String storage, String target) throws JSONException {
+                        public Result createRest(int newid, Float bwlimit, String description, Boolean full, String hostname, String pool, String snapname, String storage, String target) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("newid", newid);
                             parameters.put("bwlimit", bwlimit);
@@ -17659,7 +17659,7 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result cloneVm(int newid, Integer bwlimit, String description, Boolean full, String hostname, String pool, String snapname, String storage, String target) throws JSONException {
+                        public Result cloneVm(int newid, Float bwlimit, String description, Boolean full, String hostname, String pool, String snapname, String storage, String target) throws JSONException {
                             return createRest(newid, bwlimit, description, full, hostname, pool, snapname, storage, target);
                         }
 
@@ -17811,7 +17811,7 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest(String storage, String volume, Integer bwlimit, Boolean delete, String digest) throws JSONException {
+                        public Result createRest(String storage, String volume, Float bwlimit, Boolean delete, String digest) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("storage", storage);
                             parameters.put("volume", volume);
@@ -17838,7 +17838,7 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result moveVolume(String storage, String volume, Integer bwlimit, Boolean delete, String digest) throws JSONException {
+                        public Result moveVolume(String storage, String volume, Float bwlimit, Boolean delete, String digest) throws JSONException {
                             return createRest(storage, volume, bwlimit, delete, digest);
                         }
 
@@ -18109,7 +18109,7 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result createRest(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, Boolean debug, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                public Result createRest(String ostemplate, int vmid, String arch, Float bwlimit, String cmode, Boolean console, Integer cores, Float cpulimit, Integer cpuunits, Boolean debug, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ostemplate", ostemplate);
                     parameters.put("vmid", vmid);
@@ -18249,7 +18249,7 @@ public class PveClient extends PveClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createVm(String ostemplate, int vmid, String arch, Integer bwlimit, String cmode, Boolean console, Integer cores, Integer cpulimit, Integer cpuunits, Boolean debug, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                public Result createVm(String ostemplate, int vmid, String arch, Float bwlimit, String cmode, Boolean console, Integer cores, Float cpulimit, Integer cpuunits, Boolean debug, String description, String features, Boolean force, String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage, Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unique, Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
                     return createRest(ostemplate, vmid, arch, bwlimit, cmode, console, cores, cpulimit, cpuunits, debug, description, features, force, hookscript, hostname, ignore_unpack_errors, lock_, memory, mpN, nameserver, netN, onboot, ostype, password, pool, protection, restore, rootfs, searchdomain, ssh_public_keys, start, startup, storage, swap, tags, template, timezone, tty, unique, unprivileged, unusedN);
                 }
 
@@ -18629,7 +18629,7 @@ public class PveClient extends PveClientBase {
                      * @throws JSONException
                      */
 
-                    public Result createRest(String dev, String crush_device_class, String db_dev, Integer db_dev_size, Boolean encrypted, String wal_dev, Integer wal_dev_size) throws JSONException {
+                    public Result createRest(String dev, String crush_device_class, String db_dev, Float db_dev_size, Boolean encrypted, String wal_dev, Float wal_dev_size) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("dev", dev);
                         parameters.put("crush-device-class", crush_device_class);
@@ -18655,7 +18655,7 @@ public class PveClient extends PveClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result createosd(String dev, String crush_device_class, String db_dev, Integer db_dev_size, Boolean encrypted, String wal_dev, Integer wal_dev_size) throws JSONException {
+                    public Result createosd(String dev, String crush_device_class, String db_dev, Float db_dev_size, Boolean encrypted, String wal_dev, Float wal_dev_size) throws JSONException {
                         return createRest(dev, crush_device_class, db_dev, db_dev_size, encrypted, wal_dev, wal_dev_size);
                     }
 
@@ -19268,7 +19268,7 @@ public class PveClient extends PveClientBase {
                          * @throws JSONException
                          */
 
-                        public Result setRest(String application, String crush_rule, Integer min_size, String pg_autoscale_mode, Integer pg_num, Integer pg_num_min, Integer size, String target_size, Integer target_size_ratio) throws JSONException {
+                        public Result setRest(String application, String crush_rule, Integer min_size, String pg_autoscale_mode, Integer pg_num, Integer pg_num_min, Integer size, String target_size, Float target_size_ratio) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("application", application);
                             parameters.put("crush_rule", crush_rule);
@@ -19302,7 +19302,7 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result setpool(String application, String crush_rule, Integer min_size, String pg_autoscale_mode, Integer pg_num, Integer pg_num_min, Integer size, String target_size, Integer target_size_ratio) throws JSONException {
+                        public Result setpool(String application, String crush_rule, Integer min_size, String pg_autoscale_mode, Integer pg_num, Integer pg_num_min, Integer size, String target_size, Float target_size_ratio) throws JSONException {
                             return setRest(application, crush_rule, min_size, pg_autoscale_mode, pg_num, pg_num_min, size, target_size, target_size_ratio);
                         }
 
@@ -19373,7 +19373,7 @@ public class PveClient extends PveClientBase {
                      * @throws JSONException
                      */
 
-                    public Result createRest(String name, Boolean add_storages, String application, String crush_rule, Integer min_size, String pg_autoscale_mode, Integer pg_num, Integer pg_num_min, Integer size, String target_size, Integer target_size_ratio) throws JSONException {
+                    public Result createRest(String name, Boolean add_storages, String application, String crush_rule, Integer min_size, String pg_autoscale_mode, Integer pg_num, Integer pg_num_min, Integer size, String target_size, Float target_size_ratio) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
                         parameters.put("add_storages", add_storages);
@@ -19412,7 +19412,7 @@ public class PveClient extends PveClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result createpool(String name, Boolean add_storages, String application, String crush_rule, Integer min_size, String pg_autoscale_mode, Integer pg_num, Integer pg_num_min, Integer size, String target_size, Integer target_size_ratio) throws JSONException {
+                    public Result createpool(String name, Boolean add_storages, String application, String crush_rule, Integer min_size, String pg_autoscale_mode, Integer pg_num, Integer pg_num_min, Integer size, String target_size, Float target_size_ratio) throws JSONException {
                         return createRest(name, add_storages, application, crush_rule, min_size, pg_autoscale_mode, pg_num, pg_num_min, size, target_size, target_size_ratio);
                     }
 
