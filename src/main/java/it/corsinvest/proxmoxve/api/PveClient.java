@@ -112,6 +112,11 @@ public class PveClient extends PveClientBase {
         public PVECeph getCeph() {
             return _ceph == null ? (_ceph = new PVECeph(_client)) : _ceph;
         }
+        private PVEJobs _jobs;
+
+        public PVEJobs getJobs() {
+            return _jobs == null ? (_jobs = new PVEJobs(_client)) : _jobs;
+        }
         private PVESdn _sdn;
 
         public PVESdn getSdn() {
@@ -558,11 +563,13 @@ public class PveClient extends PveClientBase {
                      * @param token The InfluxDB access token. Only necessary
                      * when using the http v2 api. If the v2 compatibility api
                      * is used, use 'user:password' instead.
+                     * @param verify_certificate Set to 0 to disable certificate
+                     * verification for https endpoints.
                      * @return Result
                      * @throws JSONException
                      */
 
-                    public Result createRest(int port, String server, String type, String api_path_prefix, String bucket, Boolean disable, String influxdbproto, Integer max_body_size, Integer mtu, String organization, String path, String proto, Integer timeout, String token) throws JSONException {
+                    public Result createRest(int port, String server, String type, String api_path_prefix, String bucket, Boolean disable, String influxdbproto, Integer max_body_size, Integer mtu, String organization, String path, String proto, Integer timeout, String token, Boolean verify_certificate) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("port", port);
                         parameters.put("server", server);
@@ -578,6 +585,7 @@ public class PveClient extends PveClientBase {
                         parameters.put("proto", proto);
                         parameters.put("timeout", timeout);
                         parameters.put("token", token);
+                        parameters.put("verify-certificate", verify_certificate);
                         return _client.create("/cluster/metrics/server/" + _id + "", parameters);
                     }
 
@@ -609,11 +617,13 @@ public class PveClient extends PveClientBase {
                      * @param token The InfluxDB access token. Only necessary
                      * when using the http v2 api. If the v2 compatibility api
                      * is used, use 'user:password' instead.
+                     * @param verify_certificate Set to 0 to disable certificate
+                     * verification for https endpoints.
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result create(int port, String server, String type, String api_path_prefix, String bucket, Boolean disable, String influxdbproto, Integer max_body_size, Integer mtu, String organization, String path, String proto, Integer timeout, String token) throws JSONException {
-                        return createRest(port, server, type, api_path_prefix, bucket, disable, influxdbproto, max_body_size, mtu, organization, path, proto, timeout, token);
+                    public Result create(int port, String server, String type, String api_path_prefix, String bucket, Boolean disable, String influxdbproto, Integer max_body_size, Integer mtu, String organization, String path, String proto, Integer timeout, String token, Boolean verify_certificate) throws JSONException {
+                        return createRest(port, server, type, api_path_prefix, bucket, disable, influxdbproto, max_body_size, mtu, organization, path, proto, timeout, token, verify_certificate);
                     }
 
                     /**
@@ -678,11 +688,13 @@ public class PveClient extends PveClientBase {
                      * @param token The InfluxDB access token. Only necessary
                      * when using the http v2 api. If the v2 compatibility api
                      * is used, use 'user:password' instead.
+                     * @param verify_certificate Set to 0 to disable certificate
+                     * verification for https endpoints.
                      * @return Result
                      * @throws JSONException
                      */
 
-                    public Result setRest(int port, String server, String api_path_prefix, String bucket, String delete, String digest, Boolean disable, String influxdbproto, Integer max_body_size, Integer mtu, String organization, String path, String proto, Integer timeout, String token) throws JSONException {
+                    public Result setRest(int port, String server, String api_path_prefix, String bucket, String delete, String digest, Boolean disable, String influxdbproto, Integer max_body_size, Integer mtu, String organization, String path, String proto, Integer timeout, String token, Boolean verify_certificate) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("port", port);
                         parameters.put("server", server);
@@ -699,6 +711,7 @@ public class PveClient extends PveClientBase {
                         parameters.put("proto", proto);
                         parameters.put("timeout", timeout);
                         parameters.put("token", token);
+                        parameters.put("verify-certificate", verify_certificate);
                         return _client.set("/cluster/metrics/server/" + _id + "", parameters);
                     }
 
@@ -733,11 +746,13 @@ public class PveClient extends PveClientBase {
                      * @param token The InfluxDB access token. Only necessary
                      * when using the http v2 api. If the v2 compatibility api
                      * is used, use 'user:password' instead.
+                     * @param verify_certificate Set to 0 to disable certificate
+                     * verification for https endpoints.
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result update(int port, String server, String api_path_prefix, String bucket, String delete, String digest, Boolean disable, String influxdbproto, Integer max_body_size, Integer mtu, String organization, String path, String proto, Integer timeout, String token) throws JSONException {
-                        return setRest(port, server, api_path_prefix, bucket, delete, digest, disable, influxdbproto, max_body_size, mtu, organization, path, proto, timeout, token);
+                    public Result update(int port, String server, String api_path_prefix, String bucket, String delete, String digest, Boolean disable, String influxdbproto, Integer max_body_size, Integer mtu, String organization, String path, String proto, Integer timeout, String token, Boolean verify_certificate) throws JSONException {
+                        return setRest(port, server, api_path_prefix, bucket, delete, digest, disable, influxdbproto, max_body_size, mtu, organization, path, proto, timeout, token, verify_certificate);
                     }
 
                     /**
@@ -3249,9 +3264,9 @@ public class PveClient extends PveClientBase {
                 /**
                  * Update vzdump backup job definition.
                  *
-                 * @param starttime Job Start time.
                  * @param all Backup all known guest systems on this host.
                  * @param bwlimit Limit I/O bandwidth (KBytes per second).
+                 * @param comment Description for the Job.
                  * @param compress Compress dump file. Enum: 0,1,gzip,lzo,zstd
                  * @param delete A list of settings you want to delete.
                  * @param dow Day of week selection.
@@ -3283,7 +3298,10 @@ public class PveClient extends PveClientBase {
                  * @param quiet Be quiet.
                  * @param remove Prune older backups according to
                  * 'prune-backups'.
+                 * @param schedule Backup schedule. The format is a subset of
+                 * `systemd` calendar events.
                  * @param script Use specified hook script.
+                 * @param starttime Job Start time.
                  * @param stdexcludes Exclude temporary files and logs.
                  * @param stop Stop running backup jobs on this host.
                  * @param stopwait Maximal time to wait until a guest system is
@@ -3297,11 +3315,11 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result setRest(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, String prune_backups, Boolean quiet, Boolean remove, String script, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+                public Result setRest(Boolean all, Integer bwlimit, String comment, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, String prune_backups, Boolean quiet, Boolean remove, String schedule, String script, String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
-                    parameters.put("starttime", starttime);
                     parameters.put("all", all);
                     parameters.put("bwlimit", bwlimit);
+                    parameters.put("comment", comment);
                     parameters.put("compress", compress);
                     parameters.put("delete", delete);
                     parameters.put("dow", dow);
@@ -3321,7 +3339,9 @@ public class PveClient extends PveClientBase {
                     parameters.put("prune-backups", prune_backups);
                     parameters.put("quiet", quiet);
                     parameters.put("remove", remove);
+                    parameters.put("schedule", schedule);
                     parameters.put("script", script);
+                    parameters.put("starttime", starttime);
                     parameters.put("stdexcludes", stdexcludes);
                     parameters.put("stop", stop);
                     parameters.put("stopwait", stopwait);
@@ -3335,9 +3355,9 @@ public class PveClient extends PveClientBase {
                 /**
                  * Update vzdump backup job definition.
                  *
-                 * @param starttime Job Start time.
                  * @param all Backup all known guest systems on this host.
                  * @param bwlimit Limit I/O bandwidth (KBytes per second).
+                 * @param comment Description for the Job.
                  * @param compress Compress dump file. Enum: 0,1,gzip,lzo,zstd
                  * @param delete A list of settings you want to delete.
                  * @param dow Day of week selection.
@@ -3369,7 +3389,10 @@ public class PveClient extends PveClientBase {
                  * @param quiet Be quiet.
                  * @param remove Prune older backups according to
                  * 'prune-backups'.
+                 * @param schedule Backup schedule. The format is a subset of
+                 * `systemd` calendar events.
                  * @param script Use specified hook script.
+                 * @param starttime Job Start time.
                  * @param stdexcludes Exclude temporary files and logs.
                  * @param stop Stop running backup jobs on this host.
                  * @param stopwait Maximal time to wait until a guest system is
@@ -3382,33 +3405,29 @@ public class PveClient extends PveClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result updateJob(String starttime, Boolean all, Integer bwlimit, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, String prune_backups, Boolean quiet, Boolean remove, String script, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
-                    return setRest(starttime, all, bwlimit, compress, delete, dow, dumpdir, enabled, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, node, pigz, pool, prune_backups, quiet, remove, script, stdexcludes, stop, stopwait, storage, tmpdir, vmid, zstd);
+                public Result updateJob(Boolean all, Integer bwlimit, String comment, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, String prune_backups, Boolean quiet, Boolean remove, String schedule, String script, String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+                    return setRest(all, bwlimit, comment, compress, delete, dow, dumpdir, enabled, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, node, pigz, pool, prune_backups, quiet, remove, schedule, script, starttime, stdexcludes, stop, stopwait, storage, tmpdir, vmid, zstd);
                 }
 
                 /**
                  * Update vzdump backup job definition.
                  *
-                 * @param starttime Job Start time.
                  * @return Result
                  * @throws JSONException
                  */
 
-                public Result setRest(String starttime) throws JSONException {
-                    Map<String, Object> parameters = new HashMap<>();
-                    parameters.put("starttime", starttime);
-                    return _client.set("/cluster/backup/" + _id + "", parameters);
+                public Result setRest() throws JSONException {
+                    return _client.set("/cluster/backup/" + _id + "", null);
                 }
 
                 /**
                  * Update vzdump backup job definition.
                  *
-                 * @param starttime Job Start time.
                  * @return Result
                  * @throws JSONException
                  */
-                public Result updateJob(String starttime) throws JSONException {
-                    return setRest(starttime);
+                public Result updateJob() throws JSONException {
+                    return setRest();
                 }
 
             }
@@ -3436,9 +3455,9 @@ public class PveClient extends PveClientBase {
             /**
              * Create new vzdump backup job.
              *
-             * @param starttime Job Start time.
              * @param all Backup all known guest systems on this host.
              * @param bwlimit Limit I/O bandwidth (KBytes per second).
+             * @param comment Description for the Job.
              * @param compress Compress dump file. Enum: 0,1,gzip,lzo,zstd
              * @param dow Day of week selection.
              * @param dumpdir Store resulting files to specified directory.
@@ -3447,6 +3466,7 @@ public class PveClient extends PveClientBase {
              * @param exclude_path Exclude certain files/directories (shell
              * globs). Paths starting with '/' are anchored to the container's
              * root, other paths match relative to each subdirectory.
+             * @param id Job ID (will be autogenerated).
              * @param ionice Set CFQ ionice priority.
              * @param lockwait Maximal time to wait for the global lock
              * (minutes).
@@ -3466,7 +3486,10 @@ public class PveClient extends PveClientBase {
              * from the storage configuration.
              * @param quiet Be quiet.
              * @param remove Prune older backups according to 'prune-backups'.
+             * @param schedule Backup schedule. The format is a subset of
+             * `systemd` calendar events.
              * @param script Use specified hook script.
+             * @param starttime Job Start time.
              * @param stdexcludes Exclude temporary files and logs.
              * @param stop Stop running backup jobs on this host.
              * @param stopwait Maximal time to wait until a guest system is
@@ -3480,17 +3503,18 @@ public class PveClient extends PveClientBase {
              * @throws JSONException
              */
 
-            public Result createRest(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, String prune_backups, Boolean quiet, Boolean remove, String script, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+            public Result createRest(Boolean all, Integer bwlimit, String comment, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, String id, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, String prune_backups, Boolean quiet, Boolean remove, String schedule, String script, String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
-                parameters.put("starttime", starttime);
                 parameters.put("all", all);
                 parameters.put("bwlimit", bwlimit);
+                parameters.put("comment", comment);
                 parameters.put("compress", compress);
                 parameters.put("dow", dow);
                 parameters.put("dumpdir", dumpdir);
                 parameters.put("enabled", enabled);
                 parameters.put("exclude", exclude);
                 parameters.put("exclude-path", exclude_path);
+                parameters.put("id", id);
                 parameters.put("ionice", ionice);
                 parameters.put("lockwait", lockwait);
                 parameters.put("mailnotification", mailnotification);
@@ -3503,7 +3527,9 @@ public class PveClient extends PveClientBase {
                 parameters.put("prune-backups", prune_backups);
                 parameters.put("quiet", quiet);
                 parameters.put("remove", remove);
+                parameters.put("schedule", schedule);
                 parameters.put("script", script);
+                parameters.put("starttime", starttime);
                 parameters.put("stdexcludes", stdexcludes);
                 parameters.put("stop", stop);
                 parameters.put("stopwait", stopwait);
@@ -3517,9 +3543,9 @@ public class PveClient extends PveClientBase {
             /**
              * Create new vzdump backup job.
              *
-             * @param starttime Job Start time.
              * @param all Backup all known guest systems on this host.
              * @param bwlimit Limit I/O bandwidth (KBytes per second).
+             * @param comment Description for the Job.
              * @param compress Compress dump file. Enum: 0,1,gzip,lzo,zstd
              * @param dow Day of week selection.
              * @param dumpdir Store resulting files to specified directory.
@@ -3528,6 +3554,7 @@ public class PveClient extends PveClientBase {
              * @param exclude_path Exclude certain files/directories (shell
              * globs). Paths starting with '/' are anchored to the container's
              * root, other paths match relative to each subdirectory.
+             * @param id Job ID (will be autogenerated).
              * @param ionice Set CFQ ionice priority.
              * @param lockwait Maximal time to wait for the global lock
              * (minutes).
@@ -3547,7 +3574,10 @@ public class PveClient extends PveClientBase {
              * from the storage configuration.
              * @param quiet Be quiet.
              * @param remove Prune older backups according to 'prune-backups'.
+             * @param schedule Backup schedule. The format is a subset of
+             * `systemd` calendar events.
              * @param script Use specified hook script.
+             * @param starttime Job Start time.
              * @param stdexcludes Exclude temporary files and logs.
              * @param stop Stop running backup jobs on this host.
              * @param stopwait Maximal time to wait until a guest system is
@@ -3560,33 +3590,29 @@ public class PveClient extends PveClientBase {
              * @return Result
              * @throws JSONException
              */
-            public Result createJob(String starttime, Boolean all, Integer bwlimit, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, String prune_backups, Boolean quiet, Boolean remove, String script, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
-                return createRest(starttime, all, bwlimit, compress, dow, dumpdir, enabled, exclude, exclude_path, ionice, lockwait, mailnotification, mailto, maxfiles, mode, node, pigz, pool, prune_backups, quiet, remove, script, stdexcludes, stop, stopwait, storage, tmpdir, vmid, zstd);
+            public Result createJob(Boolean all, Integer bwlimit, String comment, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, String id, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, Integer pigz, String pool, String prune_backups, Boolean quiet, Boolean remove, String schedule, String script, String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+                return createRest(all, bwlimit, comment, compress, dow, dumpdir, enabled, exclude, exclude_path, id, ionice, lockwait, mailnotification, mailto, maxfiles, mode, node, pigz, pool, prune_backups, quiet, remove, schedule, script, starttime, stdexcludes, stop, stopwait, storage, tmpdir, vmid, zstd);
             }
 
             /**
              * Create new vzdump backup job.
              *
-             * @param starttime Job Start time.
              * @return Result
              * @throws JSONException
              */
 
-            public Result createRest(String starttime) throws JSONException {
-                Map<String, Object> parameters = new HashMap<>();
-                parameters.put("starttime", starttime);
-                return _client.create("/cluster/backup", parameters);
+            public Result createRest() throws JSONException {
+                return _client.create("/cluster/backup", null);
             }
 
             /**
              * Create new vzdump backup job.
              *
-             * @param starttime Job Start time.
              * @return Result
              * @throws JSONException
              */
-            public Result createJob(String starttime) throws JSONException {
-                return createRest(starttime);
+            public Result createJob() throws JSONException {
+                return createRest();
             }
 
         }
@@ -4520,7 +4546,7 @@ public class PveClient extends PveClientBase {
                      * Update ACME plugin configuration.
                      *
                      * @param api API plugin name Enum:
-                     * 1984hosting,acmedns,acmeproxy,active24,ad,ali,anx,arvan,aurora,autodns,aws,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,df,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgedns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hetzner,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ispconfig,jd,joker,kappernet,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,one,online,openprovider,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rcode0,regru,scaleway,schlundtech,selectel,servercow,simply,tele3,transip,ultra,unoeuro,variomedia,vscale,vultr,websupport,world4you,yandex,zilore,zone,zonomi
+                     * 1984hosting,acmedns,acmeproxy,active24,ad,ali,anx,arvan,aurora,autodns,aws,azion,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,df,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgedns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hetzner,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ispconfig,jd,joker,kappernet,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,oci,one,online,openprovider,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rcode0,regru,scaleway,schlundtech,selectel,servercow,simply,tele3,transip,ultra,unoeuro,variomedia,veesp,vscale,vultr,websupport,world4you,yandex,zilore,zone,zonomi
                      * @param data DNS plugin data. (base64 encoded)
                      * @param delete A list of settings you want to delete.
                      * @param digest Prevent changes if current configuration
@@ -4551,7 +4577,7 @@ public class PveClient extends PveClientBase {
                      * Update ACME plugin configuration.
                      *
                      * @param api API plugin name Enum:
-                     * 1984hosting,acmedns,acmeproxy,active24,ad,ali,anx,arvan,aurora,autodns,aws,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,df,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgedns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hetzner,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ispconfig,jd,joker,kappernet,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,one,online,openprovider,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rcode0,regru,scaleway,schlundtech,selectel,servercow,simply,tele3,transip,ultra,unoeuro,variomedia,vscale,vultr,websupport,world4you,yandex,zilore,zone,zonomi
+                     * 1984hosting,acmedns,acmeproxy,active24,ad,ali,anx,arvan,aurora,autodns,aws,azion,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,df,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgedns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hetzner,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ispconfig,jd,joker,kappernet,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,oci,one,online,openprovider,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rcode0,regru,scaleway,schlundtech,selectel,servercow,simply,tele3,transip,ultra,unoeuro,variomedia,veesp,vscale,vultr,websupport,world4you,yandex,zilore,zone,zonomi
                      * @param data DNS plugin data. (base64 encoded)
                      * @param delete A list of settings you want to delete.
                      * @param digest Prevent changes if current configuration
@@ -4645,7 +4671,7 @@ public class PveClient extends PveClientBase {
                  * @param id ACME Plugin ID name
                  * @param type ACME challenge type. Enum: dns,standalone
                  * @param api API plugin name Enum:
-                 * 1984hosting,acmedns,acmeproxy,active24,ad,ali,anx,arvan,aurora,autodns,aws,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,df,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgedns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hetzner,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ispconfig,jd,joker,kappernet,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,one,online,openprovider,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rcode0,regru,scaleway,schlundtech,selectel,servercow,simply,tele3,transip,ultra,unoeuro,variomedia,vscale,vultr,websupport,world4you,yandex,zilore,zone,zonomi
+                 * 1984hosting,acmedns,acmeproxy,active24,ad,ali,anx,arvan,aurora,autodns,aws,azion,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,df,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgedns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hetzner,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ispconfig,jd,joker,kappernet,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,oci,one,online,openprovider,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rcode0,regru,scaleway,schlundtech,selectel,servercow,simply,tele3,transip,ultra,unoeuro,variomedia,veesp,vscale,vultr,websupport,world4you,yandex,zilore,zone,zonomi
                  * @param data DNS plugin data. (base64 encoded)
                  * @param disable Flag to disable the config.
                  * @param nodes List of cluster node names.
@@ -4674,7 +4700,7 @@ public class PveClient extends PveClientBase {
                  * @param id ACME Plugin ID name
                  * @param type ACME challenge type. Enum: dns,standalone
                  * @param api API plugin name Enum:
-                 * 1984hosting,acmedns,acmeproxy,active24,ad,ali,anx,arvan,aurora,autodns,aws,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,df,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgedns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hetzner,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ispconfig,jd,joker,kappernet,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,one,online,openprovider,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rcode0,regru,scaleway,schlundtech,selectel,servercow,simply,tele3,transip,ultra,unoeuro,variomedia,vscale,vultr,websupport,world4you,yandex,zilore,zone,zonomi
+                 * 1984hosting,acmedns,acmeproxy,active24,ad,ali,anx,arvan,aurora,autodns,aws,azion,azure,cf,clouddns,cloudns,cn,conoha,constellix,cx,cyon,da,ddnss,desec,df,dgon,dnsimple,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgedns,euserv,exoscale,freedns,gandi_livedns,gcloud,gd,gdnsdk,he,hetzner,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ispconfig,jd,joker,kappernet,kas,kinghost,knot,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,namecheap,namecom,namesilo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,oci,one,online,openprovider,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rcode0,regru,scaleway,schlundtech,selectel,servercow,simply,tele3,transip,ultra,unoeuro,variomedia,veesp,vscale,vultr,websupport,world4you,yandex,zilore,zone,zonomi
                  * @param data DNS plugin data. (base64 encoded)
                  * @param disable Flag to disable the config.
                  * @param nodes List of cluster node names.
@@ -5364,6 +5390,117 @@ public class PveClient extends PveClientBase {
              * @throws JSONException
              */
             public Result cephindex() throws JSONException {
+                return getRest();
+            }
+
+        }
+
+        public class PVEJobs {
+
+            private final PveClient _client;
+
+            protected PVEJobs(PveClient client) {
+                _client = client;
+
+            }
+
+            private PVESchedule_Analyze _schedule_Analyze;
+
+            public PVESchedule_Analyze getSchedule_Analyze() {
+                return _schedule_Analyze == null ? (_schedule_Analyze = new PVESchedule_Analyze(_client)) : _schedule_Analyze;
+            }
+
+            public class PVESchedule_Analyze {
+
+                private final PveClient _client;
+
+                protected PVESchedule_Analyze(PveClient client) {
+                    _client = client;
+
+                }
+
+                /**
+                 * Returns a list of future schedule runtimes.
+                 *
+                 * @param schedule Job schedule. The format is a subset of
+                 * `systemd` calendar events.
+                 * @param iterations Number of event-iteration to simulate and
+                 * return.
+                 * @param starttime UNIX timestamp to start the calculation
+                 * from. Defaults to the current time.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest(String schedule, Integer iterations, Integer starttime) throws JSONException {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("schedule", schedule);
+                    parameters.put("iterations", iterations);
+                    parameters.put("starttime", starttime);
+                    return _client.get("/cluster/jobs/schedule-analyze", parameters);
+                }
+
+                /**
+                 * Returns a list of future schedule runtimes.
+                 *
+                 * @param schedule Job schedule. The format is a subset of
+                 * `systemd` calendar events.
+                 * @param iterations Number of event-iteration to simulate and
+                 * return.
+                 * @param starttime UNIX timestamp to start the calculation
+                 * from. Defaults to the current time.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result schedule_Analyze(String schedule, Integer iterations, Integer starttime) throws JSONException {
+                    return getRest(schedule, iterations, starttime);
+                }
+
+                /**
+                 * Returns a list of future schedule runtimes.
+                 *
+                 * @param schedule Job schedule. The format is a subset of
+                 * `systemd` calendar events.
+                 * @return Result
+                 * @throws JSONException
+                 */
+
+                public Result getRest(String schedule) throws JSONException {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("schedule", schedule);
+                    return _client.get("/cluster/jobs/schedule-analyze", parameters);
+                }
+
+                /**
+                 * Returns a list of future schedule runtimes.
+                 *
+                 * @param schedule Job schedule. The format is a subset of
+                 * `systemd` calendar events.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result schedule_Analyze(String schedule) throws JSONException {
+                    return getRest(schedule);
+                }
+
+            }
+
+            /**
+             * Index for jobs related endpoints.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/cluster/jobs", null);
+            }
+
+            /**
+             * Index for jobs related endpoints.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result index() throws JSONException {
                 return getRest();
             }
 
@@ -6076,16 +6213,22 @@ public class PveClient extends PveClientBase {
                     /**
                      * Update sdn zone object configuration.
                      *
+                     * @param advertise_subnets Advertise evpn subnets if you
+                     * have silent hosts
                      * @param bridge
                      * @param controller Frr router name
                      * @param delete A list of settings you want to delete.
                      * @param digest Prevent changes if current configuration
                      * file has different SHA1 digest. This can be used to
                      * prevent concurrent modifications.
+                     * @param disable_arp_nd_suppression Disable ipv4 arp
+                     * &amp;&amp; ipv6 neighbour discovery suppression
                      * @param dns dns api server
                      * @param dnszone dns domain zone ex: mydomain.com
                      * @param dp_id Faucet dataplane id
                      * @param exitnodes List of cluster node names.
+                     * @param exitnodes_local_routing Allow exitnodes to connect
+                     * to evpn guests
                      * @param ipam use a specific ipam
                      * @param mac Anycast logical router mac address
                      * @param mtu MTU
@@ -6099,16 +6242,19 @@ public class PveClient extends PveClientBase {
                      * @throws JSONException
                      */
 
-                    public Result setRest(String bridge, String controller, String delete, String digest, String dns, String dnszone, Integer dp_id, String exitnodes, String ipam, String mac, Integer mtu, String nodes, String peers, String reversedns, Integer tag, String vlan_protocol, Integer vrf_vxlan) throws JSONException {
+                    public Result setRest(Boolean advertise_subnets, String bridge, String controller, String delete, String digest, Boolean disable_arp_nd_suppression, String dns, String dnszone, Integer dp_id, String exitnodes, Boolean exitnodes_local_routing, String ipam, String mac, Integer mtu, String nodes, String peers, String reversedns, Integer tag, String vlan_protocol, Integer vrf_vxlan) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("advertise-subnets", advertise_subnets);
                         parameters.put("bridge", bridge);
                         parameters.put("controller", controller);
                         parameters.put("delete", delete);
                         parameters.put("digest", digest);
+                        parameters.put("disable-arp-nd-suppression", disable_arp_nd_suppression);
                         parameters.put("dns", dns);
                         parameters.put("dnszone", dnszone);
                         parameters.put("dp-id", dp_id);
                         parameters.put("exitnodes", exitnodes);
+                        parameters.put("exitnodes-local-routing", exitnodes_local_routing);
                         parameters.put("ipam", ipam);
                         parameters.put("mac", mac);
                         parameters.put("mtu", mtu);
@@ -6124,16 +6270,22 @@ public class PveClient extends PveClientBase {
                     /**
                      * Update sdn zone object configuration.
                      *
+                     * @param advertise_subnets Advertise evpn subnets if you
+                     * have silent hosts
                      * @param bridge
                      * @param controller Frr router name
                      * @param delete A list of settings you want to delete.
                      * @param digest Prevent changes if current configuration
                      * file has different SHA1 digest. This can be used to
                      * prevent concurrent modifications.
+                     * @param disable_arp_nd_suppression Disable ipv4 arp
+                     * &amp;&amp; ipv6 neighbour discovery suppression
                      * @param dns dns api server
                      * @param dnszone dns domain zone ex: mydomain.com
                      * @param dp_id Faucet dataplane id
                      * @param exitnodes List of cluster node names.
+                     * @param exitnodes_local_routing Allow exitnodes to connect
+                     * to evpn guests
                      * @param ipam use a specific ipam
                      * @param mac Anycast logical router mac address
                      * @param mtu MTU
@@ -6146,8 +6298,8 @@ public class PveClient extends PveClientBase {
                      * @return Result
                      * @throws JSONException
                      */
-                    public Result update(String bridge, String controller, String delete, String digest, String dns, String dnszone, Integer dp_id, String exitnodes, String ipam, String mac, Integer mtu, String nodes, String peers, String reversedns, Integer tag, String vlan_protocol, Integer vrf_vxlan) throws JSONException {
-                        return setRest(bridge, controller, delete, digest, dns, dnszone, dp_id, exitnodes, ipam, mac, mtu, nodes, peers, reversedns, tag, vlan_protocol, vrf_vxlan);
+                    public Result update(Boolean advertise_subnets, String bridge, String controller, String delete, String digest, Boolean disable_arp_nd_suppression, String dns, String dnszone, Integer dp_id, String exitnodes, Boolean exitnodes_local_routing, String ipam, String mac, Integer mtu, String nodes, String peers, String reversedns, Integer tag, String vlan_protocol, Integer vrf_vxlan) throws JSONException {
+                        return setRest(advertise_subnets, bridge, controller, delete, digest, disable_arp_nd_suppression, dns, dnszone, dp_id, exitnodes, exitnodes_local_routing, ipam, mac, mtu, nodes, peers, reversedns, tag, vlan_protocol, vrf_vxlan);
                     }
 
                     /**
@@ -6232,12 +6384,18 @@ public class PveClient extends PveClientBase {
                  * @param type Plugin type. Enum:
                  * evpn,faucet,qinq,simple,vlan,vxlan
                  * @param zone The SDN zone object identifier.
+                 * @param advertise_subnets Advertise evpn subnets if you have
+                 * silent hosts
                  * @param bridge
                  * @param controller Frr router name
+                 * @param disable_arp_nd_suppression Disable ipv4 arp &amp;&amp;
+                 * ipv6 neighbour discovery suppression
                  * @param dns dns api server
                  * @param dnszone dns domain zone ex: mydomain.com
                  * @param dp_id Faucet dataplane id
                  * @param exitnodes List of cluster node names.
+                 * @param exitnodes_local_routing Allow exitnodes to connect to
+                 * evpn guests
                  * @param ipam use a specific ipam
                  * @param mac Anycast logical router mac address
                  * @param mtu MTU
@@ -6251,16 +6409,19 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result createRest(String type, String zone, String bridge, String controller, String dns, String dnszone, Integer dp_id, String exitnodes, String ipam, String mac, Integer mtu, String nodes, String peers, String reversedns, Integer tag, String vlan_protocol, Integer vrf_vxlan) throws JSONException {
+                public Result createRest(String type, String zone, Boolean advertise_subnets, String bridge, String controller, Boolean disable_arp_nd_suppression, String dns, String dnszone, Integer dp_id, String exitnodes, Boolean exitnodes_local_routing, String ipam, String mac, Integer mtu, String nodes, String peers, String reversedns, Integer tag, String vlan_protocol, Integer vrf_vxlan) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     parameters.put("zone", zone);
+                    parameters.put("advertise-subnets", advertise_subnets);
                     parameters.put("bridge", bridge);
                     parameters.put("controller", controller);
+                    parameters.put("disable-arp-nd-suppression", disable_arp_nd_suppression);
                     parameters.put("dns", dns);
                     parameters.put("dnszone", dnszone);
                     parameters.put("dp-id", dp_id);
                     parameters.put("exitnodes", exitnodes);
+                    parameters.put("exitnodes-local-routing", exitnodes_local_routing);
                     parameters.put("ipam", ipam);
                     parameters.put("mac", mac);
                     parameters.put("mtu", mtu);
@@ -6279,12 +6440,18 @@ public class PveClient extends PveClientBase {
                  * @param type Plugin type. Enum:
                  * evpn,faucet,qinq,simple,vlan,vxlan
                  * @param zone The SDN zone object identifier.
+                 * @param advertise_subnets Advertise evpn subnets if you have
+                 * silent hosts
                  * @param bridge
                  * @param controller Frr router name
+                 * @param disable_arp_nd_suppression Disable ipv4 arp &amp;&amp;
+                 * ipv6 neighbour discovery suppression
                  * @param dns dns api server
                  * @param dnszone dns domain zone ex: mydomain.com
                  * @param dp_id Faucet dataplane id
                  * @param exitnodes List of cluster node names.
+                 * @param exitnodes_local_routing Allow exitnodes to connect to
+                 * evpn guests
                  * @param ipam use a specific ipam
                  * @param mac Anycast logical router mac address
                  * @param mtu MTU
@@ -6297,8 +6464,8 @@ public class PveClient extends PveClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result create(String type, String zone, String bridge, String controller, String dns, String dnszone, Integer dp_id, String exitnodes, String ipam, String mac, Integer mtu, String nodes, String peers, String reversedns, Integer tag, String vlan_protocol, Integer vrf_vxlan) throws JSONException {
-                    return createRest(type, zone, bridge, controller, dns, dnszone, dp_id, exitnodes, ipam, mac, mtu, nodes, peers, reversedns, tag, vlan_protocol, vrf_vxlan);
+                public Result create(String type, String zone, Boolean advertise_subnets, String bridge, String controller, Boolean disable_arp_nd_suppression, String dns, String dnszone, Integer dp_id, String exitnodes, Boolean exitnodes_local_routing, String ipam, String mac, Integer mtu, String nodes, String peers, String reversedns, Integer tag, String vlan_protocol, Integer vrf_vxlan) throws JSONException {
+                    return createRest(type, zone, advertise_subnets, bridge, controller, disable_arp_nd_suppression, dns, dnszone, dp_id, exitnodes, exitnodes_local_routing, ipam, mac, mtu, nodes, peers, reversedns, tag, vlan_protocol, vrf_vxlan);
                 }
 
                 /**
@@ -7351,6 +7518,9 @@ public class PveClient extends PveClientBase {
              * not activated for the VM), the fallback is noVNC. Enum:
              * applet,vv,html5,xtermjs
              * @param delete A list of settings you want to delete.
+             * @param description Datacenter description. Shown in the
+             * web-interface datacenter notes panel. This is saved as comment
+             * inside the configuration file.
              * @param email_from Specify email address to send notification from
              * (default is root@$hostname)
              * @param fencing Set the fencing mode of the HA cluster. Hardware
@@ -7374,15 +7544,17 @@ public class PveClient extends PveClientBase {
              * default. For secure private networks you can disable it to speed
              * up migration. Deprecated, use the 'migration' property instead!
              * @param u2f u2f
+             * @param webauthn webauthn configuration
              * @return Result
              * @throws JSONException
              */
 
-            public Result setRest(String bwlimit, String console, String delete, String email_from, String fencing, String ha, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure, String u2f) throws JSONException {
+            public Result setRest(String bwlimit, String console, String delete, String description, String email_from, String fencing, String ha, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure, String u2f, String webauthn) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("bwlimit", bwlimit);
                 parameters.put("console", console);
                 parameters.put("delete", delete);
+                parameters.put("description", description);
                 parameters.put("email_from", email_from);
                 parameters.put("fencing", fencing);
                 parameters.put("ha", ha);
@@ -7394,6 +7566,7 @@ public class PveClient extends PveClientBase {
                 parameters.put("migration", migration);
                 parameters.put("migration_unsecure", migration_unsecure);
                 parameters.put("u2f", u2f);
+                parameters.put("webauthn", webauthn);
                 return _client.set("/cluster/options", parameters);
             }
 
@@ -7409,6 +7582,9 @@ public class PveClient extends PveClientBase {
              * not activated for the VM), the fallback is noVNC. Enum:
              * applet,vv,html5,xtermjs
              * @param delete A list of settings you want to delete.
+             * @param description Datacenter description. Shown in the
+             * web-interface datacenter notes panel. This is saved as comment
+             * inside the configuration file.
              * @param email_from Specify email address to send notification from
              * (default is root@$hostname)
              * @param fencing Set the fencing mode of the HA cluster. Hardware
@@ -7432,11 +7608,12 @@ public class PveClient extends PveClientBase {
              * default. For secure private networks you can disable it to speed
              * up migration. Deprecated, use the 'migration' property instead!
              * @param u2f u2f
+             * @param webauthn webauthn configuration
              * @return Result
              * @throws JSONException
              */
-            public Result setOptions(String bwlimit, String console, String delete, String email_from, String fencing, String ha, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure, String u2f) throws JSONException {
-                return setRest(bwlimit, console, delete, email_from, fencing, ha, http_proxy, keyboard, language, mac_prefix, max_workers, migration, migration_unsecure, u2f);
+            public Result setOptions(String bwlimit, String console, String delete, String description, String email_from, String fencing, String ha, String http_proxy, String keyboard, String language, String mac_prefix, Integer max_workers, String migration, Boolean migration_unsecure, String u2f, String webauthn) throws JSONException {
+                return setRest(bwlimit, console, delete, description, email_from, fencing, ha, http_proxy, keyboard, language, mac_prefix, max_workers, migration, migration_unsecure, u2f, webauthn);
             }
 
             /**
@@ -7772,6 +7949,11 @@ public class PveClient extends PveClientBase {
 
             public PVEAplinfo getAplinfo() {
                 return _aplinfo == null ? (_aplinfo = new PVEAplinfo(_client, _node)) : _aplinfo;
+            }
+            private PVEQuery_Url_Metadata _query_Url_Metadata;
+
+            public PVEQuery_Url_Metadata getQuery_Url_Metadata() {
+                return _query_Url_Metadata == null ? (_query_Url_Metadata = new PVEQuery_Url_Metadata(_client, _node)) : _query_Url_Metadata;
             }
             private PVEReport _report;
 
@@ -10749,8 +10931,8 @@ public class PveClient extends PveClientBase {
                          * Set virtual machine options (asynchrounous API).
                          *
                          * @param acpi Enable/disable ACPI.
-                         * @param agent Enable/disable Qemu GuestAgent and its
-                         * properties.
+                         * @param agent Enable/disable communication with the
+                         * Qemu Guest Agent and its properties.
                          * @param arch Virtual processor architecture. Defaults
                          * to the host. Enum: x86_64,aarch64
                          * @param args Arbitrary arguments passed to kvm.
@@ -10765,9 +10947,9 @@ public class PveClient extends PveClientBase {
                          * Using zero disables the ballon driver.
                          * @param bios Select BIOS implementation. Enum:
                          * seabios,ovmf
-                         * @param boot Specify guest boot order. Use with
-                         * 'order=', usage with no key or 'legacy=' is
-                         * deprecated.
+                         * @param boot Specify guest boot order. Use the
+                         * 'order=' sub-property as usage with no key or
+                         * 'legacy=' is deprecated.
                          * @param bootdisk Enable booting from specified disk.
                          * Deprecated: Use 'boot: order=foo;bar' instead.
                          * @param cdrom This is an alias for option -ide2
@@ -10788,7 +10970,8 @@ public class PveClient extends PveClientBase {
                          * @param cores The number of cores per socket.
                          * @param cpu Emulated CPU type.
                          * @param cpulimit Limit of CPU usage.
-                         * @param cpuunits CPU weight for a VM.
+                         * @param cpuunits CPU weight for a VM, will be clamped
+                         * to [1, 10000] in cgroup v2.
                          * @param delete A list of settings you want to delete.
                          * @param description Description for the VM. Shown in
                          * the web-interface VM's summary. This is saved as
@@ -10814,8 +10997,8 @@ public class PveClient extends PveClientBase {
                          * @param hotplug Selectively enable hotplug features.
                          * This is a comma separated list of hotplug features:
                          * 'network', 'disk', 'cpu', 'memory' and 'usb'. Use '0'
-                         * to disable hotplug completely. Value '1' is an alias
-                         * for the default 'network,disk,usb'.
+                         * to disable hotplug completely. Using '1' as value is
+                         * an alias for the default `network,disk,usb`.
                          * @param hugepages Enable/disable hugepages memory.
                          * Enum: any,2,1024
                          * @param ideN Use volume as IDE hard disk or CD-ROM (n
@@ -10837,16 +11020,16 @@ public class PveClient extends PveClientBase {
                          * @param keephugepages Use together with hugepages. If
                          * enabled, hugepages will not not be deleted after VM
                          * shutdown and can be used for subsequent starts.
-                         * @param keyboard Keybord layout for vnc server.
-                         * Default is read from the '/etc/pve/datacenter.cfg'
-                         * configuration file.It should not be necessary to set
+                         * @param keyboard Keyboard layout for VNC server. The
+                         * default is read from the'/etc/pve/datacenter.cfg'
+                         * configuration file. It should not be necessary to set
                          * it. Enum:
                          * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
                          * @param kvm Enable/disable KVM hardware
                          * virtualization.
-                         * @param localtime Set the real time clock to local
-                         * time. This is enabled by default if ostype indicates
-                         * a Microsoft OS.
+                         * @param localtime Set the real time clock (RTC) to
+                         * local time. This is enabled by default if the
+                         * `ostype` indicates a Microsoft Windows OS.
                          * @param lock_ Lock/unlock the VM. Enum:
                          * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
                          * @param machine Specifies the Qemu machine type.
@@ -10869,7 +11052,7 @@ public class PveClient extends PveClientBase {
                          * @param onboot Specifies whether a VM will be started
                          * during system bootup.
                          * @param ostype Specify guest operating system. Enum:
-                         * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,l24,l26,solaris
+                         * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,win11,l24,l26,solaris
                          * @param parallelN Map host parallel devices (n is 0 to
                          * 2).
                          * @param protection Sets the protection flag of the VM.
@@ -10923,6 +11106,12 @@ public class PveClient extends PveClientBase {
                          * information.
                          * @param tdf Enable/disable time drift fix.
                          * @param template Enable/disable Template.
+                         * @param tpmstate0 Configure a Disk for storing TPM
+                         * state. Use the special syntax STORAGE_ID:SIZE_IN_GiB
+                         * to allocate a new volume. Note that SIZE_IN_GiB is
+                         * ignored here and that the default size of 4 MiB will
+                         * always be used instead. The format is also fixed to
+                         * 'raw'.
                          * @param unusedN Reference to unused volumes. This is
                          * used internally, and should not be modified manually.
                          * @param usbN Configure an USB device (n is 0 to 4).
@@ -10942,7 +11131,7 @@ public class PveClient extends PveClientBase {
                          * @throws JSONException
                          */
 
-                        public Result createRest(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                        public Result createRest(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, String tpmstate0, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
                             parameters.put("agent", agent);
@@ -11007,6 +11196,7 @@ public class PveClient extends PveClientBase {
                             parameters.put("tags", tags);
                             parameters.put("tdf", tdf);
                             parameters.put("template", template);
+                            parameters.put("tpmstate0", tpmstate0);
                             parameters.put("vcpus", vcpus);
                             parameters.put("vga", vga);
                             parameters.put("vmgenid", vmgenid);
@@ -11031,8 +11221,8 @@ public class PveClient extends PveClientBase {
                          * Set virtual machine options (asynchrounous API).
                          *
                          * @param acpi Enable/disable ACPI.
-                         * @param agent Enable/disable Qemu GuestAgent and its
-                         * properties.
+                         * @param agent Enable/disable communication with the
+                         * Qemu Guest Agent and its properties.
                          * @param arch Virtual processor architecture. Defaults
                          * to the host. Enum: x86_64,aarch64
                          * @param args Arbitrary arguments passed to kvm.
@@ -11047,9 +11237,9 @@ public class PveClient extends PveClientBase {
                          * Using zero disables the ballon driver.
                          * @param bios Select BIOS implementation. Enum:
                          * seabios,ovmf
-                         * @param boot Specify guest boot order. Use with
-                         * 'order=', usage with no key or 'legacy=' is
-                         * deprecated.
+                         * @param boot Specify guest boot order. Use the
+                         * 'order=' sub-property as usage with no key or
+                         * 'legacy=' is deprecated.
                          * @param bootdisk Enable booting from specified disk.
                          * Deprecated: Use 'boot: order=foo;bar' instead.
                          * @param cdrom This is an alias for option -ide2
@@ -11070,7 +11260,8 @@ public class PveClient extends PveClientBase {
                          * @param cores The number of cores per socket.
                          * @param cpu Emulated CPU type.
                          * @param cpulimit Limit of CPU usage.
-                         * @param cpuunits CPU weight for a VM.
+                         * @param cpuunits CPU weight for a VM, will be clamped
+                         * to [1, 10000] in cgroup v2.
                          * @param delete A list of settings you want to delete.
                          * @param description Description for the VM. Shown in
                          * the web-interface VM's summary. This is saved as
@@ -11096,8 +11287,8 @@ public class PveClient extends PveClientBase {
                          * @param hotplug Selectively enable hotplug features.
                          * This is a comma separated list of hotplug features:
                          * 'network', 'disk', 'cpu', 'memory' and 'usb'. Use '0'
-                         * to disable hotplug completely. Value '1' is an alias
-                         * for the default 'network,disk,usb'.
+                         * to disable hotplug completely. Using '1' as value is
+                         * an alias for the default `network,disk,usb`.
                          * @param hugepages Enable/disable hugepages memory.
                          * Enum: any,2,1024
                          * @param ideN Use volume as IDE hard disk or CD-ROM (n
@@ -11119,16 +11310,16 @@ public class PveClient extends PveClientBase {
                          * @param keephugepages Use together with hugepages. If
                          * enabled, hugepages will not not be deleted after VM
                          * shutdown and can be used for subsequent starts.
-                         * @param keyboard Keybord layout for vnc server.
-                         * Default is read from the '/etc/pve/datacenter.cfg'
-                         * configuration file.It should not be necessary to set
+                         * @param keyboard Keyboard layout for VNC server. The
+                         * default is read from the'/etc/pve/datacenter.cfg'
+                         * configuration file. It should not be necessary to set
                          * it. Enum:
                          * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
                          * @param kvm Enable/disable KVM hardware
                          * virtualization.
-                         * @param localtime Set the real time clock to local
-                         * time. This is enabled by default if ostype indicates
-                         * a Microsoft OS.
+                         * @param localtime Set the real time clock (RTC) to
+                         * local time. This is enabled by default if the
+                         * `ostype` indicates a Microsoft Windows OS.
                          * @param lock_ Lock/unlock the VM. Enum:
                          * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
                          * @param machine Specifies the Qemu machine type.
@@ -11151,7 +11342,7 @@ public class PveClient extends PveClientBase {
                          * @param onboot Specifies whether a VM will be started
                          * during system bootup.
                          * @param ostype Specify guest operating system. Enum:
-                         * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,l24,l26,solaris
+                         * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,win11,l24,l26,solaris
                          * @param parallelN Map host parallel devices (n is 0 to
                          * 2).
                          * @param protection Sets the protection flag of the VM.
@@ -11205,6 +11396,12 @@ public class PveClient extends PveClientBase {
                          * information.
                          * @param tdf Enable/disable time drift fix.
                          * @param template Enable/disable Template.
+                         * @param tpmstate0 Configure a Disk for storing TPM
+                         * state. Use the special syntax STORAGE_ID:SIZE_IN_GiB
+                         * to allocate a new volume. Note that SIZE_IN_GiB is
+                         * ignored here and that the default size of 4 MiB will
+                         * always be used instead. The format is also fixed to
+                         * 'raw'.
                          * @param unusedN Reference to unused volumes. This is
                          * used internally, and should not be modified manually.
                          * @param usbN Configure an USB device (n is 0 to 4).
@@ -11223,8 +11420,8 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result updateVmAsync(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
-                            return createRest(acpi, agent, arch, args, audio0, autostart, background_delay, balloon, bios, boot, bootdisk, cdrom, cicustom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, delete, description, digest, efidisk0, force, freeze, hookscript, hostpciN, hotplug, hugepages, ideN, ipconfigN, ivshmem, keephugepages, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, protection, reboot, revert, rng0, sataN, scsiN, scsihw, searchdomain, serialN, shares, skiplock, smbios1, smp, sockets, spice_enhancements, sshkeys, startdate, startup, tablet, tags, tdf, template, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
+                        public Result updateVmAsync(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, String tpmstate0, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                            return createRest(acpi, agent, arch, args, audio0, autostart, background_delay, balloon, bios, boot, bootdisk, cdrom, cicustom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, delete, description, digest, efidisk0, force, freeze, hookscript, hostpciN, hotplug, hugepages, ideN, ipconfigN, ivshmem, keephugepages, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, protection, reboot, revert, rng0, sataN, scsiN, scsihw, searchdomain, serialN, shares, skiplock, smbios1, smp, sockets, spice_enhancements, sshkeys, startdate, startup, tablet, tags, tdf, template, tpmstate0, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
                         }
 
                         /**
@@ -11254,8 +11451,8 @@ public class PveClient extends PveClientBase {
                          * actions involving hotplug or storage allocation.
                          *
                          * @param acpi Enable/disable ACPI.
-                         * @param agent Enable/disable Qemu GuestAgent and its
-                         * properties.
+                         * @param agent Enable/disable communication with the
+                         * Qemu Guest Agent and its properties.
                          * @param arch Virtual processor architecture. Defaults
                          * to the host. Enum: x86_64,aarch64
                          * @param args Arbitrary arguments passed to kvm.
@@ -11267,9 +11464,9 @@ public class PveClient extends PveClientBase {
                          * Using zero disables the ballon driver.
                          * @param bios Select BIOS implementation. Enum:
                          * seabios,ovmf
-                         * @param boot Specify guest boot order. Use with
-                         * 'order=', usage with no key or 'legacy=' is
-                         * deprecated.
+                         * @param boot Specify guest boot order. Use the
+                         * 'order=' sub-property as usage with no key or
+                         * 'legacy=' is deprecated.
                          * @param bootdisk Enable booting from specified disk.
                          * Deprecated: Use 'boot: order=foo;bar' instead.
                          * @param cdrom This is an alias for option -ide2
@@ -11290,7 +11487,8 @@ public class PveClient extends PveClientBase {
                          * @param cores The number of cores per socket.
                          * @param cpu Emulated CPU type.
                          * @param cpulimit Limit of CPU usage.
-                         * @param cpuunits CPU weight for a VM.
+                         * @param cpuunits CPU weight for a VM, will be clamped
+                         * to [1, 10000] in cgroup v2.
                          * @param delete A list of settings you want to delete.
                          * @param description Description for the VM. Shown in
                          * the web-interface VM's summary. This is saved as
@@ -11316,8 +11514,8 @@ public class PveClient extends PveClientBase {
                          * @param hotplug Selectively enable hotplug features.
                          * This is a comma separated list of hotplug features:
                          * 'network', 'disk', 'cpu', 'memory' and 'usb'. Use '0'
-                         * to disable hotplug completely. Value '1' is an alias
-                         * for the default 'network,disk,usb'.
+                         * to disable hotplug completely. Using '1' as value is
+                         * an alias for the default `network,disk,usb`.
                          * @param hugepages Enable/disable hugepages memory.
                          * Enum: any,2,1024
                          * @param ideN Use volume as IDE hard disk or CD-ROM (n
@@ -11339,16 +11537,16 @@ public class PveClient extends PveClientBase {
                          * @param keephugepages Use together with hugepages. If
                          * enabled, hugepages will not not be deleted after VM
                          * shutdown and can be used for subsequent starts.
-                         * @param keyboard Keybord layout for vnc server.
-                         * Default is read from the '/etc/pve/datacenter.cfg'
-                         * configuration file.It should not be necessary to set
+                         * @param keyboard Keyboard layout for VNC server. The
+                         * default is read from the'/etc/pve/datacenter.cfg'
+                         * configuration file. It should not be necessary to set
                          * it. Enum:
                          * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
                          * @param kvm Enable/disable KVM hardware
                          * virtualization.
-                         * @param localtime Set the real time clock to local
-                         * time. This is enabled by default if ostype indicates
-                         * a Microsoft OS.
+                         * @param localtime Set the real time clock (RTC) to
+                         * local time. This is enabled by default if the
+                         * `ostype` indicates a Microsoft Windows OS.
                          * @param lock_ Lock/unlock the VM. Enum:
                          * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
                          * @param machine Specifies the Qemu machine type.
@@ -11371,7 +11569,7 @@ public class PveClient extends PveClientBase {
                          * @param onboot Specifies whether a VM will be started
                          * during system bootup.
                          * @param ostype Specify guest operating system. Enum:
-                         * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,l24,l26,solaris
+                         * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,win11,l24,l26,solaris
                          * @param parallelN Map host parallel devices (n is 0 to
                          * 2).
                          * @param protection Sets the protection flag of the VM.
@@ -11425,6 +11623,12 @@ public class PveClient extends PveClientBase {
                          * information.
                          * @param tdf Enable/disable time drift fix.
                          * @param template Enable/disable Template.
+                         * @param tpmstate0 Configure a Disk for storing TPM
+                         * state. Use the special syntax STORAGE_ID:SIZE_IN_GiB
+                         * to allocate a new volume. Note that SIZE_IN_GiB is
+                         * ignored here and that the default size of 4 MiB will
+                         * always be used instead. The format is also fixed to
+                         * 'raw'.
                          * @param unusedN Reference to unused volumes. This is
                          * used internally, and should not be modified manually.
                          * @param usbN Configure an USB device (n is 0 to 4).
@@ -11444,7 +11648,7 @@ public class PveClient extends PveClientBase {
                          * @throws JSONException
                          */
 
-                        public Result setRest(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                        public Result setRest(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, String tpmstate0, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
                             parameters.put("agent", agent);
@@ -11508,6 +11712,7 @@ public class PveClient extends PveClientBase {
                             parameters.put("tags", tags);
                             parameters.put("tdf", tdf);
                             parameters.put("template", template);
+                            parameters.put("tpmstate0", tpmstate0);
                             parameters.put("vcpus", vcpus);
                             parameters.put("vga", vga);
                             parameters.put("vmgenid", vmgenid);
@@ -11534,8 +11739,8 @@ public class PveClient extends PveClientBase {
                          * actions involving hotplug or storage allocation.
                          *
                          * @param acpi Enable/disable ACPI.
-                         * @param agent Enable/disable Qemu GuestAgent and its
-                         * properties.
+                         * @param agent Enable/disable communication with the
+                         * Qemu Guest Agent and its properties.
                          * @param arch Virtual processor architecture. Defaults
                          * to the host. Enum: x86_64,aarch64
                          * @param args Arbitrary arguments passed to kvm.
@@ -11547,9 +11752,9 @@ public class PveClient extends PveClientBase {
                          * Using zero disables the ballon driver.
                          * @param bios Select BIOS implementation. Enum:
                          * seabios,ovmf
-                         * @param boot Specify guest boot order. Use with
-                         * 'order=', usage with no key or 'legacy=' is
-                         * deprecated.
+                         * @param boot Specify guest boot order. Use the
+                         * 'order=' sub-property as usage with no key or
+                         * 'legacy=' is deprecated.
                          * @param bootdisk Enable booting from specified disk.
                          * Deprecated: Use 'boot: order=foo;bar' instead.
                          * @param cdrom This is an alias for option -ide2
@@ -11570,7 +11775,8 @@ public class PveClient extends PveClientBase {
                          * @param cores The number of cores per socket.
                          * @param cpu Emulated CPU type.
                          * @param cpulimit Limit of CPU usage.
-                         * @param cpuunits CPU weight for a VM.
+                         * @param cpuunits CPU weight for a VM, will be clamped
+                         * to [1, 10000] in cgroup v2.
                          * @param delete A list of settings you want to delete.
                          * @param description Description for the VM. Shown in
                          * the web-interface VM's summary. This is saved as
@@ -11596,8 +11802,8 @@ public class PveClient extends PveClientBase {
                          * @param hotplug Selectively enable hotplug features.
                          * This is a comma separated list of hotplug features:
                          * 'network', 'disk', 'cpu', 'memory' and 'usb'. Use '0'
-                         * to disable hotplug completely. Value '1' is an alias
-                         * for the default 'network,disk,usb'.
+                         * to disable hotplug completely. Using '1' as value is
+                         * an alias for the default `network,disk,usb`.
                          * @param hugepages Enable/disable hugepages memory.
                          * Enum: any,2,1024
                          * @param ideN Use volume as IDE hard disk or CD-ROM (n
@@ -11619,16 +11825,16 @@ public class PveClient extends PveClientBase {
                          * @param keephugepages Use together with hugepages. If
                          * enabled, hugepages will not not be deleted after VM
                          * shutdown and can be used for subsequent starts.
-                         * @param keyboard Keybord layout for vnc server.
-                         * Default is read from the '/etc/pve/datacenter.cfg'
-                         * configuration file.It should not be necessary to set
+                         * @param keyboard Keyboard layout for VNC server. The
+                         * default is read from the'/etc/pve/datacenter.cfg'
+                         * configuration file. It should not be necessary to set
                          * it. Enum:
                          * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
                          * @param kvm Enable/disable KVM hardware
                          * virtualization.
-                         * @param localtime Set the real time clock to local
-                         * time. This is enabled by default if ostype indicates
-                         * a Microsoft OS.
+                         * @param localtime Set the real time clock (RTC) to
+                         * local time. This is enabled by default if the
+                         * `ostype` indicates a Microsoft Windows OS.
                          * @param lock_ Lock/unlock the VM. Enum:
                          * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
                          * @param machine Specifies the Qemu machine type.
@@ -11651,7 +11857,7 @@ public class PveClient extends PveClientBase {
                          * @param onboot Specifies whether a VM will be started
                          * during system bootup.
                          * @param ostype Specify guest operating system. Enum:
-                         * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,l24,l26,solaris
+                         * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,win11,l24,l26,solaris
                          * @param parallelN Map host parallel devices (n is 0 to
                          * 2).
                          * @param protection Sets the protection flag of the VM.
@@ -11705,6 +11911,12 @@ public class PveClient extends PveClientBase {
                          * information.
                          * @param tdf Enable/disable time drift fix.
                          * @param template Enable/disable Template.
+                         * @param tpmstate0 Configure a Disk for storing TPM
+                         * state. Use the special syntax STORAGE_ID:SIZE_IN_GiB
+                         * to allocate a new volume. Note that SIZE_IN_GiB is
+                         * ignored here and that the default size of 4 MiB will
+                         * always be used instead. The format is also fixed to
+                         * 'raw'.
                          * @param unusedN Reference to unused volumes. This is
                          * used internally, and should not be modified manually.
                          * @param usbN Configure an USB device (n is 0 to 4).
@@ -11723,8 +11935,8 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result updateVm(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
-                            return setRest(acpi, agent, arch, args, audio0, autostart, balloon, bios, boot, bootdisk, cdrom, cicustom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, delete, description, digest, efidisk0, force, freeze, hookscript, hostpciN, hotplug, hugepages, ideN, ipconfigN, ivshmem, keephugepages, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, protection, reboot, revert, rng0, sataN, scsiN, scsihw, searchdomain, serialN, shares, skiplock, smbios1, smp, sockets, spice_enhancements, sshkeys, startdate, startup, tablet, tags, tdf, template, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
+                        public Result updateVm(Boolean acpi, String agent, String arch, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, String tpmstate0, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                            return setRest(acpi, agent, arch, args, audio0, autostart, balloon, bios, boot, bootdisk, cdrom, cicustom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, delete, description, digest, efidisk0, force, freeze, hookscript, hostpciN, hotplug, hugepages, ideN, ipconfigN, ivshmem, keephugepages, keyboard, kvm, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, protection, reboot, revert, rng0, sataN, scsiN, scsihw, searchdomain, serialN, shares, skiplock, smbios1, smp, sockets, spice_enhancements, sshkeys, startdate, startup, tablet, tags, tdf, template, tpmstate0, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
                         }
 
                         /**
@@ -13009,84 +13221,106 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Move volume to different storage.
+                         * Move volume to different storage or to a different
+                         * VM.
                          *
                          * @param disk The disk you want to move. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
-                         * @param storage Target storage.
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
                          * @param bwlimit Override I/O bandwidth limit (in
                          * KiB/s).
                          * @param delete Delete the original disk after
                          * successful copy. By default the original disk is kept
                          * as unused disk.
                          * @param digest Prevent changes if current
-                         * configuration file has different SHA1 digest. This
-                         * can be used to prevent concurrent modifications.
+                         * configuration file has different SHA1" ." digest.
+                         * This can be used to prevent concurrent modifications.
                          * @param format Target Format. Enum: raw,qcow2,vmdk
+                         * @param storage Target storage.
+                         * @param target_digest Prevent changes if the current
+                         * config file of the target VM has a" ." different SHA1
+                         * digest. This can be used to detect concurrent
+                         * modifications.
+                         * @param target_disk The config key the disk will be
+                         * moved to on the target VM (for example, ide0 or
+                         * scsi1). Default is the source disk key. Enum:
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
+                         * @param target_vmid The (unique) ID of the VM.
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest(String disk, String storage, Integer bwlimit, Boolean delete, String digest, String format) throws JSONException {
+                        public Result createRest(String disk, Integer bwlimit, Boolean delete, String digest, String format, String storage, String target_digest, String target_disk, Integer target_vmid) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
-                            parameters.put("storage", storage);
                             parameters.put("bwlimit", bwlimit);
                             parameters.put("delete", delete);
                             parameters.put("digest", digest);
                             parameters.put("format", format);
+                            parameters.put("storage", storage);
+                            parameters.put("target-digest", target_digest);
+                            parameters.put("target-disk", target_disk);
+                            parameters.put("target-vmid", target_vmid);
                             return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/move_disk", parameters);
                         }
 
                         /**
-                         * Move volume to different storage.
+                         * Move volume to different storage or to a different
+                         * VM.
                          *
                          * @param disk The disk you want to move. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
-                         * @param storage Target storage.
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
                          * @param bwlimit Override I/O bandwidth limit (in
                          * KiB/s).
                          * @param delete Delete the original disk after
                          * successful copy. By default the original disk is kept
                          * as unused disk.
                          * @param digest Prevent changes if current
-                         * configuration file has different SHA1 digest. This
-                         * can be used to prevent concurrent modifications.
+                         * configuration file has different SHA1" ." digest.
+                         * This can be used to prevent concurrent modifications.
                          * @param format Target Format. Enum: raw,qcow2,vmdk
+                         * @param storage Target storage.
+                         * @param target_digest Prevent changes if the current
+                         * config file of the target VM has a" ." different SHA1
+                         * digest. This can be used to detect concurrent
+                         * modifications.
+                         * @param target_disk The config key the disk will be
+                         * moved to on the target VM (for example, ide0 or
+                         * scsi1). Default is the source disk key. Enum:
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
+                         * @param target_vmid The (unique) ID of the VM.
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result moveVmDisk(String disk, String storage, Integer bwlimit, Boolean delete, String digest, String format) throws JSONException {
-                            return createRest(disk, storage, bwlimit, delete, digest, format);
+                        public Result moveVmDisk(String disk, Integer bwlimit, Boolean delete, String digest, String format, String storage, String target_digest, String target_disk, Integer target_vmid) throws JSONException {
+                            return createRest(disk, bwlimit, delete, digest, format, storage, target_digest, target_disk, target_vmid);
                         }
 
                         /**
-                         * Move volume to different storage.
+                         * Move volume to different storage or to a different
+                         * VM.
                          *
                          * @param disk The disk you want to move. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
-                         * @param storage Target storage.
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
                          * @return Result
                          * @throws JSONException
                          */
 
-                        public Result createRest(String disk, String storage) throws JSONException {
+                        public Result createRest(String disk) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
-                            parameters.put("storage", storage);
                             return _client.create("/nodes/" + _node + "/qemu/" + _vmid + "/move_disk", parameters);
                         }
 
                         /**
-                         * Move volume to different storage.
+                         * Move volume to different storage or to a different
+                         * VM.
                          *
                          * @param disk The disk you want to move. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
-                         * @param storage Target storage.
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result moveVmDisk(String disk, String storage) throws JSONException {
-                            return createRest(disk, storage);
+                        public Result moveVmDisk(String disk) throws JSONException {
+                            return createRest(disk);
                         }
 
                     }
@@ -13303,7 +13537,7 @@ public class PveClient extends PveClientBase {
                          * Extend volume size.
                          *
                          * @param disk The disk you want to resize. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0
                          * @param size The new size. With the `+` sign the value
                          * is added to the actual size of the volume and without
                          * it, the value is taken as an absolute one. Shrinking
@@ -13329,7 +13563,7 @@ public class PveClient extends PveClientBase {
                          * Extend volume size.
                          *
                          * @param disk The disk you want to resize. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0
                          * @param size The new size. With the `+` sign the value
                          * is added to the actual size of the volume and without
                          * it, the value is taken as an absolute one. Shrinking
@@ -13350,7 +13584,7 @@ public class PveClient extends PveClientBase {
                          * Extend volume size.
                          *
                          * @param disk The disk you want to resize. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0
                          * @param size The new size. With the `+` sign the value
                          * is added to the actual size of the volume and without
                          * it, the value is taken as an absolute one. Shrinking
@@ -13370,7 +13604,7 @@ public class PveClient extends PveClientBase {
                          * Extend volume size.
                          *
                          * @param disk The disk you want to resize. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0
                          * @param size The new size. With the `+` sign the value
                          * is added to the actual size of the volume and without
                          * it, the value is taken as an absolute one. Shrinking
@@ -13708,7 +13942,7 @@ public class PveClient extends PveClientBase {
                          *
                          * @param disk If you want to convert only 1 disk to
                          * base image. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0
                          * @return Result
                          * @throws JSONException
                          */
@@ -13723,7 +13957,7 @@ public class PveClient extends PveClientBase {
                          *
                          * @param disk If you want to convert only 1 disk to
                          * base image. Enum:
-                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0
+                         * ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0
                          * @return Result
                          * @throws JSONException
                          */
@@ -13948,8 +14182,8 @@ public class PveClient extends PveClientBase {
                  *
                  * @param vmid The (unique) ID of the VM.
                  * @param acpi Enable/disable ACPI.
-                 * @param agent Enable/disable Qemu GuestAgent and its
-                 * properties.
+                 * @param agent Enable/disable communication with the Qemu Guest
+                 * Agent and its properties.
                  * @param arch Virtual processor architecture. Defaults to the
                  * host. Enum: x86_64,aarch64
                  * @param archive The backup archive. Either the file system
@@ -13963,8 +14197,8 @@ public class PveClient extends PveClientBase {
                  * @param balloon Amount of target RAM for the VM in MB. Using
                  * zero disables the ballon driver.
                  * @param bios Select BIOS implementation. Enum: seabios,ovmf
-                 * @param boot Specify guest boot order. Use with 'order=',
-                 * usage with no key or 'legacy=' is deprecated.
+                 * @param boot Specify guest boot order. Use the 'order='
+                 * sub-property as usage with no key or 'legacy=' is deprecated.
                  * @param bootdisk Enable booting from specified disk.
                  * Deprecated: Use 'boot: order=foo;bar' instead.
                  * @param bwlimit Override I/O bandwidth limit (in KiB/s).
@@ -13985,7 +14219,8 @@ public class PveClient extends PveClientBase {
                  * @param cores The number of cores per socket.
                  * @param cpu Emulated CPU type.
                  * @param cpulimit Limit of CPU usage.
-                 * @param cpuunits CPU weight for a VM.
+                 * @param cpuunits CPU weight for a VM, will be clamped to [1,
+                 * 10000] in cgroup v2.
                  * @param description Description for the VM. Shown in the
                  * web-interface VM's summary. This is saved as comment inside
                  * the configuration file.
@@ -14002,8 +14237,8 @@ public class PveClient extends PveClientBase {
                  * @param hotplug Selectively enable hotplug features. This is a
                  * comma separated list of hotplug features: 'network', 'disk',
                  * 'cpu', 'memory' and 'usb'. Use '0' to disable hotplug
-                 * completely. Value '1' is an alias for the default
-                 * 'network,disk,usb'.
+                 * completely. Using '1' as value is an alias for the default
+                 * `network,disk,usb`.
                  * @param hugepages Enable/disable hugepages memory. Enum:
                  * any,2,1024
                  * @param ideN Use volume as IDE hard disk or CD-ROM (n is 0 to
@@ -14024,15 +14259,16 @@ public class PveClient extends PveClientBase {
                  * @param keephugepages Use together with hugepages. If enabled,
                  * hugepages will not not be deleted after VM shutdown and can
                  * be used for subsequent starts.
-                 * @param keyboard Keybord layout for vnc server. Default is
-                 * read from the '/etc/pve/datacenter.cfg' configuration file.It
-                 * should not be necessary to set it. Enum:
+                 * @param keyboard Keyboard layout for VNC server. The default
+                 * is read from the'/etc/pve/datacenter.cfg' configuration file.
+                 * It should not be necessary to set it. Enum:
                  * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
                  * @param kvm Enable/disable KVM hardware virtualization.
                  * @param live_restore Start the VM immediately from the backup
                  * and restore in background. PBS only.
-                 * @param localtime Set the real time clock to local time. This
-                 * is enabled by default if ostype indicates a Microsoft OS.
+                 * @param localtime Set the real time clock (RTC) to local time.
+                 * This is enabled by default if the `ostype` indicates a
+                 * Microsoft Windows OS.
                  * @param lock_ Lock/unlock the VM. Enum:
                  * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
                  * @param machine Specifies the Qemu machine type.
@@ -14054,7 +14290,7 @@ public class PveClient extends PveClientBase {
                  * @param onboot Specifies whether a VM will be started during
                  * system bootup.
                  * @param ostype Specify guest operating system. Enum:
-                 * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,l24,l26,solaris
+                 * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,win11,l24,l26,solaris
                  * @param parallelN Map host parallel devices (n is 0 to 2).
                  * @param pool Add the VM to the specified pool.
                  * @param protection Sets the protection flag of the VM. This
@@ -14102,6 +14338,11 @@ public class PveClient extends PveClientBase {
                  * @param tags Tags of the VM. This is only meta information.
                  * @param tdf Enable/disable time drift fix.
                  * @param template Enable/disable Template.
+                 * @param tpmstate0 Configure a Disk for storing TPM state. Use
+                 * the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new
+                 * volume. Note that SIZE_IN_GiB is ignored here and that the
+                 * default size of 4 MiB will always be used instead. The format
+                 * is also fixed to 'raw'.
                  * @param unique Assign a unique random ethernet address.
                  * @param unusedN Reference to unused volumes. This is used
                  * internally, and should not be modified manually.
@@ -14120,7 +14361,7 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result createRest(int vmid, Boolean acpi, String agent, String arch, String archive, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean live_restore, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, String tags, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                public Result createRest(int vmid, Boolean acpi, String agent, String arch, String archive, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean live_restore, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, String tags, Boolean tdf, Boolean template, String tpmstate0, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vmid", vmid);
                     parameters.put("acpi", acpi);
@@ -14187,6 +14428,7 @@ public class PveClient extends PveClientBase {
                     parameters.put("tags", tags);
                     parameters.put("tdf", tdf);
                     parameters.put("template", template);
+                    parameters.put("tpmstate0", tpmstate0);
                     parameters.put("unique", unique);
                     parameters.put("vcpus", vcpus);
                     parameters.put("vga", vga);
@@ -14213,8 +14455,8 @@ public class PveClient extends PveClientBase {
                  *
                  * @param vmid The (unique) ID of the VM.
                  * @param acpi Enable/disable ACPI.
-                 * @param agent Enable/disable Qemu GuestAgent and its
-                 * properties.
+                 * @param agent Enable/disable communication with the Qemu Guest
+                 * Agent and its properties.
                  * @param arch Virtual processor architecture. Defaults to the
                  * host. Enum: x86_64,aarch64
                  * @param archive The backup archive. Either the file system
@@ -14228,8 +14470,8 @@ public class PveClient extends PveClientBase {
                  * @param balloon Amount of target RAM for the VM in MB. Using
                  * zero disables the ballon driver.
                  * @param bios Select BIOS implementation. Enum: seabios,ovmf
-                 * @param boot Specify guest boot order. Use with 'order=',
-                 * usage with no key or 'legacy=' is deprecated.
+                 * @param boot Specify guest boot order. Use the 'order='
+                 * sub-property as usage with no key or 'legacy=' is deprecated.
                  * @param bootdisk Enable booting from specified disk.
                  * Deprecated: Use 'boot: order=foo;bar' instead.
                  * @param bwlimit Override I/O bandwidth limit (in KiB/s).
@@ -14250,7 +14492,8 @@ public class PveClient extends PveClientBase {
                  * @param cores The number of cores per socket.
                  * @param cpu Emulated CPU type.
                  * @param cpulimit Limit of CPU usage.
-                 * @param cpuunits CPU weight for a VM.
+                 * @param cpuunits CPU weight for a VM, will be clamped to [1,
+                 * 10000] in cgroup v2.
                  * @param description Description for the VM. Shown in the
                  * web-interface VM's summary. This is saved as comment inside
                  * the configuration file.
@@ -14267,8 +14510,8 @@ public class PveClient extends PveClientBase {
                  * @param hotplug Selectively enable hotplug features. This is a
                  * comma separated list of hotplug features: 'network', 'disk',
                  * 'cpu', 'memory' and 'usb'. Use '0' to disable hotplug
-                 * completely. Value '1' is an alias for the default
-                 * 'network,disk,usb'.
+                 * completely. Using '1' as value is an alias for the default
+                 * `network,disk,usb`.
                  * @param hugepages Enable/disable hugepages memory. Enum:
                  * any,2,1024
                  * @param ideN Use volume as IDE hard disk or CD-ROM (n is 0 to
@@ -14289,15 +14532,16 @@ public class PveClient extends PveClientBase {
                  * @param keephugepages Use together with hugepages. If enabled,
                  * hugepages will not not be deleted after VM shutdown and can
                  * be used for subsequent starts.
-                 * @param keyboard Keybord layout for vnc server. Default is
-                 * read from the '/etc/pve/datacenter.cfg' configuration file.It
-                 * should not be necessary to set it. Enum:
+                 * @param keyboard Keyboard layout for VNC server. The default
+                 * is read from the'/etc/pve/datacenter.cfg' configuration file.
+                 * It should not be necessary to set it. Enum:
                  * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
                  * @param kvm Enable/disable KVM hardware virtualization.
                  * @param live_restore Start the VM immediately from the backup
                  * and restore in background. PBS only.
-                 * @param localtime Set the real time clock to local time. This
-                 * is enabled by default if ostype indicates a Microsoft OS.
+                 * @param localtime Set the real time clock (RTC) to local time.
+                 * This is enabled by default if the `ostype` indicates a
+                 * Microsoft Windows OS.
                  * @param lock_ Lock/unlock the VM. Enum:
                  * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
                  * @param machine Specifies the Qemu machine type.
@@ -14319,7 +14563,7 @@ public class PveClient extends PveClientBase {
                  * @param onboot Specifies whether a VM will be started during
                  * system bootup.
                  * @param ostype Specify guest operating system. Enum:
-                 * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,l24,l26,solaris
+                 * other,wxp,w2k,w2k3,w2k8,wvista,win7,win8,win10,win11,l24,l26,solaris
                  * @param parallelN Map host parallel devices (n is 0 to 2).
                  * @param pool Add the VM to the specified pool.
                  * @param protection Sets the protection flag of the VM. This
@@ -14367,6 +14611,11 @@ public class PveClient extends PveClientBase {
                  * @param tags Tags of the VM. This is only meta information.
                  * @param tdf Enable/disable time drift fix.
                  * @param template Enable/disable Template.
+                 * @param tpmstate0 Configure a Disk for storing TPM state. Use
+                 * the special syntax STORAGE_ID:SIZE_IN_GiB to allocate a new
+                 * volume. Note that SIZE_IN_GiB is ignored here and that the
+                 * default size of 4 MiB will always be used instead. The format
+                 * is also fixed to 'raw'.
                  * @param unique Assign a unique random ethernet address.
                  * @param unusedN Reference to unused volumes. This is used
                  * internally, and should not be modified manually.
@@ -14384,8 +14633,8 @@ public class PveClient extends PveClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result createVm(int vmid, Boolean acpi, String agent, String arch, String archive, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean live_restore, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, String tags, Boolean tdf, Boolean template, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
-                    return createRest(vmid, acpi, agent, arch, archive, args, audio0, autostart, balloon, bios, boot, bootdisk, bwlimit, cdrom, cicustom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, description, efidisk0, force, freeze, hookscript, hostpciN, hotplug, hugepages, ideN, ipconfigN, ivshmem, keephugepages, keyboard, kvm, live_restore, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, pool, protection, reboot, rng0, sataN, scsiN, scsihw, searchdomain, serialN, shares, smbios1, smp, sockets, spice_enhancements, sshkeys, start, startdate, startup, storage, tablet, tags, tdf, template, unique, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
+                public Result createVm(int vmid, Boolean acpi, String agent, String arch, String archive, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean live_restore, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, String tags, Boolean tdf, Boolean template, String tpmstate0, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                    return createRest(vmid, acpi, agent, arch, archive, args, audio0, autostart, balloon, bios, boot, bootdisk, bwlimit, cdrom, cicustom, cipassword, citype, ciuser, cores, cpu, cpulimit, cpuunits, description, efidisk0, force, freeze, hookscript, hostpciN, hotplug, hugepages, ideN, ipconfigN, ivshmem, keephugepages, keyboard, kvm, live_restore, localtime, lock_, machine, memory, migrate_downtime, migrate_speed, name, nameserver, netN, numa, numaN, onboot, ostype, parallelN, pool, protection, reboot, rng0, sataN, scsiN, scsihw, searchdomain, serialN, shares, smbios1, smp, sockets, spice_enhancements, sshkeys, start, startdate, startup, storage, tablet, tags, tdf, template, tpmstate0, unique, unusedN, usbN, vcpus, vga, virtioN, vmgenid, vmstatestorage, watchdog);
                 }
 
                 /**
@@ -15140,7 +15389,7 @@ public class PveClient extends PveClientBase {
                             }
 
                             /**
-                             * Suspend the container.
+                             * Suspend the container. This is experimental.
                              *
                              * @return Result
                              * @throws JSONException
@@ -15150,7 +15399,7 @@ public class PveClient extends PveClientBase {
                             }
 
                             /**
-                             * Suspend the container.
+                             * Suspend the container. This is experimental.
                              *
                              * @return Result
                              * @throws JSONException
@@ -17795,81 +18044,101 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Move a rootfs-/mp-volume to a different storage
+                         * Move a rootfs-/mp-volume to a different storage or to
+                         * a different container.
                          *
-                         * @param storage Target Storage.
                          * @param volume Volume which will be moved. Enum:
-                         * rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9,mp10,mp11,mp12,mp13,mp14,mp15,mp16,mp17,mp18,mp19,mp20,mp21,mp22,mp23,mp24,mp25,mp26,mp27,mp28,mp29,mp30,mp31,mp32,mp33,mp34,mp35,mp36,mp37,mp38,mp39,mp40,mp41,mp42,mp43,mp44,mp45,mp46,mp47,mp48,mp49,mp50,mp51,mp52,mp53,mp54,mp55,mp56,mp57,mp58,mp59,mp60,mp61,mp62,mp63,mp64,mp65,mp66,mp67,mp68,mp69,mp70,mp71,mp72,mp73,mp74,mp75,mp76,mp77,mp78,mp79,mp80,mp81,mp82,mp83,mp84,mp85,mp86,mp87,mp88,mp89,mp90,mp91,mp92,mp93,mp94,mp95,mp96,mp97,mp98,mp99,mp100,mp101,mp102,mp103,mp104,mp105,mp106,mp107,mp108,mp109,mp110,mp111,mp112,mp113,mp114,mp115,mp116,mp117,mp118,mp119,mp120,mp121,mp122,mp123,mp124,mp125,mp126,mp127,mp128,mp129,mp130,mp131,mp132,mp133,mp134,mp135,mp136,mp137,mp138,mp139,mp140,mp141,mp142,mp143,mp144,mp145,mp146,mp147,mp148,mp149,mp150,mp151,mp152,mp153,mp154,mp155,mp156,mp157,mp158,mp159,mp160,mp161,mp162,mp163,mp164,mp165,mp166,mp167,mp168,mp169,mp170,mp171,mp172,mp173,mp174,mp175,mp176,mp177,mp178,mp179,mp180,mp181,mp182,mp183,mp184,mp185,mp186,mp187,mp188,mp189,mp190,mp191,mp192,mp193,mp194,mp195,mp196,mp197,mp198,mp199,mp200,mp201,mp202,mp203,mp204,mp205,mp206,mp207,mp208,mp209,mp210,mp211,mp212,mp213,mp214,mp215,mp216,mp217,mp218,mp219,mp220,mp221,mp222,mp223,mp224,mp225,mp226,mp227,mp228,mp229,mp230,mp231,mp232,mp233,mp234,mp235,mp236,mp237,mp238,mp239,mp240,mp241,mp242,mp243,mp244,mp245,mp246,mp247,mp248,mp249,mp250,mp251,mp252,mp253,mp254,mp255
+                         * rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9,mp10,mp11,mp12,mp13,mp14,mp15,mp16,mp17,mp18,mp19,mp20,mp21,mp22,mp23,mp24,mp25,mp26,mp27,mp28,mp29,mp30,mp31,mp32,mp33,mp34,mp35,mp36,mp37,mp38,mp39,mp40,mp41,mp42,mp43,mp44,mp45,mp46,mp47,mp48,mp49,mp50,mp51,mp52,mp53,mp54,mp55,mp56,mp57,mp58,mp59,mp60,mp61,mp62,mp63,mp64,mp65,mp66,mp67,mp68,mp69,mp70,mp71,mp72,mp73,mp74,mp75,mp76,mp77,mp78,mp79,mp80,mp81,mp82,mp83,mp84,mp85,mp86,mp87,mp88,mp89,mp90,mp91,mp92,mp93,mp94,mp95,mp96,mp97,mp98,mp99,mp100,mp101,mp102,mp103,mp104,mp105,mp106,mp107,mp108,mp109,mp110,mp111,mp112,mp113,mp114,mp115,mp116,mp117,mp118,mp119,mp120,mp121,mp122,mp123,mp124,mp125,mp126,mp127,mp128,mp129,mp130,mp131,mp132,mp133,mp134,mp135,mp136,mp137,mp138,mp139,mp140,mp141,mp142,mp143,mp144,mp145,mp146,mp147,mp148,mp149,mp150,mp151,mp152,mp153,mp154,mp155,mp156,mp157,mp158,mp159,mp160,mp161,mp162,mp163,mp164,mp165,mp166,mp167,mp168,mp169,mp170,mp171,mp172,mp173,mp174,mp175,mp176,mp177,mp178,mp179,mp180,mp181,mp182,mp183,mp184,mp185,mp186,mp187,mp188,mp189,mp190,mp191,mp192,mp193,mp194,mp195,mp196,mp197,mp198,mp199,mp200,mp201,mp202,mp203,mp204,mp205,mp206,mp207,mp208,mp209,mp210,mp211,mp212,mp213,mp214,mp215,mp216,mp217,mp218,mp219,mp220,mp221,mp222,mp223,mp224,mp225,mp226,mp227,mp228,mp229,mp230,mp231,mp232,mp233,mp234,mp235,mp236,mp237,mp238,mp239,mp240,mp241,mp242,mp243,mp244,mp245,mp246,mp247,mp248,mp249,mp250,mp251,mp252,mp253,mp254,mp255,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
                          * @param bwlimit Override I/O bandwidth limit (in
                          * KiB/s).
                          * @param delete Delete the original volume after
                          * successful copy. By default the original is kept as
                          * an unused volume entry.
                          * @param digest Prevent changes if current
-                         * configuration file has different SHA1 digest. This
-                         * can be used to prevent concurrent modifications.
+                         * configuration file has different SHA1 " . "digest.
+                         * This can be used to prevent concurrent modifications.
+                         * @param storage Target Storage.
+                         * @param target_digest Prevent changes if current
+                         * configuration file of the target " . "container has a
+                         * different SHA1 digest. This can be used to prevent "
+                         * . "concurrent modifications.
+                         * @param target_vmid The (unique) ID of the VM.
+                         * @param target_volume The config key the volume will
+                         * be moved to. Default is the source volume key. Enum:
+                         * rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9,mp10,mp11,mp12,mp13,mp14,mp15,mp16,mp17,mp18,mp19,mp20,mp21,mp22,mp23,mp24,mp25,mp26,mp27,mp28,mp29,mp30,mp31,mp32,mp33,mp34,mp35,mp36,mp37,mp38,mp39,mp40,mp41,mp42,mp43,mp44,mp45,mp46,mp47,mp48,mp49,mp50,mp51,mp52,mp53,mp54,mp55,mp56,mp57,mp58,mp59,mp60,mp61,mp62,mp63,mp64,mp65,mp66,mp67,mp68,mp69,mp70,mp71,mp72,mp73,mp74,mp75,mp76,mp77,mp78,mp79,mp80,mp81,mp82,mp83,mp84,mp85,mp86,mp87,mp88,mp89,mp90,mp91,mp92,mp93,mp94,mp95,mp96,mp97,mp98,mp99,mp100,mp101,mp102,mp103,mp104,mp105,mp106,mp107,mp108,mp109,mp110,mp111,mp112,mp113,mp114,mp115,mp116,mp117,mp118,mp119,mp120,mp121,mp122,mp123,mp124,mp125,mp126,mp127,mp128,mp129,mp130,mp131,mp132,mp133,mp134,mp135,mp136,mp137,mp138,mp139,mp140,mp141,mp142,mp143,mp144,mp145,mp146,mp147,mp148,mp149,mp150,mp151,mp152,mp153,mp154,mp155,mp156,mp157,mp158,mp159,mp160,mp161,mp162,mp163,mp164,mp165,mp166,mp167,mp168,mp169,mp170,mp171,mp172,mp173,mp174,mp175,mp176,mp177,mp178,mp179,mp180,mp181,mp182,mp183,mp184,mp185,mp186,mp187,mp188,mp189,mp190,mp191,mp192,mp193,mp194,mp195,mp196,mp197,mp198,mp199,mp200,mp201,mp202,mp203,mp204,mp205,mp206,mp207,mp208,mp209,mp210,mp211,mp212,mp213,mp214,mp215,mp216,mp217,mp218,mp219,mp220,mp221,mp222,mp223,mp224,mp225,mp226,mp227,mp228,mp229,mp230,mp231,mp232,mp233,mp234,mp235,mp236,mp237,mp238,mp239,mp240,mp241,mp242,mp243,mp244,mp245,mp246,mp247,mp248,mp249,mp250,mp251,mp252,mp253,mp254,mp255,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest(String storage, String volume, Float bwlimit, Boolean delete, String digest) throws JSONException {
+                        public Result createRest(String volume, Float bwlimit, Boolean delete, String digest, String storage, String target_digest, Integer target_vmid, String target_volume) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
-                            parameters.put("storage", storage);
                             parameters.put("volume", volume);
                             parameters.put("bwlimit", bwlimit);
                             parameters.put("delete", delete);
                             parameters.put("digest", digest);
+                            parameters.put("storage", storage);
+                            parameters.put("target-digest", target_digest);
+                            parameters.put("target-vmid", target_vmid);
+                            parameters.put("target-volume", target_volume);
                             return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/move_volume", parameters);
                         }
 
                         /**
-                         * Move a rootfs-/mp-volume to a different storage
+                         * Move a rootfs-/mp-volume to a different storage or to
+                         * a different container.
                          *
-                         * @param storage Target Storage.
                          * @param volume Volume which will be moved. Enum:
-                         * rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9,mp10,mp11,mp12,mp13,mp14,mp15,mp16,mp17,mp18,mp19,mp20,mp21,mp22,mp23,mp24,mp25,mp26,mp27,mp28,mp29,mp30,mp31,mp32,mp33,mp34,mp35,mp36,mp37,mp38,mp39,mp40,mp41,mp42,mp43,mp44,mp45,mp46,mp47,mp48,mp49,mp50,mp51,mp52,mp53,mp54,mp55,mp56,mp57,mp58,mp59,mp60,mp61,mp62,mp63,mp64,mp65,mp66,mp67,mp68,mp69,mp70,mp71,mp72,mp73,mp74,mp75,mp76,mp77,mp78,mp79,mp80,mp81,mp82,mp83,mp84,mp85,mp86,mp87,mp88,mp89,mp90,mp91,mp92,mp93,mp94,mp95,mp96,mp97,mp98,mp99,mp100,mp101,mp102,mp103,mp104,mp105,mp106,mp107,mp108,mp109,mp110,mp111,mp112,mp113,mp114,mp115,mp116,mp117,mp118,mp119,mp120,mp121,mp122,mp123,mp124,mp125,mp126,mp127,mp128,mp129,mp130,mp131,mp132,mp133,mp134,mp135,mp136,mp137,mp138,mp139,mp140,mp141,mp142,mp143,mp144,mp145,mp146,mp147,mp148,mp149,mp150,mp151,mp152,mp153,mp154,mp155,mp156,mp157,mp158,mp159,mp160,mp161,mp162,mp163,mp164,mp165,mp166,mp167,mp168,mp169,mp170,mp171,mp172,mp173,mp174,mp175,mp176,mp177,mp178,mp179,mp180,mp181,mp182,mp183,mp184,mp185,mp186,mp187,mp188,mp189,mp190,mp191,mp192,mp193,mp194,mp195,mp196,mp197,mp198,mp199,mp200,mp201,mp202,mp203,mp204,mp205,mp206,mp207,mp208,mp209,mp210,mp211,mp212,mp213,mp214,mp215,mp216,mp217,mp218,mp219,mp220,mp221,mp222,mp223,mp224,mp225,mp226,mp227,mp228,mp229,mp230,mp231,mp232,mp233,mp234,mp235,mp236,mp237,mp238,mp239,mp240,mp241,mp242,mp243,mp244,mp245,mp246,mp247,mp248,mp249,mp250,mp251,mp252,mp253,mp254,mp255
+                         * rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9,mp10,mp11,mp12,mp13,mp14,mp15,mp16,mp17,mp18,mp19,mp20,mp21,mp22,mp23,mp24,mp25,mp26,mp27,mp28,mp29,mp30,mp31,mp32,mp33,mp34,mp35,mp36,mp37,mp38,mp39,mp40,mp41,mp42,mp43,mp44,mp45,mp46,mp47,mp48,mp49,mp50,mp51,mp52,mp53,mp54,mp55,mp56,mp57,mp58,mp59,mp60,mp61,mp62,mp63,mp64,mp65,mp66,mp67,mp68,mp69,mp70,mp71,mp72,mp73,mp74,mp75,mp76,mp77,mp78,mp79,mp80,mp81,mp82,mp83,mp84,mp85,mp86,mp87,mp88,mp89,mp90,mp91,mp92,mp93,mp94,mp95,mp96,mp97,mp98,mp99,mp100,mp101,mp102,mp103,mp104,mp105,mp106,mp107,mp108,mp109,mp110,mp111,mp112,mp113,mp114,mp115,mp116,mp117,mp118,mp119,mp120,mp121,mp122,mp123,mp124,mp125,mp126,mp127,mp128,mp129,mp130,mp131,mp132,mp133,mp134,mp135,mp136,mp137,mp138,mp139,mp140,mp141,mp142,mp143,mp144,mp145,mp146,mp147,mp148,mp149,mp150,mp151,mp152,mp153,mp154,mp155,mp156,mp157,mp158,mp159,mp160,mp161,mp162,mp163,mp164,mp165,mp166,mp167,mp168,mp169,mp170,mp171,mp172,mp173,mp174,mp175,mp176,mp177,mp178,mp179,mp180,mp181,mp182,mp183,mp184,mp185,mp186,mp187,mp188,mp189,mp190,mp191,mp192,mp193,mp194,mp195,mp196,mp197,mp198,mp199,mp200,mp201,mp202,mp203,mp204,mp205,mp206,mp207,mp208,mp209,mp210,mp211,mp212,mp213,mp214,mp215,mp216,mp217,mp218,mp219,mp220,mp221,mp222,mp223,mp224,mp225,mp226,mp227,mp228,mp229,mp230,mp231,mp232,mp233,mp234,mp235,mp236,mp237,mp238,mp239,mp240,mp241,mp242,mp243,mp244,mp245,mp246,mp247,mp248,mp249,mp250,mp251,mp252,mp253,mp254,mp255,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
                          * @param bwlimit Override I/O bandwidth limit (in
                          * KiB/s).
                          * @param delete Delete the original volume after
                          * successful copy. By default the original is kept as
                          * an unused volume entry.
                          * @param digest Prevent changes if current
-                         * configuration file has different SHA1 digest. This
-                         * can be used to prevent concurrent modifications.
+                         * configuration file has different SHA1 " . "digest.
+                         * This can be used to prevent concurrent modifications.
+                         * @param storage Target Storage.
+                         * @param target_digest Prevent changes if current
+                         * configuration file of the target " . "container has a
+                         * different SHA1 digest. This can be used to prevent "
+                         * . "concurrent modifications.
+                         * @param target_vmid The (unique) ID of the VM.
+                         * @param target_volume The config key the volume will
+                         * be moved to. Default is the source volume key. Enum:
+                         * rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9,mp10,mp11,mp12,mp13,mp14,mp15,mp16,mp17,mp18,mp19,mp20,mp21,mp22,mp23,mp24,mp25,mp26,mp27,mp28,mp29,mp30,mp31,mp32,mp33,mp34,mp35,mp36,mp37,mp38,mp39,mp40,mp41,mp42,mp43,mp44,mp45,mp46,mp47,mp48,mp49,mp50,mp51,mp52,mp53,mp54,mp55,mp56,mp57,mp58,mp59,mp60,mp61,mp62,mp63,mp64,mp65,mp66,mp67,mp68,mp69,mp70,mp71,mp72,mp73,mp74,mp75,mp76,mp77,mp78,mp79,mp80,mp81,mp82,mp83,mp84,mp85,mp86,mp87,mp88,mp89,mp90,mp91,mp92,mp93,mp94,mp95,mp96,mp97,mp98,mp99,mp100,mp101,mp102,mp103,mp104,mp105,mp106,mp107,mp108,mp109,mp110,mp111,mp112,mp113,mp114,mp115,mp116,mp117,mp118,mp119,mp120,mp121,mp122,mp123,mp124,mp125,mp126,mp127,mp128,mp129,mp130,mp131,mp132,mp133,mp134,mp135,mp136,mp137,mp138,mp139,mp140,mp141,mp142,mp143,mp144,mp145,mp146,mp147,mp148,mp149,mp150,mp151,mp152,mp153,mp154,mp155,mp156,mp157,mp158,mp159,mp160,mp161,mp162,mp163,mp164,mp165,mp166,mp167,mp168,mp169,mp170,mp171,mp172,mp173,mp174,mp175,mp176,mp177,mp178,mp179,mp180,mp181,mp182,mp183,mp184,mp185,mp186,mp187,mp188,mp189,mp190,mp191,mp192,mp193,mp194,mp195,mp196,mp197,mp198,mp199,mp200,mp201,mp202,mp203,mp204,mp205,mp206,mp207,mp208,mp209,mp210,mp211,mp212,mp213,mp214,mp215,mp216,mp217,mp218,mp219,mp220,mp221,mp222,mp223,mp224,mp225,mp226,mp227,mp228,mp229,mp230,mp231,mp232,mp233,mp234,mp235,mp236,mp237,mp238,mp239,mp240,mp241,mp242,mp243,mp244,mp245,mp246,mp247,mp248,mp249,mp250,mp251,mp252,mp253,mp254,mp255,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result moveVolume(String storage, String volume, Float bwlimit, Boolean delete, String digest) throws JSONException {
-                            return createRest(storage, volume, bwlimit, delete, digest);
+                        public Result moveVolume(String volume, Float bwlimit, Boolean delete, String digest, String storage, String target_digest, Integer target_vmid, String target_volume) throws JSONException {
+                            return createRest(volume, bwlimit, delete, digest, storage, target_digest, target_vmid, target_volume);
                         }
 
                         /**
-                         * Move a rootfs-/mp-volume to a different storage
+                         * Move a rootfs-/mp-volume to a different storage or to
+                         * a different container.
                          *
-                         * @param storage Target Storage.
                          * @param volume Volume which will be moved. Enum:
-                         * rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9,mp10,mp11,mp12,mp13,mp14,mp15,mp16,mp17,mp18,mp19,mp20,mp21,mp22,mp23,mp24,mp25,mp26,mp27,mp28,mp29,mp30,mp31,mp32,mp33,mp34,mp35,mp36,mp37,mp38,mp39,mp40,mp41,mp42,mp43,mp44,mp45,mp46,mp47,mp48,mp49,mp50,mp51,mp52,mp53,mp54,mp55,mp56,mp57,mp58,mp59,mp60,mp61,mp62,mp63,mp64,mp65,mp66,mp67,mp68,mp69,mp70,mp71,mp72,mp73,mp74,mp75,mp76,mp77,mp78,mp79,mp80,mp81,mp82,mp83,mp84,mp85,mp86,mp87,mp88,mp89,mp90,mp91,mp92,mp93,mp94,mp95,mp96,mp97,mp98,mp99,mp100,mp101,mp102,mp103,mp104,mp105,mp106,mp107,mp108,mp109,mp110,mp111,mp112,mp113,mp114,mp115,mp116,mp117,mp118,mp119,mp120,mp121,mp122,mp123,mp124,mp125,mp126,mp127,mp128,mp129,mp130,mp131,mp132,mp133,mp134,mp135,mp136,mp137,mp138,mp139,mp140,mp141,mp142,mp143,mp144,mp145,mp146,mp147,mp148,mp149,mp150,mp151,mp152,mp153,mp154,mp155,mp156,mp157,mp158,mp159,mp160,mp161,mp162,mp163,mp164,mp165,mp166,mp167,mp168,mp169,mp170,mp171,mp172,mp173,mp174,mp175,mp176,mp177,mp178,mp179,mp180,mp181,mp182,mp183,mp184,mp185,mp186,mp187,mp188,mp189,mp190,mp191,mp192,mp193,mp194,mp195,mp196,mp197,mp198,mp199,mp200,mp201,mp202,mp203,mp204,mp205,mp206,mp207,mp208,mp209,mp210,mp211,mp212,mp213,mp214,mp215,mp216,mp217,mp218,mp219,mp220,mp221,mp222,mp223,mp224,mp225,mp226,mp227,mp228,mp229,mp230,mp231,mp232,mp233,mp234,mp235,mp236,mp237,mp238,mp239,mp240,mp241,mp242,mp243,mp244,mp245,mp246,mp247,mp248,mp249,mp250,mp251,mp252,mp253,mp254,mp255
+                         * rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9,mp10,mp11,mp12,mp13,mp14,mp15,mp16,mp17,mp18,mp19,mp20,mp21,mp22,mp23,mp24,mp25,mp26,mp27,mp28,mp29,mp30,mp31,mp32,mp33,mp34,mp35,mp36,mp37,mp38,mp39,mp40,mp41,mp42,mp43,mp44,mp45,mp46,mp47,mp48,mp49,mp50,mp51,mp52,mp53,mp54,mp55,mp56,mp57,mp58,mp59,mp60,mp61,mp62,mp63,mp64,mp65,mp66,mp67,mp68,mp69,mp70,mp71,mp72,mp73,mp74,mp75,mp76,mp77,mp78,mp79,mp80,mp81,mp82,mp83,mp84,mp85,mp86,mp87,mp88,mp89,mp90,mp91,mp92,mp93,mp94,mp95,mp96,mp97,mp98,mp99,mp100,mp101,mp102,mp103,mp104,mp105,mp106,mp107,mp108,mp109,mp110,mp111,mp112,mp113,mp114,mp115,mp116,mp117,mp118,mp119,mp120,mp121,mp122,mp123,mp124,mp125,mp126,mp127,mp128,mp129,mp130,mp131,mp132,mp133,mp134,mp135,mp136,mp137,mp138,mp139,mp140,mp141,mp142,mp143,mp144,mp145,mp146,mp147,mp148,mp149,mp150,mp151,mp152,mp153,mp154,mp155,mp156,mp157,mp158,mp159,mp160,mp161,mp162,mp163,mp164,mp165,mp166,mp167,mp168,mp169,mp170,mp171,mp172,mp173,mp174,mp175,mp176,mp177,mp178,mp179,mp180,mp181,mp182,mp183,mp184,mp185,mp186,mp187,mp188,mp189,mp190,mp191,mp192,mp193,mp194,mp195,mp196,mp197,mp198,mp199,mp200,mp201,mp202,mp203,mp204,mp205,mp206,mp207,mp208,mp209,mp210,mp211,mp212,mp213,mp214,mp215,mp216,mp217,mp218,mp219,mp220,mp221,mp222,mp223,mp224,mp225,mp226,mp227,mp228,mp229,mp230,mp231,mp232,mp233,mp234,mp235,mp236,mp237,mp238,mp239,mp240,mp241,mp242,mp243,mp244,mp245,mp246,mp247,mp248,mp249,mp250,mp251,mp252,mp253,mp254,mp255,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
                          * @return Result
                          * @throws JSONException
                          */
 
-                        public Result createRest(String storage, String volume) throws JSONException {
+                        public Result createRest(String volume) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
-                            parameters.put("storage", storage);
                             parameters.put("volume", volume);
                             return _client.create("/nodes/" + _node + "/lxc/" + _vmid + "/move_volume", parameters);
                         }
 
                         /**
-                         * Move a rootfs-/mp-volume to a different storage
+                         * Move a rootfs-/mp-volume to a different storage or to
+                         * a different container.
                          *
-                         * @param storage Target Storage.
                          * @param volume Volume which will be moved. Enum:
-                         * rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9,mp10,mp11,mp12,mp13,mp14,mp15,mp16,mp17,mp18,mp19,mp20,mp21,mp22,mp23,mp24,mp25,mp26,mp27,mp28,mp29,mp30,mp31,mp32,mp33,mp34,mp35,mp36,mp37,mp38,mp39,mp40,mp41,mp42,mp43,mp44,mp45,mp46,mp47,mp48,mp49,mp50,mp51,mp52,mp53,mp54,mp55,mp56,mp57,mp58,mp59,mp60,mp61,mp62,mp63,mp64,mp65,mp66,mp67,mp68,mp69,mp70,mp71,mp72,mp73,mp74,mp75,mp76,mp77,mp78,mp79,mp80,mp81,mp82,mp83,mp84,mp85,mp86,mp87,mp88,mp89,mp90,mp91,mp92,mp93,mp94,mp95,mp96,mp97,mp98,mp99,mp100,mp101,mp102,mp103,mp104,mp105,mp106,mp107,mp108,mp109,mp110,mp111,mp112,mp113,mp114,mp115,mp116,mp117,mp118,mp119,mp120,mp121,mp122,mp123,mp124,mp125,mp126,mp127,mp128,mp129,mp130,mp131,mp132,mp133,mp134,mp135,mp136,mp137,mp138,mp139,mp140,mp141,mp142,mp143,mp144,mp145,mp146,mp147,mp148,mp149,mp150,mp151,mp152,mp153,mp154,mp155,mp156,mp157,mp158,mp159,mp160,mp161,mp162,mp163,mp164,mp165,mp166,mp167,mp168,mp169,mp170,mp171,mp172,mp173,mp174,mp175,mp176,mp177,mp178,mp179,mp180,mp181,mp182,mp183,mp184,mp185,mp186,mp187,mp188,mp189,mp190,mp191,mp192,mp193,mp194,mp195,mp196,mp197,mp198,mp199,mp200,mp201,mp202,mp203,mp204,mp205,mp206,mp207,mp208,mp209,mp210,mp211,mp212,mp213,mp214,mp215,mp216,mp217,mp218,mp219,mp220,mp221,mp222,mp223,mp224,mp225,mp226,mp227,mp228,mp229,mp230,mp231,mp232,mp233,mp234,mp235,mp236,mp237,mp238,mp239,mp240,mp241,mp242,mp243,mp244,mp245,mp246,mp247,mp248,mp249,mp250,mp251,mp252,mp253,mp254,mp255
+                         * rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9,mp10,mp11,mp12,mp13,mp14,mp15,mp16,mp17,mp18,mp19,mp20,mp21,mp22,mp23,mp24,mp25,mp26,mp27,mp28,mp29,mp30,mp31,mp32,mp33,mp34,mp35,mp36,mp37,mp38,mp39,mp40,mp41,mp42,mp43,mp44,mp45,mp46,mp47,mp48,mp49,mp50,mp51,mp52,mp53,mp54,mp55,mp56,mp57,mp58,mp59,mp60,mp61,mp62,mp63,mp64,mp65,mp66,mp67,mp68,mp69,mp70,mp71,mp72,mp73,mp74,mp75,mp76,mp77,mp78,mp79,mp80,mp81,mp82,mp83,mp84,mp85,mp86,mp87,mp88,mp89,mp90,mp91,mp92,mp93,mp94,mp95,mp96,mp97,mp98,mp99,mp100,mp101,mp102,mp103,mp104,mp105,mp106,mp107,mp108,mp109,mp110,mp111,mp112,mp113,mp114,mp115,mp116,mp117,mp118,mp119,mp120,mp121,mp122,mp123,mp124,mp125,mp126,mp127,mp128,mp129,mp130,mp131,mp132,mp133,mp134,mp135,mp136,mp137,mp138,mp139,mp140,mp141,mp142,mp143,mp144,mp145,mp146,mp147,mp148,mp149,mp150,mp151,mp152,mp153,mp154,mp155,mp156,mp157,mp158,mp159,mp160,mp161,mp162,mp163,mp164,mp165,mp166,mp167,mp168,mp169,mp170,mp171,mp172,mp173,mp174,mp175,mp176,mp177,mp178,mp179,mp180,mp181,mp182,mp183,mp184,mp185,mp186,mp187,mp188,mp189,mp190,mp191,mp192,mp193,mp194,mp195,mp196,mp197,mp198,mp199,mp200,mp201,mp202,mp203,mp204,mp205,mp206,mp207,mp208,mp209,mp210,mp211,mp212,mp213,mp214,mp215,mp216,mp217,mp218,mp219,mp220,mp221,mp222,mp223,mp224,mp225,mp226,mp227,mp228,mp229,mp230,mp231,mp232,mp233,mp234,mp235,mp236,mp237,mp238,mp239,mp240,mp241,mp242,mp243,mp244,mp245,mp246,mp247,mp248,mp249,mp250,mp251,mp252,mp253,mp254,mp255,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result moveVolume(String storage, String volume) throws JSONException {
-                            return createRest(storage, volume);
+                        public Result moveVolume(String volume) throws JSONException {
+                            return createRest(volume);
                         }
 
                     }
@@ -21137,8 +21406,9 @@ public class PveClient extends PveClientBase {
                         /**
                          * Read task log.
                          *
-                         * @param limit
-                         * @param start
+                         * @param limit The maximum amount of lines that should
+                         * be printed.
+                         * @param start The line number to start printing at.
                          * @return Result
                          * @throws JSONException
                          */
@@ -21152,8 +21422,9 @@ public class PveClient extends PveClientBase {
                         /**
                          * Read task log.
                          *
-                         * @param limit
-                         * @param start
+                         * @param limit The maximum amount of lines that should
+                         * be printed.
+                         * @param start The line number to start printing at.
                          * @return Result
                          * @throws JSONException
                          */
@@ -21262,7 +21533,7 @@ public class PveClient extends PveClientBase {
                 /**
                  * Read task list for one node (finished tasks).
                  *
-                 * @param errors
+                 * @param errors Only list tasks with a status of ERROR.
                  * @param limit Only list this amount of tasks.
                  * @param since Only list tasks since this UNIX epoch.
                  * @param source List archived, active or all tasks. Enum:
@@ -21296,7 +21567,7 @@ public class PveClient extends PveClientBase {
                 /**
                  * Read task list for one node (finished tasks).
                  *
-                 * @param errors
+                 * @param errors Only list tasks with a status of ERROR.
                  * @param limit Only list this amount of tasks.
                  * @param since Only list tasks since this UNIX epoch.
                  * @param source List archived, active or all tasks. Enum:
@@ -21885,8 +22156,8 @@ public class PveClient extends PveClientBase {
                      *
                      * @param pci_class_blacklist A list of blacklisted PCI
                      * classes, which will not be returned. Following are
-                     * filtered by default: Memory Controller (05), Bridge (06),
-                     * Generic System Peripheral (08) and Processor (0b).
+                     * filtered by default: Memory Controller (05), Bridge (06)
+                     * and Processor (0b).
                      * @param verbose If disabled, does only print the PCI IDs.
                      * Otherwise, additional information like vendor and device
                      * will be returned.
@@ -21905,8 +22176,8 @@ public class PveClient extends PveClientBase {
                      *
                      * @param pci_class_blacklist A list of blacklisted PCI
                      * classes, which will not be returned. Following are
-                     * filtered by default: Memory Controller (05), Bridge (06),
-                     * Generic System Peripheral (08) and Processor (0b).
+                     * filtered by default: Memory Controller (05), Bridge (06)
+                     * and Processor (0b).
                      * @param verbose If disabled, does only print the PCI IDs.
                      * Otherwise, additional information like vendor and device
                      * will be returned.
@@ -22510,13 +22781,16 @@ public class PveClient extends PveClientBase {
                              * Update volume attributes
                              *
                              * @param notes The new notes.
+                             * @param protected_ Protection status. Currently
+                             * only supported for backups.
                              * @return Result
                              * @throws JSONException
                              */
 
-                            public Result setRest(String notes) throws JSONException {
+                            public Result setRest(String notes, Boolean protected_) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("notes", notes);
+                                parameters.put("protected", protected_);
                                 return _client.set("/nodes/" + _node + "/storage/" + _storage + "/content/" + _volume + "", parameters);
                             }
 
@@ -22524,11 +22798,13 @@ public class PveClient extends PveClientBase {
                              * Update volume attributes
                              *
                              * @param notes The new notes.
+                             * @param protected_ Protection status. Currently
+                             * only supported for backups.
                              * @return Result
                              * @throws JSONException
                              */
-                            public Result updateattributes(String notes) throws JSONException {
-                                return setRest(notes);
+                            public Result updateattributes(String notes, Boolean protected_) throws JSONException {
+                                return setRest(notes, protected_);
                             }
 
                             /**
@@ -22999,8 +23275,13 @@ public class PveClient extends PveClientBase {
                         /**
                          * Upload templates and ISO images.
                          *
-                         * @param content Content type.
+                         * @param content Content type. Enum: iso,vztmpl
                          * @param filename The name of the file to create.
+                         * Caution: This will be normalized!
+                         * @param checksum The expected checksum of the file.
+                         * @param checksum_algorithm The algorithm to calculate
+                         * the checksum of the file. Enum:
+                         * md5,sha1,sha224,sha256,sha384,sha512
                          * @param tmpfilename The source file name. This
                          * parameter is usually set by the REST handler. You can
                          * only overwrite it when connecting to the trusted port
@@ -23008,10 +23289,12 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result createRest(String content, String filename, String tmpfilename) throws JSONException {
+                        public Result createRest(String content, String filename, String checksum, String checksum_algorithm, String tmpfilename) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("content", content);
                             parameters.put("filename", filename);
+                            parameters.put("checksum", checksum);
+                            parameters.put("checksum-algorithm", checksum_algorithm);
                             parameters.put("tmpfilename", tmpfilename);
                             return _client.create("/nodes/" + _node + "/storage/" + _storage + "/upload", parameters);
                         }
@@ -23019,8 +23302,13 @@ public class PveClient extends PveClientBase {
                         /**
                          * Upload templates and ISO images.
                          *
-                         * @param content Content type.
+                         * @param content Content type. Enum: iso,vztmpl
                          * @param filename The name of the file to create.
+                         * Caution: This will be normalized!
+                         * @param checksum The expected checksum of the file.
+                         * @param checksum_algorithm The algorithm to calculate
+                         * the checksum of the file. Enum:
+                         * md5,sha1,sha224,sha256,sha384,sha512
                          * @param tmpfilename The source file name. This
                          * parameter is usually set by the REST handler. You can
                          * only overwrite it when connecting to the trusted port
@@ -23028,15 +23316,16 @@ public class PveClient extends PveClientBase {
                          * @return Result
                          * @throws JSONException
                          */
-                        public Result upload(String content, String filename, String tmpfilename) throws JSONException {
-                            return createRest(content, filename, tmpfilename);
+                        public Result upload(String content, String filename, String checksum, String checksum_algorithm, String tmpfilename) throws JSONException {
+                            return createRest(content, filename, checksum, checksum_algorithm, tmpfilename);
                         }
 
                         /**
                          * Upload templates and ISO images.
                          *
-                         * @param content Content type.
+                         * @param content Content type. Enum: iso,vztmpl
                          * @param filename The name of the file to create.
+                         * Caution: This will be normalized!
                          * @return Result
                          * @throws JSONException
                          */
@@ -23051,8 +23340,9 @@ public class PveClient extends PveClientBase {
                         /**
                          * Upload templates and ISO images.
                          *
-                         * @param content Content type.
+                         * @param content Content type. Enum: iso,vztmpl
                          * @param filename The name of the file to create.
+                         * Caution: This will be normalized!
                          * @return Result
                          * @throws JSONException
                          */
@@ -23304,6 +23594,80 @@ public class PveClient extends PveClientBase {
                         _node = node;
                     }
 
+                    public PVEItemName get(Object name) {
+                        return new PVEItemName(_client, _node, name);
+                    }
+
+                    public class PVEItemName {
+
+                        private final PveClient _client;
+                        private final Object _node;
+                        private final Object _name;
+
+                        protected PVEItemName(PveClient client, Object node, Object name) {
+                            _client = client;
+                            _node = node;
+                            _name = name;
+                        }
+
+                        /**
+                         * Remove an LVM Volume Group.
+                         *
+                         * @param cleanup_config Marks associated storage(s) as
+                         * not available on this node anymore or removes them
+                         * from the configuration (if configured for this node
+                         * only).
+                         * @param cleanup_disks Also wipe disks so they can be
+                         * repurposed afterwards.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest(Boolean cleanup_config, Boolean cleanup_disks) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("cleanup-config", cleanup_config);
+                            parameters.put("cleanup-disks", cleanup_disks);
+                            return _client.delete("/nodes/" + _node + "/disks/lvm/" + _name + "", parameters);
+                        }
+
+                        /**
+                         * Remove an LVM Volume Group.
+                         *
+                         * @param cleanup_config Marks associated storage(s) as
+                         * not available on this node anymore or removes them
+                         * from the configuration (if configured for this node
+                         * only).
+                         * @param cleanup_disks Also wipe disks so they can be
+                         * repurposed afterwards.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result delete(Boolean cleanup_config, Boolean cleanup_disks) throws JSONException {
+                            return deleteRest(cleanup_config, cleanup_disks);
+                        }
+
+                        /**
+                         * Remove an LVM Volume Group.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result deleteRest() throws JSONException {
+                            return _client.delete("/nodes/" + _node + "/disks/lvm/" + _name + "", null);
+                        }
+
+                        /**
+                         * Remove an LVM Volume Group.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result delete() throws JSONException {
+                            return deleteRest();
+                        }
+
+                    }
+
                     /**
                      * List LVM Volume Groups
                      *
@@ -23401,6 +23765,87 @@ public class PveClient extends PveClientBase {
                         _node = node;
                     }
 
+                    public PVEItemName get(Object name) {
+                        return new PVEItemName(_client, _node, name);
+                    }
+
+                    public class PVEItemName {
+
+                        private final PveClient _client;
+                        private final Object _node;
+                        private final Object _name;
+
+                        protected PVEItemName(PveClient client, Object node, Object name) {
+                            _client = client;
+                            _node = node;
+                            _name = name;
+                        }
+
+                        /**
+                         * Remove an LVM thin pool.
+                         *
+                         * @param volume_group The storage identifier.
+                         * @param cleanup_config Marks associated storage(s) as
+                         * not available on this node anymore or removes them
+                         * from the configuration (if configured for this node
+                         * only).
+                         * @param cleanup_disks Also wipe disks so they can be
+                         * repurposed afterwards.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest(String volume_group, Boolean cleanup_config, Boolean cleanup_disks) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("volume-group", volume_group);
+                            parameters.put("cleanup-config", cleanup_config);
+                            parameters.put("cleanup-disks", cleanup_disks);
+                            return _client.delete("/nodes/" + _node + "/disks/lvmthin/" + _name + "", parameters);
+                        }
+
+                        /**
+                         * Remove an LVM thin pool.
+                         *
+                         * @param volume_group The storage identifier.
+                         * @param cleanup_config Marks associated storage(s) as
+                         * not available on this node anymore or removes them
+                         * from the configuration (if configured for this node
+                         * only).
+                         * @param cleanup_disks Also wipe disks so they can be
+                         * repurposed afterwards.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result delete(String volume_group, Boolean cleanup_config, Boolean cleanup_disks) throws JSONException {
+                            return deleteRest(volume_group, cleanup_config, cleanup_disks);
+                        }
+
+                        /**
+                         * Remove an LVM thin pool.
+                         *
+                         * @param volume_group The storage identifier.
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result deleteRest(String volume_group) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("volume-group", volume_group);
+                            return _client.delete("/nodes/" + _node + "/disks/lvmthin/" + _name + "", parameters);
+                        }
+
+                        /**
+                         * Remove an LVM thin pool.
+                         *
+                         * @param volume_group The storage identifier.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result delete(String volume_group) throws JSONException {
+                            return deleteRest(volume_group);
+                        }
+
+                    }
+
                     /**
                      * List LVM thinpools
                      *
@@ -23494,6 +23939,80 @@ public class PveClient extends PveClientBase {
                     protected PVEDirectory(PveClient client, Object node) {
                         _client = client;
                         _node = node;
+                    }
+
+                    public PVEItemName get(Object name) {
+                        return new PVEItemName(_client, _node, name);
+                    }
+
+                    public class PVEItemName {
+
+                        private final PveClient _client;
+                        private final Object _node;
+                        private final Object _name;
+
+                        protected PVEItemName(PveClient client, Object node, Object name) {
+                            _client = client;
+                            _node = node;
+                            _name = name;
+                        }
+
+                        /**
+                         * Unmounts the storage and removes the mount unit.
+                         *
+                         * @param cleanup_config Marks associated storage(s) as
+                         * not available on this node anymore or removes them
+                         * from the configuration (if configured for this node
+                         * only).
+                         * @param cleanup_disks Also wipe disk so it can be
+                         * repurposed afterwards.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest(Boolean cleanup_config, Boolean cleanup_disks) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("cleanup-config", cleanup_config);
+                            parameters.put("cleanup-disks", cleanup_disks);
+                            return _client.delete("/nodes/" + _node + "/disks/directory/" + _name + "", parameters);
+                        }
+
+                        /**
+                         * Unmounts the storage and removes the mount unit.
+                         *
+                         * @param cleanup_config Marks associated storage(s) as
+                         * not available on this node anymore or removes them
+                         * from the configuration (if configured for this node
+                         * only).
+                         * @param cleanup_disks Also wipe disk so it can be
+                         * repurposed afterwards.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result delete(Boolean cleanup_config, Boolean cleanup_disks) throws JSONException {
+                            return deleteRest(cleanup_config, cleanup_disks);
+                        }
+
+                        /**
+                         * Unmounts the storage and removes the mount unit.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result deleteRest() throws JSONException {
+                            return _client.delete("/nodes/" + _node + "/disks/directory/" + _name + "", null);
+                        }
+
+                        /**
+                         * Unmounts the storage and removes the mount unit.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result delete() throws JSONException {
+                            return deleteRest();
+                        }
+
                     }
 
                     /**
@@ -23615,11 +24134,68 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
+                         * Destroy a ZFS pool.
+                         *
+                         * @param cleanup_config Marks associated storage(s) as
+                         * not available on this node anymore or removes them
+                         * from the configuration (if configured for this node
+                         * only).
+                         * @param cleanup_disks Also wipe disks so they can be
+                         * repurposed afterwards.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result deleteRest(Boolean cleanup_config, Boolean cleanup_disks) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("cleanup-config", cleanup_config);
+                            parameters.put("cleanup-disks", cleanup_disks);
+                            return _client.delete("/nodes/" + _node + "/disks/zfs/" + _name + "", parameters);
+                        }
+
+                        /**
+                         * Destroy a ZFS pool.
+                         *
+                         * @param cleanup_config Marks associated storage(s) as
+                         * not available on this node anymore or removes them
+                         * from the configuration (if configured for this node
+                         * only).
+                         * @param cleanup_disks Also wipe disks so they can be
+                         * repurposed afterwards.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result delete(Boolean cleanup_config, Boolean cleanup_disks) throws JSONException {
+                            return deleteRest(cleanup_config, cleanup_disks);
+                        }
+
+                        /**
+                         * Destroy a ZFS pool.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+
+                        public Result deleteRest() throws JSONException {
+                            return _client.delete("/nodes/" + _node + "/disks/zfs/" + _name + "", null);
+                        }
+
+                        /**
+                         * Destroy a ZFS pool.
+                         *
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result delete() throws JSONException {
+                            return deleteRest();
+                        }
+
+                        /**
                          * Get details about a zpool.
                          *
                          * @return Result
                          * @throws JSONException
                          */
+
                         public Result getRest() throws JSONException {
                             return _client.get("/nodes/" + _node + "/disks/zfs/" + _name + "", null);
                         }
@@ -23667,7 +24243,7 @@ public class PveClient extends PveClientBase {
                      * @param add_storage Configure storage using the zpool.
                      * @param ashift Pool sector size exponent.
                      * @param compression The compression algorithm to use.
-                     * Enum: on,off,gzip,lz4,lzjb,zle
+                     * Enum: on,off,gzip,lz4,lzjb,zle,zstd
                      * @return Result
                      * @throws JSONException
                      */
@@ -23694,7 +24270,7 @@ public class PveClient extends PveClientBase {
                      * @param add_storage Configure storage using the zpool.
                      * @param ashift Pool sector size exponent.
                      * @param compression The compression algorithm to use.
-                     * Enum: on,off,gzip,lz4,lzjb,zle
+                     * Enum: on,off,gzip,lz4,lzjb,zle,zstd
                      * @return Result
                      * @throws JSONException
                      */
@@ -26459,7 +27035,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * login,ceph_install,upgrade
+                 * ceph_install,upgrade,login
                  * @param cmd_opts Add parameters to a command. Encoded as null
                  * terminated strings.
                  * @param height sets the height of the console in pixels.
@@ -26482,7 +27058,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * login,ceph_install,upgrade
+                 * ceph_install,upgrade,login
                  * @param cmd_opts Add parameters to a command. Encoded as null
                  * terminated strings.
                  * @param height sets the height of the console in pixels.
@@ -26532,7 +27108,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * login,ceph_install,upgrade
+                 * ceph_install,upgrade,login
                  * @param cmd_opts Add parameters to a command. Encoded as null
                  * terminated strings.
                  * @return Result
@@ -26549,7 +27125,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * login,ceph_install,upgrade
+                 * ceph_install,upgrade,login
                  * @param cmd_opts Add parameters to a command. Encoded as null
                  * terminated strings.
                  * @return Result
@@ -26635,7 +27211,7 @@ public class PveClient extends PveClientBase {
                  * Creates a SPICE shell.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * login,ceph_install,upgrade
+                 * ceph_install,upgrade,login
                  * @param cmd_opts Add parameters to a command. Encoded as null
                  * terminated strings.
                  * @param proxy SPICE proxy server. This can be used by the
@@ -26660,7 +27236,7 @@ public class PveClient extends PveClientBase {
                  * Creates a SPICE shell.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * login,ceph_install,upgrade
+                 * ceph_install,upgrade,login
                  * @param cmd_opts Add parameters to a command. Encoded as null
                  * terminated strings.
                  * @param proxy SPICE proxy server. This can be used by the
@@ -26908,6 +27484,72 @@ public class PveClient extends PveClientBase {
                  */
                 public Result aplDownload(String storage, String template) throws JSONException {
                     return createRest(storage, template);
+                }
+
+            }
+
+            public class PVEQuery_Url_Metadata {
+
+                private final PveClient _client;
+                private final Object _node;
+
+                protected PVEQuery_Url_Metadata(PveClient client, Object node) {
+                    _client = client;
+                    _node = node;
+                }
+
+                /**
+                 * Query metadata of an URL: file size, file name and mime type.
+                 *
+                 * @param url The URL to query the metadata from.
+                 * @param verify_certificates If false, no SSL/TLS certificates
+                 * will be verified.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest(String url, Boolean verify_certificates) throws JSONException {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("url", url);
+                    parameters.put("verify-certificates", verify_certificates);
+                    return _client.get("/nodes/" + _node + "/query-url-metadata", parameters);
+                }
+
+                /**
+                 * Query metadata of an URL: file size, file name and mime type.
+                 *
+                 * @param url The URL to query the metadata from.
+                 * @param verify_certificates If false, no SSL/TLS certificates
+                 * will be verified.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result queryUrlMetadata(String url, Boolean verify_certificates) throws JSONException {
+                    return getRest(url, verify_certificates);
+                }
+
+                /**
+                 * Query metadata of an URL: file size, file name and mime type.
+                 *
+                 * @param url The URL to query the metadata from.
+                 * @return Result
+                 * @throws JSONException
+                 */
+
+                public Result getRest(String url) throws JSONException {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("url", url);
+                    return _client.get("/nodes/" + _node + "/query-url-metadata", parameters);
+                }
+
+                /**
+                 * Query metadata of an URL: file size, file name and mime type.
+                 *
+                 * @param url The URL to query the metadata from.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result queryUrlMetadata(String url) throws JSONException {
+                    return getRest(url);
                 }
 
             }
@@ -27361,11 +28003,13 @@ public class PveClient extends PveClientBase {
              * one automatically without passphrase.
              * @param fingerprint Certificate SHA 256 fingerprint.
              * @param format Default image format.
+             * @param fs_name The Ceph filesystem name.
              * @param fuse Mount CephFS through FUSE.
              * @param is_mountpoint Assume the given path is an externally
              * managed mountpoint and consider the storage offline if it is not
              * mounted. Using a boolean (yes/no) value serves as a shortcut to
              * using the target path in this field.
+             * @param keyring Client keyring contents (for external clusters).
              * @param krbd Always access rbd through krbd kernel module.
              * @param lio_tpg target portal group for Linux LIO targets
              * @param master_pubkey Base64-encoded, PEM-formatted public RSA
@@ -27388,6 +28032,9 @@ public class PveClient extends PveClientBase {
              * @param password Password for accessing the share/datastore.
              * @param pool Pool.
              * @param port For non default port.
+             * @param preallocation Preallocation mode for raw and qcow2 images.
+             * Using 'metadata' on raw images results in preallocation=off.
+             * Enum: off,metadata,falloc,full
              * @param prune_backups The retention options with shorter intervals
              * are processed first with --keep-last being the very first one.
              * Each option covers a specific period of time. We say that backups
@@ -27400,7 +28047,9 @@ public class PveClient extends PveClientBase {
              * @param server Server IP or DNS name.
              * @param server2 Backup volfile server IP or DNS name.
              * @param shared Mark storage as shared.
-             * @param smbversion SMB protocol version Enum: 2.0,2.1,3.0
+             * @param smbversion SMB protocol version. 'default' if not set,
+             * negotiates the highest SMB2+ version supported by both the client
+             * and server. Enum: default,2.0,2.1,3,3.0,3.11
              * @param sparse use sparse volumes
              * @param subdir Subdir to mount.
              * @param tagged_only Only use logical volumes tagged with
@@ -27412,7 +28061,7 @@ public class PveClient extends PveClientBase {
              * @throws JSONException
              */
 
-            public Result setRest(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String encryption_key, String fingerprint, String format, Boolean fuse, String is_mountpoint, Boolean krbd, String lio_tpg, String master_pubkey, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String pool, Integer port, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
+            public Result setRest(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String encryption_key, String fingerprint, String format, String fs_name, Boolean fuse, String is_mountpoint, String keyring, Boolean krbd, String lio_tpg, String master_pubkey, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String pool, Integer port, String preallocation, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("blocksize", blocksize);
                 parameters.put("bwlimit", bwlimit);
@@ -27426,8 +28075,10 @@ public class PveClient extends PveClientBase {
                 parameters.put("encryption-key", encryption_key);
                 parameters.put("fingerprint", fingerprint);
                 parameters.put("format", format);
+                parameters.put("fs-name", fs_name);
                 parameters.put("fuse", fuse);
                 parameters.put("is_mountpoint", is_mountpoint);
+                parameters.put("keyring", keyring);
                 parameters.put("krbd", krbd);
                 parameters.put("lio_tpg", lio_tpg);
                 parameters.put("master-pubkey", master_pubkey);
@@ -27443,6 +28094,7 @@ public class PveClient extends PveClientBase {
                 parameters.put("password", password);
                 parameters.put("pool", pool);
                 parameters.put("port", port);
+                parameters.put("preallocation", preallocation);
                 parameters.put("prune-backups", prune_backups);
                 parameters.put("saferemove", saferemove);
                 parameters.put("saferemove_throughput", saferemove_throughput);
@@ -27477,11 +28129,13 @@ public class PveClient extends PveClientBase {
              * one automatically without passphrase.
              * @param fingerprint Certificate SHA 256 fingerprint.
              * @param format Default image format.
+             * @param fs_name The Ceph filesystem name.
              * @param fuse Mount CephFS through FUSE.
              * @param is_mountpoint Assume the given path is an externally
              * managed mountpoint and consider the storage offline if it is not
              * mounted. Using a boolean (yes/no) value serves as a shortcut to
              * using the target path in this field.
+             * @param keyring Client keyring contents (for external clusters).
              * @param krbd Always access rbd through krbd kernel module.
              * @param lio_tpg target portal group for Linux LIO targets
              * @param master_pubkey Base64-encoded, PEM-formatted public RSA
@@ -27504,6 +28158,9 @@ public class PveClient extends PveClientBase {
              * @param password Password for accessing the share/datastore.
              * @param pool Pool.
              * @param port For non default port.
+             * @param preallocation Preallocation mode for raw and qcow2 images.
+             * Using 'metadata' on raw images results in preallocation=off.
+             * Enum: off,metadata,falloc,full
              * @param prune_backups The retention options with shorter intervals
              * are processed first with --keep-last being the very first one.
              * Each option covers a specific period of time. We say that backups
@@ -27516,7 +28173,9 @@ public class PveClient extends PveClientBase {
              * @param server Server IP or DNS name.
              * @param server2 Backup volfile server IP or DNS name.
              * @param shared Mark storage as shared.
-             * @param smbversion SMB protocol version Enum: 2.0,2.1,3.0
+             * @param smbversion SMB protocol version. 'default' if not set,
+             * negotiates the highest SMB2+ version supported by both the client
+             * and server. Enum: default,2.0,2.1,3,3.0,3.11
              * @param sparse use sparse volumes
              * @param subdir Subdir to mount.
              * @param tagged_only Only use logical volumes tagged with
@@ -27527,8 +28186,8 @@ public class PveClient extends PveClientBase {
              * @return Result
              * @throws JSONException
              */
-            public Result update(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String encryption_key, String fingerprint, String format, Boolean fuse, String is_mountpoint, Boolean krbd, String lio_tpg, String master_pubkey, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String pool, Integer port, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
-                return setRest(blocksize, bwlimit, comstar_hg, comstar_tg, content, delete, digest, disable, domain, encryption_key, fingerprint, format, fuse, is_mountpoint, krbd, lio_tpg, master_pubkey, maxfiles, mkdir, monhost, mountpoint, namespace_, nocow, nodes, nowritecache, options, password, pool, port, prune_backups, saferemove, saferemove_throughput, server, server2, shared, smbversion, sparse, subdir, tagged_only, transport, username);
+            public Result update(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String delete, String digest, Boolean disable, String domain, String encryption_key, String fingerprint, String format, String fs_name, Boolean fuse, String is_mountpoint, String keyring, Boolean krbd, String lio_tpg, String master_pubkey, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String pool, Integer port, String preallocation, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
+                return setRest(blocksize, bwlimit, comstar_hg, comstar_tg, content, delete, digest, disable, domain, encryption_key, fingerprint, format, fs_name, fuse, is_mountpoint, keyring, krbd, lio_tpg, master_pubkey, maxfiles, mkdir, monhost, mountpoint, namespace_, nocow, nodes, nowritecache, options, password, pool, port, preallocation, prune_backups, saferemove, saferemove_throughput, server, server2, shared, smbversion, sparse, subdir, tagged_only, transport, username);
             }
 
             /**
@@ -27623,12 +28282,14 @@ public class PveClient extends PveClientBase {
          * @param export NFS export path.
          * @param fingerprint Certificate SHA 256 fingerprint.
          * @param format Default image format.
+         * @param fs_name The Ceph filesystem name.
          * @param fuse Mount CephFS through FUSE.
          * @param is_mountpoint Assume the given path is an externally managed
          * mountpoint and consider the storage offline if it is not mounted.
          * Using a boolean (yes/no) value serves as a shortcut to using the
          * target path in this field.
          * @param iscsiprovider iscsi provider
+         * @param keyring Client keyring contents (for external clusters).
          * @param krbd Always access rbd through krbd kernel module.
          * @param lio_tpg target portal group for Linux LIO targets
          * @param master_pubkey Base64-encoded, PEM-formatted public RSA key.
@@ -27652,6 +28313,9 @@ public class PveClient extends PveClientBase {
          * @param pool Pool.
          * @param port For non default port.
          * @param portal iSCSI portal (IP or DNS name with optional port).
+         * @param preallocation Preallocation mode for raw and qcow2 images.
+         * Using 'metadata' on raw images results in preallocation=off. Enum:
+         * off,metadata,falloc,full
          * @param prune_backups The retention options with shorter intervals are
          * processed first with --keep-last being the very first one. Each
          * option covers a specific period of time. We say that backups within
@@ -27664,7 +28328,9 @@ public class PveClient extends PveClientBase {
          * @param server2 Backup volfile server IP or DNS name.
          * @param share CIFS share.
          * @param shared Mark storage as shared.
-         * @param smbversion SMB protocol version Enum: 2.0,2.1,3.0
+         * @param smbversion SMB protocol version. 'default' if not set,
+         * negotiates the highest SMB2+ version supported by both the client and
+         * server. Enum: default,2.0,2.1,3,3.0,3.11
          * @param sparse use sparse volumes
          * @param subdir Subdir to mount.
          * @param tagged_only Only use logical volumes tagged with 'pve-vm-ID'.
@@ -27678,7 +28344,7 @@ public class PveClient extends PveClientBase {
          * @throws JSONException
          */
 
-        public Result createRest(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String datastore, Boolean disable, String domain, String encryption_key, String export, String fingerprint, String format, Boolean fuse, String is_mountpoint, String iscsiprovider, Boolean krbd, String lio_tpg, String master_pubkey, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String path, String pool, Integer port, String portal, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
+        public Result createRest(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String datastore, Boolean disable, String domain, String encryption_key, String export, String fingerprint, String format, String fs_name, Boolean fuse, String is_mountpoint, String iscsiprovider, String keyring, Boolean krbd, String lio_tpg, String master_pubkey, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String path, String pool, Integer port, String portal, String preallocation, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("storage", storage);
             parameters.put("type", type);
@@ -27696,9 +28362,11 @@ public class PveClient extends PveClientBase {
             parameters.put("export", export);
             parameters.put("fingerprint", fingerprint);
             parameters.put("format", format);
+            parameters.put("fs-name", fs_name);
             parameters.put("fuse", fuse);
             parameters.put("is_mountpoint", is_mountpoint);
             parameters.put("iscsiprovider", iscsiprovider);
+            parameters.put("keyring", keyring);
             parameters.put("krbd", krbd);
             parameters.put("lio_tpg", lio_tpg);
             parameters.put("master-pubkey", master_pubkey);
@@ -27716,6 +28384,7 @@ public class PveClient extends PveClientBase {
             parameters.put("pool", pool);
             parameters.put("port", port);
             parameters.put("portal", portal);
+            parameters.put("preallocation", preallocation);
             parameters.put("prune-backups", prune_backups);
             parameters.put("saferemove", saferemove);
             parameters.put("saferemove_throughput", saferemove_throughput);
@@ -27758,12 +28427,14 @@ public class PveClient extends PveClientBase {
          * @param export NFS export path.
          * @param fingerprint Certificate SHA 256 fingerprint.
          * @param format Default image format.
+         * @param fs_name The Ceph filesystem name.
          * @param fuse Mount CephFS through FUSE.
          * @param is_mountpoint Assume the given path is an externally managed
          * mountpoint and consider the storage offline if it is not mounted.
          * Using a boolean (yes/no) value serves as a shortcut to using the
          * target path in this field.
          * @param iscsiprovider iscsi provider
+         * @param keyring Client keyring contents (for external clusters).
          * @param krbd Always access rbd through krbd kernel module.
          * @param lio_tpg target portal group for Linux LIO targets
          * @param master_pubkey Base64-encoded, PEM-formatted public RSA key.
@@ -27787,6 +28458,9 @@ public class PveClient extends PveClientBase {
          * @param pool Pool.
          * @param port For non default port.
          * @param portal iSCSI portal (IP or DNS name with optional port).
+         * @param preallocation Preallocation mode for raw and qcow2 images.
+         * Using 'metadata' on raw images results in preallocation=off. Enum:
+         * off,metadata,falloc,full
          * @param prune_backups The retention options with shorter intervals are
          * processed first with --keep-last being the very first one. Each
          * option covers a specific period of time. We say that backups within
@@ -27799,7 +28473,9 @@ public class PveClient extends PveClientBase {
          * @param server2 Backup volfile server IP or DNS name.
          * @param share CIFS share.
          * @param shared Mark storage as shared.
-         * @param smbversion SMB protocol version Enum: 2.0,2.1,3.0
+         * @param smbversion SMB protocol version. 'default' if not set,
+         * negotiates the highest SMB2+ version supported by both the client and
+         * server. Enum: default,2.0,2.1,3,3.0,3.11
          * @param sparse use sparse volumes
          * @param subdir Subdir to mount.
          * @param tagged_only Only use logical volumes tagged with 'pve-vm-ID'.
@@ -27812,8 +28488,8 @@ public class PveClient extends PveClientBase {
          * @return Result
          * @throws JSONException
          */
-        public Result create(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String datastore, Boolean disable, String domain, String encryption_key, String export, String fingerprint, String format, Boolean fuse, String is_mountpoint, String iscsiprovider, Boolean krbd, String lio_tpg, String master_pubkey, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String path, String pool, Integer port, String portal, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
-            return createRest(storage, type, authsupported, base_, blocksize, bwlimit, comstar_hg, comstar_tg, content, datastore, disable, domain, encryption_key, export, fingerprint, format, fuse, is_mountpoint, iscsiprovider, krbd, lio_tpg, master_pubkey, maxfiles, mkdir, monhost, mountpoint, namespace_, nocow, nodes, nowritecache, options, password, path, pool, port, portal, prune_backups, saferemove, saferemove_throughput, server, server2, share, shared, smbversion, sparse, subdir, tagged_only, target, thinpool, transport, username, vgname, volume);
+        public Result create(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String datastore, Boolean disable, String domain, String encryption_key, String export, String fingerprint, String format, String fs_name, Boolean fuse, String is_mountpoint, String iscsiprovider, String keyring, Boolean krbd, String lio_tpg, String master_pubkey, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String path, String pool, Integer port, String portal, String preallocation, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
+            return createRest(storage, type, authsupported, base_, blocksize, bwlimit, comstar_hg, comstar_tg, content, datastore, disable, domain, encryption_key, export, fingerprint, format, fs_name, fuse, is_mountpoint, iscsiprovider, keyring, krbd, lio_tpg, master_pubkey, maxfiles, mkdir, monhost, mountpoint, namespace_, nocow, nodes, nowritecache, options, password, path, pool, port, portal, preallocation, prune_backups, saferemove, saferemove_throughput, server, server2, share, shared, smbversion, sparse, subdir, tagged_only, target, thinpool, transport, username, vgname, volume);
         }
 
         /**
@@ -27887,6 +28563,11 @@ public class PveClient extends PveClientBase {
         public PVEOpenid getOpenid() {
             return _openid == null ? (_openid = new PVEOpenid(_client)) : _openid;
         }
+        private PVETfa _tfa;
+
+        public PVETfa getTfa() {
+            return _tfa == null ? (_tfa = new PVETfa(_client)) : _tfa;
+        }
         private PVETicket _ticket;
 
         public PVETicket getTicket() {
@@ -27896,11 +28577,6 @@ public class PveClient extends PveClientBase {
 
         public PVEPassword getPassword() {
             return _password == null ? (_password = new PVEPassword(_client)) : _password;
-        }
-        private PVETfa _tfa;
-
-        public PVETfa getTfa() {
-            return _tfa == null ? (_tfa = new PVETfa(_client)) : _tfa;
         }
         private PVEPermissions _permissions;
 
@@ -27955,9 +28631,34 @@ public class PveClient extends PveClientBase {
                     /**
                      * Get user TFA types (Personal and Realm).
                      *
+                     * @param multiple Request all entries as an array.
                      * @return Result
                      * @throws JSONException
                      */
+                    public Result getRest(Boolean multiple) throws JSONException {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("multiple", multiple);
+                        return _client.get("/access/users/" + _userid + "/tfa", parameters);
+                    }
+
+                    /**
+                     * Get user TFA types (Personal and Realm).
+                     *
+                     * @param multiple Request all entries as an array.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result readUserTfaType(Boolean multiple) throws JSONException {
+                        return getRest(multiple);
+                    }
+
+                    /**
+                     * Get user TFA types (Personal and Realm).
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+
                     public Result getRest() throws JSONException {
                         return _client.get("/access/users/" + _userid + "/tfa", null);
                     }
@@ -29578,6 +30279,315 @@ public class PveClient extends PveClientBase {
 
         }
 
+        public class PVETfa {
+
+            private final PveClient _client;
+
+            protected PVETfa(PveClient client) {
+                _client = client;
+
+            }
+
+            public PVEItemUserid get(Object userid) {
+                return new PVEItemUserid(_client, userid);
+            }
+
+            public class PVEItemUserid {
+
+                private final PveClient _client;
+                private final Object _userid;
+
+                protected PVEItemUserid(PveClient client, Object userid) {
+                    _client = client;
+                    _userid = userid;
+                }
+
+                public PVEItemId get(Object id) {
+                    return new PVEItemId(_client, _userid, id);
+                }
+
+                public class PVEItemId {
+
+                    private final PveClient _client;
+                    private final Object _userid;
+                    private final Object _id;
+
+                    protected PVEItemId(PveClient client, Object userid, Object id) {
+                        _client = client;
+                        _userid = userid;
+                        _id = id;
+                    }
+
+                    /**
+                     * Delete a TFA entry by ID.
+                     *
+                     * @param password The current password.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result deleteRest(String password) throws JSONException {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("password", password);
+                        return _client.delete("/access/tfa/" + _userid + "/" + _id + "", parameters);
+                    }
+
+                    /**
+                     * Delete a TFA entry by ID.
+                     *
+                     * @param password The current password.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result deleteTfa(String password) throws JSONException {
+                        return deleteRest(password);
+                    }
+
+                    /**
+                     * Delete a TFA entry by ID.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result deleteRest() throws JSONException {
+                        return _client.delete("/access/tfa/" + _userid + "/" + _id + "", null);
+                    }
+
+                    /**
+                     * Delete a TFA entry by ID.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result deleteTfa() throws JSONException {
+                        return deleteRest();
+                    }
+
+                    /**
+                     * Fetch a requested TFA entry if present.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result getRest() throws JSONException {
+                        return _client.get("/access/tfa/" + _userid + "/" + _id + "", null);
+                    }
+
+                    /**
+                     * Fetch a requested TFA entry if present.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result getTfaEntry() throws JSONException {
+                        return getRest();
+                    }
+
+                    /**
+                     * Add a TFA entry for a user.
+                     *
+                     * @param description A description to distinguish multiple
+                     * entries from one another
+                     * @param enable Whether the entry should be enabled for
+                     * login.
+                     * @param password The current password.
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result setRest(String description, Boolean enable, String password) throws JSONException {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("description", description);
+                        parameters.put("enable", enable);
+                        parameters.put("password", password);
+                        return _client.set("/access/tfa/" + _userid + "/" + _id + "", parameters);
+                    }
+
+                    /**
+                     * Add a TFA entry for a user.
+                     *
+                     * @param description A description to distinguish multiple
+                     * entries from one another
+                     * @param enable Whether the entry should be enabled for
+                     * login.
+                     * @param password The current password.
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result updateTfaEntry(String description, Boolean enable, String password) throws JSONException {
+                        return setRest(description, enable, password);
+                    }
+
+                    /**
+                     * Add a TFA entry for a user.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result setRest() throws JSONException {
+                        return _client.set("/access/tfa/" + _userid + "/" + _id + "", null);
+                    }
+
+                    /**
+                     * Add a TFA entry for a user.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result updateTfaEntry() throws JSONException {
+                        return setRest();
+                    }
+
+                }
+
+                /**
+                 * List TFA configurations of users.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result getRest() throws JSONException {
+                    return _client.get("/access/tfa/" + _userid + "", null);
+                }
+
+                /**
+                 * List TFA configurations of users.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result listUserTfa() throws JSONException {
+                    return getRest();
+                }
+
+                /**
+                 * Add a TFA entry for a user.
+                 *
+                 * @param type TFA Entry Type. Enum:
+                 * totp,u2f,webauthn,recovery,yubico
+                 * @param challenge When responding to a u2f challenge: the
+                 * original challenge string
+                 * @param description A description to distinguish multiple
+                 * entries from one another
+                 * @param password The current password.
+                 * @param totp A totp URI.
+                 * @param value The current value for the provided totp URI, or
+                 * a Webauthn/U2F challenge response
+                 * @return Result
+                 * @throws JSONException
+                 */
+
+                public Result createRest(String type, String challenge, String description, String password, String totp, String value) throws JSONException {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("type", type);
+                    parameters.put("challenge", challenge);
+                    parameters.put("description", description);
+                    parameters.put("password", password);
+                    parameters.put("totp", totp);
+                    parameters.put("value", value);
+                    return _client.create("/access/tfa/" + _userid + "", parameters);
+                }
+
+                /**
+                 * Add a TFA entry for a user.
+                 *
+                 * @param type TFA Entry Type. Enum:
+                 * totp,u2f,webauthn,recovery,yubico
+                 * @param challenge When responding to a u2f challenge: the
+                 * original challenge string
+                 * @param description A description to distinguish multiple
+                 * entries from one another
+                 * @param password The current password.
+                 * @param totp A totp URI.
+                 * @param value The current value for the provided totp URI, or
+                 * a Webauthn/U2F challenge response
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result addTfaEntry(String type, String challenge, String description, String password, String totp, String value) throws JSONException {
+                    return createRest(type, challenge, description, password, totp, value);
+                }
+
+                /**
+                 * Add a TFA entry for a user.
+                 *
+                 * @param type TFA Entry Type. Enum:
+                 * totp,u2f,webauthn,recovery,yubico
+                 * @return Result
+                 * @throws JSONException
+                 */
+
+                public Result createRest(String type) throws JSONException {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("type", type);
+                    return _client.create("/access/tfa/" + _userid + "", parameters);
+                }
+
+                /**
+                 * Add a TFA entry for a user.
+                 *
+                 * @param type TFA Entry Type. Enum:
+                 * totp,u2f,webauthn,recovery,yubico
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result addTfaEntry(String type) throws JSONException {
+                    return createRest(type);
+                }
+
+            }
+
+            /**
+             * List TFA configurations of users.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result getRest() throws JSONException {
+                return _client.get("/access/tfa", null);
+            }
+
+            /**
+             * List TFA configurations of users.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result listTfa() throws JSONException {
+                return getRest();
+            }
+
+            /**
+             * Finish a u2f challenge.
+             *
+             * @param response The response to the current authentication
+             * challenge.
+             * @return Result
+             * @throws JSONException
+             */
+
+            public Result createRest(String response) throws JSONException {
+                Map<String, Object> parameters = new HashMap<>();
+                parameters.put("response", response);
+                return _client.create("/access/tfa", parameters);
+            }
+
+            /**
+             * Finish a u2f challenge.
+             *
+             * @param response The response to the current authentication
+             * challenge.
+             * @return Result
+             * @throws JSONException
+             */
+            public Result verifyTfa(String response) throws JSONException {
+                return createRest(response);
+            }
+
+        }
+
         public class PVETicket {
 
             private final PveClient _client;
@@ -29613,6 +30623,10 @@ public class PveClient extends PveClientBase {
              * @param password The secret password. This can also be a valid
              * ticket.
              * @param username User name
+             * @param new_format With webauthn the format of half-authenticated
+             * tickts changed. New clients should pass 1 here and not worry
+             * about the old format. The old format is deprecated and will be
+             * retired with PVE-8.0
              * @param otp One-time password for Two-factor authentication.
              * @param path Verify ticket, and check if user have access 'privs'
              * on 'path'
@@ -29621,18 +30635,22 @@ public class PveClient extends PveClientBase {
              * @param realm You can optionally pass the realm using this
              * parameter. Normally the realm is simply added to the username
              * &amp;lt;username&amp;gt;@&amp;lt;relam&amp;gt;.
+             * @param tfa_challenge The signed TFA challenge string the user
+             * wants to respond to.
              * @return Result
              * @throws JSONException
              */
 
-            public Result createRest(String password, String username, String otp, String path, String privs, String realm) throws JSONException {
+            public Result createRest(String password, String username, Boolean new_format, String otp, String path, String privs, String realm, String tfa_challenge) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("password", password);
                 parameters.put("username", username);
+                parameters.put("new-format", new_format);
                 parameters.put("otp", otp);
                 parameters.put("path", path);
                 parameters.put("privs", privs);
                 parameters.put("realm", realm);
+                parameters.put("tfa-challenge", tfa_challenge);
                 return _client.create("/access/ticket", parameters);
             }
 
@@ -29642,6 +30660,10 @@ public class PveClient extends PveClientBase {
              * @param password The secret password. This can also be a valid
              * ticket.
              * @param username User name
+             * @param new_format With webauthn the format of half-authenticated
+             * tickts changed. New clients should pass 1 here and not worry
+             * about the old format. The old format is deprecated and will be
+             * retired with PVE-8.0
              * @param otp One-time password for Two-factor authentication.
              * @param path Verify ticket, and check if user have access 'privs'
              * on 'path'
@@ -29650,11 +30672,13 @@ public class PveClient extends PveClientBase {
              * @param realm You can optionally pass the realm using this
              * parameter. Normally the realm is simply added to the username
              * &amp;lt;username&amp;gt;@&amp;lt;relam&amp;gt;.
+             * @param tfa_challenge The signed TFA challenge string the user
+             * wants to respond to.
              * @return Result
              * @throws JSONException
              */
-            public Result createTicket(String password, String username, String otp, String path, String privs, String realm) throws JSONException {
-                return createRest(password, username, otp, path, privs, realm);
+            public Result createTicket(String password, String username, Boolean new_format, String otp, String path, String privs, String realm, String tfa_challenge) throws JSONException {
+                return createRest(password, username, new_format, otp, path, privs, realm, tfa_challenge);
             }
 
             /**
@@ -29723,117 +30747,6 @@ public class PveClient extends PveClientBase {
              */
             public Result changePassword(String password, String userid) throws JSONException {
                 return setRest(password, userid);
-            }
-
-        }
-
-        public class PVETfa {
-
-            private final PveClient _client;
-
-            protected PVETfa(PveClient client) {
-                _client = client;
-
-            }
-
-            /**
-             * Finish a u2f challenge.
-             *
-             * @param response The response to the current authentication
-             * challenge.
-             * @return Result
-             * @throws JSONException
-             */
-            public Result createRest(String response) throws JSONException {
-                Map<String, Object> parameters = new HashMap<>();
-                parameters.put("response", response);
-                return _client.create("/access/tfa", parameters);
-            }
-
-            /**
-             * Finish a u2f challenge.
-             *
-             * @param response The response to the current authentication
-             * challenge.
-             * @return Result
-             * @throws JSONException
-             */
-            public Result verifyTfa(String response) throws JSONException {
-                return createRest(response);
-            }
-
-            /**
-             * Change user u2f authentication.
-             *
-             * @param action The action to perform Enum: delete,new,confirm
-             * @param userid User ID
-             * @param config A TFA configuration. This must currently be of type
-             * TOTP of not set at all.
-             * @param key When adding TOTP, the shared secret value.
-             * @param password The current password.
-             * @param response Either the the response to the current u2f
-             * registration challenge, or, when adding TOTP, the currently valid
-             * TOTP value.
-             * @return Result
-             * @throws JSONException
-             */
-
-            public Result setRest(String action, String userid, String config, String key, String password, String response) throws JSONException {
-                Map<String, Object> parameters = new HashMap<>();
-                parameters.put("action", action);
-                parameters.put("userid", userid);
-                parameters.put("config", config);
-                parameters.put("key", key);
-                parameters.put("password", password);
-                parameters.put("response", response);
-                return _client.set("/access/tfa", parameters);
-            }
-
-            /**
-             * Change user u2f authentication.
-             *
-             * @param action The action to perform Enum: delete,new,confirm
-             * @param userid User ID
-             * @param config A TFA configuration. This must currently be of type
-             * TOTP of not set at all.
-             * @param key When adding TOTP, the shared secret value.
-             * @param password The current password.
-             * @param response Either the the response to the current u2f
-             * registration challenge, or, when adding TOTP, the currently valid
-             * TOTP value.
-             * @return Result
-             * @throws JSONException
-             */
-            public Result changeTfa(String action, String userid, String config, String key, String password, String response) throws JSONException {
-                return setRest(action, userid, config, key, password, response);
-            }
-
-            /**
-             * Change user u2f authentication.
-             *
-             * @param action The action to perform Enum: delete,new,confirm
-             * @param userid User ID
-             * @return Result
-             * @throws JSONException
-             */
-
-            public Result setRest(String action, String userid) throws JSONException {
-                Map<String, Object> parameters = new HashMap<>();
-                parameters.put("action", action);
-                parameters.put("userid", userid);
-                return _client.set("/access/tfa", parameters);
-            }
-
-            /**
-             * Change user u2f authentication.
-             *
-             * @param action The action to perform Enum: delete,new,confirm
-             * @param userid User ID
-             * @return Result
-             * @throws JSONException
-             */
-            public Result changeTfa(String action, String userid) throws JSONException {
-                return setRest(action, userid);
             }
 
         }
@@ -30125,8 +31038,8 @@ public class PveClient extends PveClientBase {
         }
 
         /**
-         * API version details. The result also includes the global datacenter
-         * confguration.
+         * API version details, including some parts of the global datacenter
+         * config.
          *
          * @return Result
          * @throws JSONException
@@ -30136,8 +31049,8 @@ public class PveClient extends PveClientBase {
         }
 
         /**
-         * API version details. The result also includes the global datacenter
-         * confguration.
+         * API version details, including some parts of the global datacenter
+         * config.
          *
          * @return Result
          * @throws JSONException
