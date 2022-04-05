@@ -36,7 +36,7 @@ public class Test {
                 System.out.println(node);
             });
 
-            String nodeId = "cv-pve01";
+            String nodeId = "cv-pve02";
 
             //loops vms qemu
             JSONArray vms = client.getNodes().get(nodeId).getQemu().vmlist().getResponse().getJSONArray("data");
@@ -59,7 +59,7 @@ public class Test {
             System.out.println(retCreateSnap.get("data"));
 
             //wait creation
-            client.waitForTaskToFinish(nodeId, retCreateSnap.getString("data"), 500, 10000);
+            client.waitForTaskToFinish(retCreateSnap.getString("data"), 500, 10000);
 
             //delete snapshot
             Result retDeleSnap = client.getNodes().get(nodeId).getQemu().get(100).getSnapshot().get("pippo").delsnapshot();

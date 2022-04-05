@@ -1,14 +1,9 @@
 /*
- * This file is part of the cv4pve-api-java https://github.com/Corsinvest/cv4pve-api-java,
- *
- * This source file is available under two different licenses:
- * - GNU General Public License version 3 (GPLv3)
- * - Corsinvest Enterprise License (CEL)
- * Full copyright and license information is available in
- * LICENSE.md which is distributed with this source code.
- *
- * Copyright (C) 2016 Corsinvest Srl	GPLv3 and CEL
+ * SPDX-FileCopyrightText: 2022 Daniele Corsini <daniele.corsini@corsinvest.it>
+ * SPDX-FileCopyrightText: Copyright Corsinvest Srl
+ * SPDX-License-Identifier: GPL-3.0-only
  */
+
 package it.corsinvest.proxmoxve.api;
 
 import java.io.BufferedReader;
@@ -382,7 +377,7 @@ public class PveClientBase {
             statusCode = httpCon.getResponseCode();
             reasonPhrase = httpCon.getResponseMessage();
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpCon.getInputStream()))) {
+            try ( BufferedReader reader = new BufferedReader(new InputStreamReader(httpCon.getInputStream()))) {
                 StringBuilder sb = new StringBuilder();
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -455,14 +450,13 @@ public class PveClientBase {
     /**
      * Wait for task to finish
      *
-     * @param node Node identifier
      * @param task Task identifier
      * @param wait Millisecond wait next check
      * @param timeOut Millisecond timeout
      * @return 0 Success
      * @throws JSONException
      */
-    public boolean waitForTaskToFinish(String node, String task, long wait, long timeOut) throws JSONException {
+    public boolean waitForTaskToFinish(String task, long wait, long timeOut) throws JSONException {
         Boolean isRunning = true;
         if (wait <= 0) {
             wait = 500;
@@ -475,24 +469,11 @@ public class PveClientBase {
         while (isRunning && (System.currentTimeMillis() - timeStart) < timeOut) {
             if ((System.currentTimeMillis() - waitTime) >= wait) {
                 waitTime = System.currentTimeMillis();
-                isRunning = taskIsRunning(node, task);
+                isRunning = taskIsRunning(task);
             }
         }
 
         return System.currentTimeMillis() - timeStart < timeOut;
-    }
-
-    /**
-     * Wait for task to finish
-     *
-     * @param task Task identifier
-     * @param wait Millisecond wait next check
-     * @param timeOut Millisecond timeout
-     * @return 0 Success
-     * @throws JSONException
-     */
-    public boolean waitForTaskToFinish(String task, long wait, long timeOut) throws JSONException {
-        return waitForTaskToFinish(task.split(":")[1], task, wait, timeOut);
     }
 
     /**
@@ -503,8 +484,8 @@ public class PveClientBase {
      * @return
      * @throws JSONException
      */
-    public boolean taskIsRunning(String node, String task) throws JSONException {
-        return readTaskStatus(node, task).getResponse().getJSONObject("data").getString("status").equals("running");
+    public boolean taskIsRunning(String task) throws JSONException {
+        return readTaskStatus(task).getResponse().getJSONObject("data").getString("status").equals("running");
     }
 
     /**
@@ -515,10 +496,18 @@ public class PveClientBase {
      * @return
      * @throws JSONException
      */
-    public String getExitStatusTask(String node, String task) throws JSONException {
-        return readTaskStatus(node, task).getResponse().getJSONObject("data").getString("exitstatus");
+    public String getExitStatusTask(String task) throws JSONException {
+        return readTaskStatus(task).getResponse().getJSONObject("data").getString("exitstatus");
     }
 
+    /**
+     * Convert JSONArray To List
+     *
+     * @param <T>
+     * @param array
+     * @return
+     * @throws JSONException
+     */
     public static <T> List<T> JSONArrayToList(JSONArray array) throws JSONException {
         List<T> ret = new ArrayList<>();
         if (array != null) {
@@ -530,12 +519,22 @@ public class PveClientBase {
     }
 
     /**
+     * Get node from task
+     *
+     * @param task
+     * @return
+     */
+    public static String getNodeFromTask(String task) {
+        return task.split(":")[1];
+    }
+
+    /**
      * Read task status.
      *
      * @return Result
      * @throws JSONException
      */
-    private Result readTaskStatus(String node, String task) throws JSONException {
-        return get("/nodes/" + node + "/tasks/" + task + "/status", null);
+    private Result readTaskStatus(String task) throws JSONException {
+        return get("/nodes/" + getNodeFromTask(task) + "/tasks/" + task + "/status", null);
     }
 }

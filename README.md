@@ -44,11 +44,7 @@ The result is class **Result** and contain methods:
 
 * Easy to learn
 * Method named
-* Method no named rest (same parameters)
-  * getRest
-  * setRest
-  * createRest
-  * deleteRest
+* Method named
 * Full method generated from documentation
 * Comment any method and parameters
 * Parameters indexed eg [n] is structured in array index and value
