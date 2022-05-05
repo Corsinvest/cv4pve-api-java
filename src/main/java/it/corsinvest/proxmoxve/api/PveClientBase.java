@@ -115,7 +115,7 @@ public class PveClientBase {
      *
      * @param username user name
      * @param password password connection
-     * @param realm pam/pve or custom
+     * @param realm    pam/pve or custom
      * @return
      * @throws JSONException
      */
@@ -149,7 +149,7 @@ public class PveClientBase {
     /**
      * Execute method GET
      *
-     * @param resource Url request
+     * @param resource   Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -161,7 +161,7 @@ public class PveClientBase {
     /**
      * Execute method PUT
      *
-     * @param resource Url request
+     * @param resource   Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -173,7 +173,7 @@ public class PveClientBase {
     /**
      * Execute method POST
      *
-     * @param resource Url request
+     * @param resource   Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -185,7 +185,7 @@ public class PveClientBase {
     /**
      * Execute method DELETE
      *
-     * @param resource Url request
+     * @param resource   Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -245,7 +245,7 @@ public class PveClientBase {
             throws JSONException {
         String url = getApiUrl() + resource;
 
-        //decode http method
+        // decode http method
         String httpMethod = "";
         switch (methodType) {
             case GET:
@@ -280,7 +280,7 @@ public class PveClientBase {
         }
 
         // Create a trust manager that does not validate certificate chains
-        TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
+        TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
             @Override
             public java.security.cert.X509Certificate[] getAcceptedIssuers() {
                 return null;
@@ -293,7 +293,7 @@ public class PveClientBase {
             @Override
             public void checkServerTrusted(X509Certificate[] certs, String authType) {
             }
-        }};
+        } };
 
         // Install the all-trusting trust manager
         try {
@@ -377,7 +377,7 @@ public class PveClientBase {
             statusCode = httpCon.getResponseCode();
             reasonPhrase = httpCon.getResponseMessage();
 
-            try ( BufferedReader reader = new BufferedReader(new InputStreamReader(httpCon.getInputStream()))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpCon.getInputStream()))) {
                 StringBuilder sb = new StringBuilder();
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -436,8 +436,8 @@ public class PveClientBase {
      * Add indexed parameter
      *
      * @param parameters Parameters
-     * @param name Name parameter
-     * @param value Values
+     * @param name       Name parameter
+     * @param value      Values
      */
     public static void addIndexedParameter(Map<String, Object> parameters, String name, Map<Integer, String> value) {
         if (value != null) {
@@ -450,14 +450,14 @@ public class PveClientBase {
     /**
      * Wait for task to finish
      *
-     * @param task Task identifier
-     * @param wait Millisecond wait next check
+     * @param task    Task identifier
+     * @param wait    Millisecond wait next check
      * @param timeOut Millisecond timeout
      * @return 0 Success
      * @throws JSONException
      */
     public boolean waitForTaskToFinish(String task, long wait, long timeOut) throws JSONException {
-        Boolean isRunning = true;
+        boolean isRunning = true;
         if (wait <= 0) {
             wait = 500;
         }
@@ -479,7 +479,6 @@ public class PveClientBase {
     /**
      * Check task is running
      *
-     * @param node Node identifier
      * @param task Task identifier
      * @return
      * @throws JSONException
@@ -491,7 +490,6 @@ public class PveClientBase {
     /**
      * Return exit status code task
      *
-     * @param node Node identifier
      * @param task Task identifier
      * @return
      * @throws JSONException
@@ -531,6 +529,7 @@ public class PveClientBase {
     /**
      * Read task status.
      *
+     * @param task
      * @return Result
      * @throws JSONException
      */
