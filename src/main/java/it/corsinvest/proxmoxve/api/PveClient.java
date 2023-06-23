@@ -110,6 +110,11 @@ public class PveClient extends PveClientBase {
         public PVEJobs getJobs() {
             return jobs == null ? (jobs = new PVEJobs(client)) : jobs;
         }
+        private PVEMapping mapping;
+
+        public PVEMapping getMapping() {
+            return mapping == null ? (mapping = new PVEMapping(client)) : mapping;
+        }
         private PVESdn sdn;
 
         public PVESdn getSdn() {
@@ -1026,7 +1031,7 @@ public class PveClient extends PveClientBase {
                          * ports or ranges.
                          * @param enable Flag to enable/disable a rule.
                          * @param icmp_type Specify icmp-type. Only valid if
-                         * proto equals 'icmp'.
+                         * proto equals 'icmp' or 'icmpv6'/'ipv6-icmp'.
                          * @param iface Network interface name. You have to use
                          * network configuration key names for VMs and
                          * containers ('net\d+'). Host related rules can use
@@ -1136,7 +1141,7 @@ public class PveClient extends PveClientBase {
                      * separated list to match several ports or ranges.
                      * @param enable Flag to enable/disable a rule.
                      * @param icmp_type Specify icmp-type. Only valid if proto
-                     * equals 'icmp'.
+                     * equals 'icmp' or 'icmpv6'/'ipv6-icmp'.
                      * @param iface Network interface name. You have to use
                      * network configuration key names for VMs and containers
                      * ('net\d+'). Host related rules can use arbitrary strings.
@@ -1336,7 +1341,7 @@ public class PveClient extends PveClientBase {
                      * separated list to match several ports or ranges.
                      * @param enable Flag to enable/disable a rule.
                      * @param icmp_type Specify icmp-type. Only valid if proto
-                     * equals 'icmp'.
+                     * equals 'icmp' or 'icmpv6'/'ipv6-icmp'.
                      * @param iface Network interface name. You have to use
                      * network configuration key names for VMs and containers
                      * ('net\d+'). Host related rules can use arbitrary strings.
@@ -1432,7 +1437,7 @@ public class PveClient extends PveClientBase {
                  * match several ports or ranges.
                  * @param enable Flag to enable/disable a rule.
                  * @param icmp_type Specify icmp-type. Only valid if proto
-                 * equals 'icmp'.
+                 * equals 'icmp' or 'icmpv6'/'ipv6-icmp'.
                  * @param iface Network interface name. You have to use network
                  * configuration key names for VMs and containers ('net\d+').
                  * Host related rules can use arbitrary strings.
@@ -2078,7 +2083,7 @@ public class PveClient extends PveClientBase {
                  * Update vzdump backup job definition.
                  *
                  * @param all Backup all known guest systems on this host.
-                 * @param bwlimit Limit I/O bandwidth (KBytes per second).
+                 * @param bwlimit Limit I/O bandwidth (in KiB/s).
                  * @param comment Description for the Job.
                  * @param compress Compress dump file. Enum: 0,1,gzip,lzo,zstd
                  * @param delete A list of settings you want to delete.
@@ -2091,7 +2096,11 @@ public class PveClient extends PveClientBase {
                  * globs). Paths starting with '/' are anchored to the
                  * container's root, other paths match relative to each
                  * subdirectory.
-                 * @param ionice Set CFQ ionice priority.
+                 * @param ionice Set IO priority when using the BFQ scheduler.
+                 * For snapshot and suspend mode backups of VMs, this only
+                 * affects the compressor. A value of 8 means the idle priority
+                 * is used, otherwise the best-effort priority is used with the
+                 * specified value.
                  * @param lockwait Maximal time to wait for the global lock
                  * (minutes).
                  * @param mailnotification Specify when to send an email Enum:
@@ -2208,7 +2217,7 @@ public class PveClient extends PveClientBase {
              * Create new vzdump backup job.
              *
              * @param all Backup all known guest systems on this host.
-             * @param bwlimit Limit I/O bandwidth (KBytes per second).
+             * @param bwlimit Limit I/O bandwidth (in KiB/s).
              * @param comment Description for the Job.
              * @param compress Compress dump file. Enum: 0,1,gzip,lzo,zstd
              * @param dow Day of week selection.
@@ -2219,7 +2228,11 @@ public class PveClient extends PveClientBase {
              * globs). Paths starting with '/' are anchored to the container's
              * root, other paths match relative to each subdirectory.
              * @param id Job ID (will be autogenerated).
-             * @param ionice Set CFQ ionice priority.
+             * @param ionice Set IO priority when using the BFQ scheduler. For
+             * snapshot and suspend mode backups of VMs, this only affects the
+             * compressor. A value of 8 means the idle priority is used,
+             * otherwise the best-effort priority is used with the specified
+             * value.
              * @param lockwait Maximal time to wait for the global lock
              * (minutes).
              * @param mailnotification Specify when to send an email Enum:
@@ -2935,7 +2948,7 @@ public class PveClient extends PveClientBase {
                      * Update ACME plugin configuration.
                      *
                      * @param api API plugin name Enum:
-                     * 1984hosting,acmedns,acmeproxy,active24,ad,ali,anx,arvan,aurora,autodns,aws,azion,azure,bunny,cf,clouddns,cloudns,cn,conoha,constellix,cpanel,curanet,cyon,da,ddnss,desec,df,dgon,dnshome,dnsimple,dnsservices,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgedns,euserv,exoscale,fornex,freedns,gandi_livedns,gcloud,gd,geoscaling,he,hetzner,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ispconfig,jd,joker,kappernet,kas,kinghost,knot,la,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,mythic_beasts,namecheap,namecom,namesilo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,oci,one,online,openprovider,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rage4,rcode0,regru,scaleway,schlundtech,selectel,selfhost,servercow,simply,tele3,transip,udr,ultra,unoeuro,variomedia,veesp,vercel,vscale,vultr,websupport,world4you,yandex,yc,zilore,zone,zonomi
+                     * 1984hosting,acmedns,acmeproxy,active24,ad,ali,anx,arvan,aurora,autodns,aws,azion,azure,bunny,cf,clouddns,cloudns,cn,conoha,constellix,cpanel,curanet,cyon,da,ddnss,desec,df,dgon,dnshome,dnsimple,dnsservices,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgedns,euserv,exoscale,fornex,freedns,gandi_livedns,gcloud,gcore,gd,geoscaling,googledomains,he,hetzner,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ipv64,ispconfig,jd,joker,kappernet,kas,kinghost,knot,la,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,mythic_beasts,namecheap,namecom,namesilo,nanelo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,oci,one,online,openprovider,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rage4,rcode0,regru,scaleway,schlundtech,selectel,selfhost,servercow,simply,tele3,transip,udr,ultra,unoeuro,variomedia,veesp,vercel,vscale,vultr,websupport,world4you,yandex,yc,zilore,zone,zonomi
                      * @param data DNS plugin data. (base64 encoded)
                      * @param delete A list of settings you want to delete.
                      * @param digest Prevent changes if current configuration
@@ -3006,7 +3019,7 @@ public class PveClient extends PveClientBase {
                  * @param id ACME Plugin ID name
                  * @param type ACME challenge type. Enum: dns,standalone
                  * @param api API plugin name Enum:
-                 * 1984hosting,acmedns,acmeproxy,active24,ad,ali,anx,arvan,aurora,autodns,aws,azion,azure,bunny,cf,clouddns,cloudns,cn,conoha,constellix,cpanel,curanet,cyon,da,ddnss,desec,df,dgon,dnshome,dnsimple,dnsservices,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgedns,euserv,exoscale,fornex,freedns,gandi_livedns,gcloud,gd,geoscaling,he,hetzner,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ispconfig,jd,joker,kappernet,kas,kinghost,knot,la,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,mythic_beasts,namecheap,namecom,namesilo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,oci,one,online,openprovider,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rage4,rcode0,regru,scaleway,schlundtech,selectel,selfhost,servercow,simply,tele3,transip,udr,ultra,unoeuro,variomedia,veesp,vercel,vscale,vultr,websupport,world4you,yandex,yc,zilore,zone,zonomi
+                 * 1984hosting,acmedns,acmeproxy,active24,ad,ali,anx,arvan,aurora,autodns,aws,azion,azure,bunny,cf,clouddns,cloudns,cn,conoha,constellix,cpanel,curanet,cyon,da,ddnss,desec,df,dgon,dnshome,dnsimple,dnsservices,do,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgedns,euserv,exoscale,fornex,freedns,gandi_livedns,gcloud,gcore,gd,geoscaling,googledomains,he,hetzner,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ipv64,ispconfig,jd,joker,kappernet,kas,kinghost,knot,la,leaseweb,lexicon,linode,linode_v4,loopia,lua,maradns,me,miab,misaka,myapi,mydevil,mydnsjp,mythic_beasts,namecheap,namecom,namesilo,nanelo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,oci,one,online,openprovider,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rage4,rcode0,regru,scaleway,schlundtech,selectel,selfhost,servercow,simply,tele3,transip,udr,ultra,unoeuro,variomedia,veesp,vercel,vscale,vultr,websupport,world4you,yandex,yc,zilore,zone,zonomi
                  * @param data DNS plugin data. (base64 encoded)
                  * @param disable Flag to disable the config.
                  * @param nodes List of cluster node names.
@@ -3469,10 +3482,173 @@ public class PveClient extends PveClientBase {
 
             }
 
+            private PVERealmSync realmSync;
+
+            public PVERealmSync getRealmSync() {
+                return realmSync == null ? (realmSync = new PVERealmSync(client)) : realmSync;
+            }
             private PVEScheduleAnalyze scheduleAnalyze;
 
             public PVEScheduleAnalyze getScheduleAnalyze() {
                 return scheduleAnalyze == null ? (scheduleAnalyze = new PVEScheduleAnalyze(client)) : scheduleAnalyze;
+            }
+
+            public class PVERealmSync {
+
+                private final PveClient client;
+
+                protected PVERealmSync(PveClient client) {
+                    this.client = client;
+
+                }
+
+                public PVEIdItem get(Object id) {
+                    return new PVEIdItem(client, id);
+                }
+
+                public class PVEIdItem {
+
+                    private final PveClient client;
+                    private final Object id;
+
+                    protected PVEIdItem(PveClient client, Object id) {
+                        this.client = client;
+                        this.id = id;
+                    }
+
+                    /**
+                     * Delete realm-sync job definition.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result deleteJob() throws JSONException {
+                        return client.delete("/cluster/jobs/realm-sync/" + this.id + "", null);
+                    }
+
+                    /**
+                     * Read realm-sync job definition.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result readJob() throws JSONException {
+                        return client.get("/cluster/jobs/realm-sync/" + this.id + "", null);
+                    }
+
+                    /**
+                     * Create new realm-sync job.
+                     *
+                     * @param schedule Backup schedule. The format is a subset
+                     * of `systemd` calendar events.
+                     * @param comment Description for the Job.
+                     * @param enable_new Enable newly synced users immediately.
+                     * @param enabled Determines if the job is enabled.
+                     * @param realm Authentication domain ID
+                     * @param remove_vanished A semicolon-seperated list of
+                     * things to remove when they or the user vanishes during a
+                     * sync. The following values are possible: 'entry' removes
+                     * the user/group when not returned from the sync.
+                     * 'properties' removes the set properties on existing
+                     * user/group that do not appear in the source (even custom
+                     * ones). 'acl' removes acls when the user/group is not
+                     * returned from the sync. Instead of a list it also can be
+                     * 'none' (the default).
+                     * @param scope Select what to sync. Enum: users,groups,both
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result createJob(String schedule, String comment, Boolean enable_new, Boolean enabled, String realm, String remove_vanished, String scope) throws JSONException {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("schedule", schedule);
+                        parameters.put("comment", comment);
+                        parameters.put("enable-new", enable_new);
+                        parameters.put("enabled", enabled);
+                        parameters.put("realm", realm);
+                        parameters.put("remove-vanished", remove_vanished);
+                        parameters.put("scope", scope);
+                        return client.create("/cluster/jobs/realm-sync/" + this.id + "", parameters);
+                    }
+
+                    /**
+                     * Create new realm-sync job.
+                     *
+                     * @param schedule Backup schedule. The format is a subset
+                     * of `systemd` calendar events.
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result createJob(String schedule) throws JSONException {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("schedule", schedule);
+                        return client.create("/cluster/jobs/realm-sync/" + this.id + "", parameters);
+                    }
+
+                    /**
+                     * Update realm-sync job definition.
+                     *
+                     * @param schedule Backup schedule. The format is a subset
+                     * of `systemd` calendar events.
+                     * @param comment Description for the Job.
+                     * @param delete A list of settings you want to delete.
+                     * @param enable_new Enable newly synced users immediately.
+                     * @param enabled Determines if the job is enabled.
+                     * @param remove_vanished A semicolon-seperated list of
+                     * things to remove when they or the user vanishes during a
+                     * sync. The following values are possible: 'entry' removes
+                     * the user/group when not returned from the sync.
+                     * 'properties' removes the set properties on existing
+                     * user/group that do not appear in the source (even custom
+                     * ones). 'acl' removes acls when the user/group is not
+                     * returned from the sync. Instead of a list it also can be
+                     * 'none' (the default).
+                     * @param scope Select what to sync. Enum: users,groups,both
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result updateJob(String schedule, String comment, String delete, Boolean enable_new, Boolean enabled, String remove_vanished, String scope) throws JSONException {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("schedule", schedule);
+                        parameters.put("comment", comment);
+                        parameters.put("delete", delete);
+                        parameters.put("enable-new", enable_new);
+                        parameters.put("enabled", enabled);
+                        parameters.put("remove-vanished", remove_vanished);
+                        parameters.put("scope", scope);
+                        return client.set("/cluster/jobs/realm-sync/" + this.id + "", parameters);
+                    }
+
+                    /**
+                     * Update realm-sync job definition.
+                     *
+                     * @param schedule Backup schedule. The format is a subset
+                     * of `systemd` calendar events.
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result updateJob(String schedule) throws JSONException {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("schedule", schedule);
+                        return client.set("/cluster/jobs/realm-sync/" + this.id + "", parameters);
+                    }
+
+                }
+
+                /**
+                 * List configured realm-sync-jobs.
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result syncjobIndex() throws JSONException {
+                    return client.get("/cluster/jobs/realm-sync", null);
+                }
+
             }
 
             public class PVEScheduleAnalyze {
@@ -3529,6 +3705,327 @@ public class PveClient extends PveClientBase {
              */
             public Result index() throws JSONException {
                 return client.get("/cluster/jobs", null);
+            }
+
+        }
+
+        public class PVEMapping {
+
+            private final PveClient client;
+
+            protected PVEMapping(PveClient client) {
+                this.client = client;
+
+            }
+
+            private PVEPci pci;
+
+            public PVEPci getPci() {
+                return pci == null ? (pci = new PVEPci(client)) : pci;
+            }
+            private PVEUsb usb;
+
+            public PVEUsb getUsb() {
+                return usb == null ? (usb = new PVEUsb(client)) : usb;
+            }
+
+            public class PVEPci {
+
+                private final PveClient client;
+
+                protected PVEPci(PveClient client) {
+                    this.client = client;
+
+                }
+
+                public PVEIdItem get(Object id) {
+                    return new PVEIdItem(client, id);
+                }
+
+                public class PVEIdItem {
+
+                    private final PveClient client;
+                    private final Object id;
+
+                    protected PVEIdItem(PveClient client, Object id) {
+                        this.client = client;
+                        this.id = id;
+                    }
+
+                    /**
+                     * Remove Hardware Mapping.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result delete() throws JSONException {
+                        return client.delete("/cluster/mapping/pci/" + this.id + "", null);
+                    }
+
+                    /**
+                     * Get PCI Mapping.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result get() throws JSONException {
+                        return client.get("/cluster/mapping/pci/" + this.id + "", null);
+                    }
+
+                    /**
+                     * Update a hardware mapping.
+                     *
+                     * @param delete A list of settings you want to delete.
+                     * @param description Description of the logical PCI device.
+                     * @param digest Prevent changes if current configuration
+                     * file has different SHA1 digest. This can be used to
+                     * prevent concurrent modifications.
+                     * @param map A list of maps for the cluster nodes.
+                     * @param mdev
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result update(String delete, String description, String digest, String map, Boolean mdev) throws JSONException {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("delete", delete);
+                        parameters.put("description", description);
+                        parameters.put("digest", digest);
+                        parameters.put("map", map);
+                        parameters.put("mdev", mdev);
+                        return client.set("/cluster/mapping/pci/" + this.id + "", parameters);
+                    }
+
+                    /**
+                     * Update a hardware mapping.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result update() throws JSONException {
+                        return client.set("/cluster/mapping/pci/" + this.id + "", null);
+                    }
+
+                }
+
+                /**
+                 * List PCI Hardware Mapping
+                 *
+                 * @param check_node If given, checks the configurations on the
+                 * given node for correctness, and adds relevant diagnostics for
+                 * the devices to the response.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result index(String check_node) throws JSONException {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("check-node", check_node);
+                    return client.get("/cluster/mapping/pci", parameters);
+                }
+
+                /**
+                 * List PCI Hardware Mapping
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+
+                public Result index() throws JSONException {
+                    return client.get("/cluster/mapping/pci", null);
+                }
+
+                /**
+                 * Create a new hardware mapping.
+                 *
+                 * @param id The ID of the logical PCI mapping.
+                 * @param map A list of maps for the cluster nodes.
+                 * @param description Description of the logical PCI device.
+                 * @param mdev
+                 * @return Result
+                 * @throws JSONException
+                 */
+
+                public Result create(String id, String map, String description, Boolean mdev) throws JSONException {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("id", id);
+                    parameters.put("map", map);
+                    parameters.put("description", description);
+                    parameters.put("mdev", mdev);
+                    return client.create("/cluster/mapping/pci", parameters);
+                }
+
+                /**
+                 * Create a new hardware mapping.
+                 *
+                 * @param id The ID of the logical PCI mapping.
+                 * @param map A list of maps for the cluster nodes.
+                 * @return Result
+                 * @throws JSONException
+                 */
+
+                public Result create(String id, String map) throws JSONException {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("id", id);
+                    parameters.put("map", map);
+                    return client.create("/cluster/mapping/pci", parameters);
+                }
+
+            }
+
+            public class PVEUsb {
+
+                private final PveClient client;
+
+                protected PVEUsb(PveClient client) {
+                    this.client = client;
+
+                }
+
+                public PVEIdItem get(Object id) {
+                    return new PVEIdItem(client, id);
+                }
+
+                public class PVEIdItem {
+
+                    private final PveClient client;
+                    private final Object id;
+
+                    protected PVEIdItem(PveClient client, Object id) {
+                        this.client = client;
+                        this.id = id;
+                    }
+
+                    /**
+                     * Remove Hardware Mapping.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result delete() throws JSONException {
+                        return client.delete("/cluster/mapping/usb/" + this.id + "", null);
+                    }
+
+                    /**
+                     * Get USB Mapping.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result get() throws JSONException {
+                        return client.get("/cluster/mapping/usb/" + this.id + "", null);
+                    }
+
+                    /**
+                     * Update a hardware mapping.
+                     *
+                     * @param map A list of maps for the cluster nodes.
+                     * @param delete A list of settings you want to delete.
+                     * @param description Description of the logical PCI device.
+                     * @param digest Prevent changes if current configuration
+                     * file has different SHA1 digest. This can be used to
+                     * prevent concurrent modifications.
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result update(String map, String delete, String description, String digest) throws JSONException {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("map", map);
+                        parameters.put("delete", delete);
+                        parameters.put("description", description);
+                        parameters.put("digest", digest);
+                        return client.set("/cluster/mapping/usb/" + this.id + "", parameters);
+                    }
+
+                    /**
+                     * Update a hardware mapping.
+                     *
+                     * @param map A list of maps for the cluster nodes.
+                     * @return Result
+                     * @throws JSONException
+                     */
+
+                    public Result update(String map) throws JSONException {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("map", map);
+                        return client.set("/cluster/mapping/usb/" + this.id + "", parameters);
+                    }
+
+                }
+
+                /**
+                 * List USB Hardware Mappings
+                 *
+                 * @param check_node If given, checks the configurations on the
+                 * given node for correctness, and adds relevant errors to the
+                 * devices.
+                 * @return Result
+                 * @throws JSONException
+                 */
+                public Result index(String check_node) throws JSONException {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("check-node", check_node);
+                    return client.get("/cluster/mapping/usb", parameters);
+                }
+
+                /**
+                 * List USB Hardware Mappings
+                 *
+                 * @return Result
+                 * @throws JSONException
+                 */
+
+                public Result index() throws JSONException {
+                    return client.get("/cluster/mapping/usb", null);
+                }
+
+                /**
+                 * Create a new hardware mapping.
+                 *
+                 * @param id The ID of the logical PCI mapping.
+                 * @param map A list of maps for the cluster nodes.
+                 * @param description Description of the logical PCI device.
+                 * @return Result
+                 * @throws JSONException
+                 */
+
+                public Result create(String id, String map, String description) throws JSONException {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("id", id);
+                    parameters.put("map", map);
+                    parameters.put("description", description);
+                    return client.create("/cluster/mapping/usb", parameters);
+                }
+
+                /**
+                 * Create a new hardware mapping.
+                 *
+                 * @param id The ID of the logical PCI mapping.
+                 * @param map A list of maps for the cluster nodes.
+                 * @return Result
+                 * @throws JSONException
+                 */
+
+                public Result create(String id, String map) throws JSONException {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("id", id);
+                    parameters.put("map", map);
+                    return client.create("/cluster/mapping/usb", parameters);
+                }
+
+            }
+
+            /**
+             * List resource types.
+             *
+             * @return Result
+             * @throws JSONException
+             */
+            public Result index() throws JSONException {
+                return client.get("/cluster/mapping", null);
             }
 
         }
@@ -4010,11 +4507,12 @@ public class PveClient extends PveClientBase {
                      * @param tag Service-VLAN Tag
                      * @param vlan_protocol Enum: 802.1q,802.1ad
                      * @param vrf_vxlan l3vni.
+                     * @param vxlan_port Vxlan tunnel udp port (default 4789).
                      * @return Result
                      * @throws JSONException
                      */
 
-                    public Result update(Boolean advertise_subnets, String bridge, Boolean bridge_disable_mac_learning, String controller, String delete, String digest, Boolean disable_arp_nd_suppression, String dns, String dnszone, Integer dp_id, String exitnodes, Boolean exitnodes_local_routing, String exitnodes_primary, String ipam, String mac, Integer mtu, String nodes, String peers, String reversedns, String rt_import, Integer tag, String vlan_protocol, Integer vrf_vxlan) throws JSONException {
+                    public Result update(Boolean advertise_subnets, String bridge, Boolean bridge_disable_mac_learning, String controller, String delete, String digest, Boolean disable_arp_nd_suppression, String dns, String dnszone, Integer dp_id, String exitnodes, Boolean exitnodes_local_routing, String exitnodes_primary, String ipam, String mac, Integer mtu, String nodes, String peers, String reversedns, String rt_import, Integer tag, String vlan_protocol, Integer vrf_vxlan, Integer vxlan_port) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("advertise-subnets", advertise_subnets);
                         parameters.put("bridge", bridge);
@@ -4039,6 +4537,7 @@ public class PveClient extends PveClientBase {
                         parameters.put("tag", tag);
                         parameters.put("vlan-protocol", vlan_protocol);
                         parameters.put("vrf-vxlan", vrf_vxlan);
+                        parameters.put("vxlan-port", vxlan_port);
                         return client.set("/cluster/sdn/zones/" + this.zone + "", parameters);
                     }
 
@@ -4115,11 +4614,12 @@ public class PveClient extends PveClientBase {
                  * @param tag Service-VLAN Tag
                  * @param vlan_protocol Enum: 802.1q,802.1ad
                  * @param vrf_vxlan l3vni.
+                 * @param vxlan_port Vxlan tunnel udp port (default 4789).
                  * @return Result
                  * @throws JSONException
                  */
 
-                public Result create(String type, String zone, Boolean advertise_subnets, String bridge, Boolean bridge_disable_mac_learning, String controller, Boolean disable_arp_nd_suppression, String dns, String dnszone, Integer dp_id, String exitnodes, Boolean exitnodes_local_routing, String exitnodes_primary, String ipam, String mac, Integer mtu, String nodes, String peers, String reversedns, String rt_import, Integer tag, String vlan_protocol, Integer vrf_vxlan) throws JSONException {
+                public Result create(String type, String zone, Boolean advertise_subnets, String bridge, Boolean bridge_disable_mac_learning, String controller, Boolean disable_arp_nd_suppression, String dns, String dnszone, Integer dp_id, String exitnodes, Boolean exitnodes_local_routing, String exitnodes_primary, String ipam, String mac, Integer mtu, String nodes, String peers, String reversedns, String rt_import, Integer tag, String vlan_protocol, Integer vrf_vxlan, Integer vxlan_port) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     parameters.put("zone", zone);
@@ -4144,6 +4644,7 @@ public class PveClient extends PveClientBase {
                     parameters.put("tag", tag);
                     parameters.put("vlan-protocol", vlan_protocol);
                     parameters.put("vrf-vxlan", vrf_vxlan);
+                    parameters.put("vxlan-port", vxlan_port);
                     return client.create("/cluster/sdn/zones", parameters);
                 }
 
@@ -4786,7 +5287,8 @@ public class PveClient extends PveClientBase {
             /**
              * Set datacenter options.
              *
-             * @param bwlimit Set bandwidth/io limits various operations.
+             * @param bwlimit Set I/O bandwidth limit for various operations (in
+             * KiB/s).
              * @param console Select the default Console viewer. You can either
              * use the builtin java applet (VNC; deprecated and maps to html5),
              * an external virt-viewer comtatible application (SPICE), an HTML5
@@ -5467,7 +5969,8 @@ public class PveClient extends PveClientBase {
                                  * ports or ranges.
                                  * @param enable Flag to enable/disable a rule.
                                  * @param icmp_type Specify icmp-type. Only
-                                 * valid if proto equals 'icmp'.
+                                 * valid if proto equals 'icmp' or
+                                 * 'icmpv6'/'ipv6-icmp'.
                                  * @param iface Network interface name. You have
                                  * to use network configuration key names for
                                  * VMs and containers ('net\d+'). Host related
@@ -5572,7 +6075,7 @@ public class PveClient extends PveClientBase {
                              * list to match several ports or ranges.
                              * @param enable Flag to enable/disable a rule.
                              * @param icmp_type Specify icmp-type. Only valid if
-                             * proto equals 'icmp'.
+                             * proto equals 'icmp' or 'icmpv6'/'ipv6-icmp'.
                              * @param iface Network interface name. You have to
                              * use network configuration key names for VMs and
                              * containers ('net\d+'). Host related rules can use
@@ -6916,7 +7419,7 @@ public class PveClient extends PveClientBase {
                              * guest-agent and returns an object with the pid.
                              *
                              * @param command The command as a list of program +
-                             * arguments
+                             * arguments.
                              * @param input_data Data to pass as 'input-data' to
                              * the guest. Usually treated as STDIN to 'command'.
                              * @return Result
@@ -6933,12 +7436,16 @@ public class PveClient extends PveClientBase {
                              * Executes the given command in the vm via the
                              * guest-agent and returns an object with the pid.
                              *
+                             * @param command The command as a list of program +
+                             * arguments.
                              * @return Result
                              * @throws JSONException
                              */
 
-                            public Result exec() throws JSONException {
-                                return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/exec", null);
+                            public Result exec(String command) throws JSONException {
+                                Map<String, Object> parameters = new HashMap<>();
+                                parameters.put("command", command);
+                                return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/exec", parameters);
                             }
 
                         }
@@ -7259,6 +7766,8 @@ public class PveClient extends PveClientBase {
                          * operating system type (`ostype`. We use the `nocloud`
                          * format for Linux, and `configdrive2` for windows.
                          * Enum: configdrive2,nocloud,opennebula
+                         * @param ciupgrade cloud-init: do an automatic package
+                         * upgrade after the first boot.
                          * @param ciuser cloud-init: User name to change ssh
                          * keys and password for instead of the image's
                          * configured default user.
@@ -7441,7 +7950,7 @@ public class PveClient extends PveClientBase {
                          * @throws JSONException
                          */
 
-                        public Result updateVmAsync(Boolean acpi, String affinity, String agent, String arch, String args, String audio0, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, String tpmstate0, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                        public Result updateVmAsync(Boolean acpi, String affinity, String agent, String arch, String args, String audio0, Boolean autostart, Integer background_delay, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, Boolean ciupgrade, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, String tpmstate0, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
                             parameters.put("affinity", affinity);
@@ -7459,6 +7968,7 @@ public class PveClient extends PveClientBase {
                             parameters.put("cicustom", cicustom);
                             parameters.put("cipassword", cipassword);
                             parameters.put("citype", citype);
+                            parameters.put("ciupgrade", ciupgrade);
                             parameters.put("ciuser", ciuser);
                             parameters.put("cores", cores);
                             parameters.put("cpu", cpu);
@@ -7577,6 +8087,8 @@ public class PveClient extends PveClientBase {
                          * operating system type (`ostype`. We use the `nocloud`
                          * format for Linux, and `configdrive2` for windows.
                          * Enum: configdrive2,nocloud,opennebula
+                         * @param ciupgrade cloud-init: do an automatic package
+                         * upgrade after the first boot.
                          * @param ciuser cloud-init: User name to change ssh
                          * keys and password for instead of the image's
                          * configured default user.
@@ -7759,7 +8271,7 @@ public class PveClient extends PveClientBase {
                          * @throws JSONException
                          */
 
-                        public Result updateVm(Boolean acpi, String affinity, String agent, String arch, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, String tpmstate0, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                        public Result updateVm(Boolean acpi, String affinity, String agent, String arch, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, String cdrom, String cicustom, String cipassword, String citype, Boolean ciupgrade, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete, String description, String digest, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, String startdate, String startup, Boolean tablet, String tags, Boolean tdf, Boolean template, String tpmstate0, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
                             parameters.put("affinity", affinity);
@@ -7776,6 +8288,7 @@ public class PveClient extends PveClientBase {
                             parameters.put("cicustom", cicustom);
                             parameters.put("cipassword", cipassword);
                             parameters.put("citype", citype);
+                            parameters.put("ciupgrade", ciupgrade);
                             parameters.put("ciuser", ciuser);
                             parameters.put("cores", cores);
                             parameters.put("cpu", cpu);
@@ -9512,6 +10025,8 @@ public class PveClient extends PveClientBase {
                  * (`ostype`. We use the `nocloud` format for Linux, and
                  * `configdrive2` for windows. Enum:
                  * configdrive2,nocloud,opennebula
+                 * @param ciupgrade cloud-init: do an automatic package upgrade
+                 * after the first boot.
                  * @param ciuser cloud-init: User name to change ssh keys and
                  * password for instead of the image's configured default user.
                  * @param cores The number of cores per socket.
@@ -9669,7 +10184,7 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result createVm(int vmid, Boolean acpi, String affinity, String agent, String arch, String archive, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom, String cipassword, String citype, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean live_restore, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, String tags, Boolean tdf, Boolean template, String tpmstate0, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                public Result createVm(int vmid, Boolean acpi, String affinity, String agent, String arch, String archive, String args, String audio0, Boolean autostart, Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom, String cipassword, String citype, Boolean ciupgrade, String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force, Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean live_restore, Boolean localtime, String lock_, String machine, Integer memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp, Integer sockets, String spice_enhancements, String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet, String tags, Boolean tdf, Boolean template, String tpmstate0, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN, String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vmid", vmid);
                     parameters.put("acpi", acpi);
@@ -9689,6 +10204,7 @@ public class PveClient extends PveClientBase {
                     parameters.put("cicustom", cicustom);
                     parameters.put("cipassword", cipassword);
                     parameters.put("citype", citype);
+                    parameters.put("ciupgrade", ciupgrade);
                     parameters.put("ciuser", ciuser);
                     parameters.put("cores", cores);
                     parameters.put("cpu", cpu);
@@ -10737,7 +11253,8 @@ public class PveClient extends PveClientBase {
                                  * ports or ranges.
                                  * @param enable Flag to enable/disable a rule.
                                  * @param icmp_type Specify icmp-type. Only
-                                 * valid if proto equals 'icmp'.
+                                 * valid if proto equals 'icmp' or
+                                 * 'icmpv6'/'ipv6-icmp'.
                                  * @param iface Network interface name. You have
                                  * to use network configuration key names for
                                  * VMs and containers ('net\d+'). Host related
@@ -10842,7 +11359,7 @@ public class PveClient extends PveClientBase {
                              * list to match several ports or ranges.
                              * @param enable Flag to enable/disable a rule.
                              * @param icmp_type Specify icmp-type. Only valid if
-                             * proto equals 'icmp'.
+                             * proto equals 'icmp' or 'icmpv6'/'ipv6-icmp'.
                              * @param iface Network interface name. You have to
                              * use network configuration key names for VMs and
                              * containers ('net\d+'). Host related rules can use
@@ -12499,21 +13016,6 @@ public class PveClient extends PveClientBase {
                 public PVEPool getPool() {
                     return pool == null ? (pool = new PVEPool(client, this.node)) : pool;
                 }
-                private PVEPools pools;
-
-                public PVEPools getPools() {
-                    return pools == null ? (pools = new PVEPools(client, this.node)) : pools;
-                }
-                private PVEConfig config;
-
-                public PVEConfig getConfig() {
-                    return config == null ? (config = new PVEConfig(client, this.node)) : config;
-                }
-                private PVEConfigdb configdb;
-
-                public PVEConfigdb getConfigdb() {
-                    return configdb == null ? (configdb = new PVEConfigdb(client, this.node)) : configdb;
-                }
                 private PVEInit init;
 
                 public PVEInit getInit() {
@@ -13447,263 +13949,6 @@ public class PveClient extends PveClientBase {
 
                 }
 
-                public class PVEPools {
-
-                    private final PveClient client;
-                    private final Object node;
-
-                    protected PVEPools(PveClient client, Object node) {
-                        this.client = client;
-                        this.node = node;
-                    }
-
-                    public PVENameItem get(Object name) {
-                        return new PVENameItem(client, this.node, name);
-                    }
-
-                    public class PVENameItem {
-
-                        private final PveClient client;
-                        private final Object node;
-                        private final Object name;
-
-                        protected PVENameItem(PveClient client, Object node, Object name) {
-                            this.client = client;
-                            this.node = node;
-                            this.name = name;
-                        }
-
-                        /**
-                         * Destroy pool. Deprecated, please use
-                         * `/nodes/{node}/ceph/pool/{name}`.
-                         *
-                         * @param force If true, destroys pool even if in use
-                         * @param remove_ecprofile Remove the erasure code
-                         * profile. Defaults to true, if applicable.
-                         * @param remove_storages Remove all pveceph-managed
-                         * storages configured for this pool
-                         * @return Result
-                         * @throws JSONException
-                         */
-                        public Result destroypool(Boolean force, Boolean remove_ecprofile, Boolean remove_storages) throws JSONException {
-                            Map<String, Object> parameters = new HashMap<>();
-                            parameters.put("force", force);
-                            parameters.put("remove_ecprofile", remove_ecprofile);
-                            parameters.put("remove_storages", remove_storages);
-                            return client.delete("/nodes/" + this.node + "/ceph/pools/" + this.name + "", parameters);
-                        }
-
-                        /**
-                         * Destroy pool. Deprecated, please use
-                         * `/nodes/{node}/ceph/pool/{name}`.
-                         *
-                         * @return Result
-                         * @throws JSONException
-                         */
-
-                        public Result destroypool() throws JSONException {
-                            return client.delete("/nodes/" + this.node + "/ceph/pools/" + this.name + "", null);
-                        }
-
-                        /**
-                         * List pool settings. Deprecated, please use
-                         * `/nodes/{node}/ceph/pool/{pool}/status`.
-                         *
-                         * @param verbose If enabled, will display additional
-                         * data(eg. statistics).
-                         * @return Result
-                         * @throws JSONException
-                         */
-
-                        public Result getpool(Boolean verbose) throws JSONException {
-                            Map<String, Object> parameters = new HashMap<>();
-                            parameters.put("verbose", verbose);
-                            return client.get("/nodes/" + this.node + "/ceph/pools/" + this.name + "", parameters);
-                        }
-
-                        /**
-                         * List pool settings. Deprecated, please use
-                         * `/nodes/{node}/ceph/pool/{pool}/status`.
-                         *
-                         * @return Result
-                         * @throws JSONException
-                         */
-
-                        public Result getpool() throws JSONException {
-                            return client.get("/nodes/" + this.node + "/ceph/pools/" + this.name + "", null);
-                        }
-
-                        /**
-                         * Change POOL settings. Deprecated, please use
-                         * `/nodes/{node}/ceph/pool/{name}`.
-                         *
-                         * @param application The application of the pool. Enum:
-                         * rbd,cephfs,rgw
-                         * @param crush_rule The rule to use for mapping object
-                         * placement in the cluster.
-                         * @param min_size Minimum number of replicas per object
-                         * @param pg_autoscale_mode The automatic PG scaling
-                         * mode of the pool. Enum: on,off,warn
-                         * @param pg_num Number of placement groups.
-                         * @param pg_num_min Minimal number of placement groups.
-                         * @param size Number of replicas per object
-                         * @param target_size The estimated target size of the
-                         * pool for the PG autoscaler.
-                         * @param target_size_ratio The estimated target ratio
-                         * of the pool for the PG autoscaler.
-                         * @return Result
-                         * @throws JSONException
-                         */
-
-                        public Result setpool(String application, String crush_rule, Integer min_size, String pg_autoscale_mode, Integer pg_num, Integer pg_num_min, Integer size, String target_size, Float target_size_ratio) throws JSONException {
-                            Map<String, Object> parameters = new HashMap<>();
-                            parameters.put("application", application);
-                            parameters.put("crush_rule", crush_rule);
-                            parameters.put("min_size", min_size);
-                            parameters.put("pg_autoscale_mode", pg_autoscale_mode);
-                            parameters.put("pg_num", pg_num);
-                            parameters.put("pg_num_min", pg_num_min);
-                            parameters.put("size", size);
-                            parameters.put("target_size", target_size);
-                            parameters.put("target_size_ratio", target_size_ratio);
-                            return client.set("/nodes/" + this.node + "/ceph/pools/" + this.name + "", parameters);
-                        }
-
-                        /**
-                         * Change POOL settings. Deprecated, please use
-                         * `/nodes/{node}/ceph/pool/{name}`.
-                         *
-                         * @return Result
-                         * @throws JSONException
-                         */
-
-                        public Result setpool() throws JSONException {
-                            return client.set("/nodes/" + this.node + "/ceph/pools/" + this.name + "", null);
-                        }
-
-                    }
-
-                    /**
-                     * List all pools. Deprecated, please use
-                     * `/nodes/{node}/ceph/pool`.
-                     *
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result lspools() throws JSONException {
-                        return client.get("/nodes/" + this.node + "/ceph/pools", null);
-                    }
-
-                    /**
-                     * Create Ceph pool. Deprecated, please use
-                     * `/nodes/{node}/ceph/pool`.
-                     *
-                     * @param name The name of the pool. It must be unique.
-                     * @param add_storages Configure VM and CT storage using the
-                     * new pool.
-                     * @param application The application of the pool. Enum:
-                     * rbd,cephfs,rgw
-                     * @param crush_rule The rule to use for mapping object
-                     * placement in the cluster.
-                     * @param erasure_coding Create an erasure coded pool for
-                     * RBD with an accompaning replicated pool for metadata
-                     * storage. With EC, the common ceph options 'size',
-                     * 'min_size' and 'crush_rule' parameters will be applied to
-                     * the metadata pool.
-                     * @param min_size Minimum number of replicas per object
-                     * @param pg_autoscale_mode The automatic PG scaling mode of
-                     * the pool. Enum: on,off,warn
-                     * @param pg_num Number of placement groups.
-                     * @param pg_num_min Minimal number of placement groups.
-                     * @param size Number of replicas per object
-                     * @param target_size The estimated target size of the pool
-                     * for the PG autoscaler.
-                     * @param target_size_ratio The estimated target ratio of
-                     * the pool for the PG autoscaler.
-                     * @return Result
-                     * @throws JSONException
-                     */
-
-                    public Result createpool(String name, Boolean add_storages, String application, String crush_rule, String erasure_coding, Integer min_size, String pg_autoscale_mode, Integer pg_num, Integer pg_num_min, Integer size, String target_size, Float target_size_ratio) throws JSONException {
-                        Map<String, Object> parameters = new HashMap<>();
-                        parameters.put("name", name);
-                        parameters.put("add_storages", add_storages);
-                        parameters.put("application", application);
-                        parameters.put("crush_rule", crush_rule);
-                        parameters.put("erasure-coding", erasure_coding);
-                        parameters.put("min_size", min_size);
-                        parameters.put("pg_autoscale_mode", pg_autoscale_mode);
-                        parameters.put("pg_num", pg_num);
-                        parameters.put("pg_num_min", pg_num_min);
-                        parameters.put("size", size);
-                        parameters.put("target_size", target_size);
-                        parameters.put("target_size_ratio", target_size_ratio);
-                        return client.create("/nodes/" + this.node + "/ceph/pools", parameters);
-                    }
-
-                    /**
-                     * Create Ceph pool. Deprecated, please use
-                     * `/nodes/{node}/ceph/pool`.
-                     *
-                     * @param name The name of the pool. It must be unique.
-                     * @return Result
-                     * @throws JSONException
-                     */
-
-                    public Result createpool(String name) throws JSONException {
-                        Map<String, Object> parameters = new HashMap<>();
-                        parameters.put("name", name);
-                        return client.create("/nodes/" + this.node + "/ceph/pools", parameters);
-                    }
-
-                }
-
-                public class PVEConfig {
-
-                    private final PveClient client;
-                    private final Object node;
-
-                    protected PVEConfig(PveClient client, Object node) {
-                        this.client = client;
-                        this.node = node;
-                    }
-
-                    /**
-                     * Get the Ceph configuration file. Deprecated, please use
-                     * `/nodes/{node}/ceph/cfg/raw.
-                     *
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result config() throws JSONException {
-                        return client.get("/nodes/" + this.node + "/ceph/config", null);
-                    }
-
-                }
-
-                public class PVEConfigdb {
-
-                    private final PveClient client;
-                    private final Object node;
-
-                    protected PVEConfigdb(PveClient client, Object node) {
-                        this.client = client;
-                        this.node = node;
-                    }
-
-                    /**
-                     * Get the Ceph configuration database. Deprecated, please
-                     * use `/nodes/{node}/ceph/cfg/db.
-                     *
-                     * @return Result
-                     * @throws JSONException
-                     */
-                    public Result configdb() throws JSONException {
-                        return client.get("/nodes/" + this.node + "/ceph/configdb", null);
-                    }
-
-                }
-
                 public class PVEInit {
 
                     private final PveClient client;
@@ -14100,7 +14345,7 @@ public class PveClient extends PveClientBase {
                  * Create backup.
                  *
                  * @param all Backup all known guest systems on this host.
-                 * @param bwlimit Limit I/O bandwidth (KBytes per second).
+                 * @param bwlimit Limit I/O bandwidth (in KiB/s).
                  * @param compress Compress dump file. Enum: 0,1,gzip,lzo,zstd
                  * @param dumpdir Store resulting files to specified directory.
                  * @param exclude Exclude specified guest systems (assumes
@@ -14109,7 +14354,11 @@ public class PveClient extends PveClientBase {
                  * globs). Paths starting with '/' are anchored to the
                  * container's root, other paths match relative to each
                  * subdirectory.
-                 * @param ionice Set CFQ ionice priority.
+                 * @param ionice Set IO priority when using the BFQ scheduler.
+                 * For snapshot and suspend mode backups of VMs, this only
+                 * affects the compressor. A value of 8 means the idle priority
+                 * is used, otherwise the best-effort priority is used with the
+                 * specified value.
                  * @param lockwait Maximal time to wait for the global lock
                  * (minutes).
                  * @param mailnotification Specify when to send an email Enum:
@@ -14430,8 +14679,8 @@ public class PveClient extends PveClientBase {
                 /**
                  * Update subscription info.
                  *
-                 * @param force Always connect to server, even if we have up to
-                 * date info inside local cache.
+                 * @param force Always connect to server, even if local cache is
+                 * still valid.
                  * @return Result
                  * @throws JSONException
                  */
@@ -14626,7 +14875,7 @@ public class PveClient extends PveClientBase {
                  * List available networks
                  *
                  * @param type Only list specific interface types. Enum:
-                 * bridge,bond,eth,alias,vlan,OVSBridge,OVSBond,OVSPort,OVSIntPort,any_bridge
+                 * bridge,bond,eth,alias,vlan,OVSBridge,OVSBond,OVSPort,OVSIntPort,any_bridge,any_local_bridge
                  * @return Result
                  * @throws JSONException
                  */
@@ -17259,7 +17508,7 @@ public class PveClient extends PveClientBase {
                          * ports or ranges.
                          * @param enable Flag to enable/disable a rule.
                          * @param icmp_type Specify icmp-type. Only valid if
-                         * proto equals 'icmp'.
+                         * proto equals 'icmp' or 'icmpv6'/'ipv6-icmp'.
                          * @param iface Network interface name. You have to use
                          * network configuration key names for VMs and
                          * containers ('net\d+'). Host related rules can use
@@ -17358,7 +17607,7 @@ public class PveClient extends PveClientBase {
                      * separated list to match several ports or ranges.
                      * @param enable Flag to enable/disable a rule.
                      * @param icmp_type Specify icmp-type. Only valid if proto
-                     * equals 'icmp'.
+                     * equals 'icmp' or 'icmpv6'/'ipv6-icmp'.
                      * @param iface Network interface name. You have to use
                      * network configuration key names for VMs and containers
                      * ('net\d+'). Host related rules can use arbitrary strings.
@@ -18257,7 +18506,7 @@ public class PveClient extends PveClientBase {
                 }
 
                 /**
-                 * Execute multiple commands in order.
+                 * Execute multiple commands in order, root only.
                  *
                  * @param commands JSON encoded array of commands.
                  * @return Result
@@ -18490,7 +18739,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * ceph_install,upgrade,login
+                 * login,ceph_install,upgrade
                  * @param cmd_opts Add parameters to a command. Encoded as null
                  * terminated strings.
                  * @param height sets the height of the console in pixels.
@@ -18536,7 +18785,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * ceph_install,upgrade,login
+                 * login,ceph_install,upgrade
                  * @param cmd_opts Add parameters to a command. Encoded as null
                  * terminated strings.
                  * @return Result
@@ -18603,7 +18852,7 @@ public class PveClient extends PveClientBase {
                  * Creates a SPICE shell.
                  *
                  * @param cmd Run specific command or default to login. Enum:
-                 * ceph_install,upgrade,login
+                 * login,ceph_install,upgrade
                  * @param cmd_opts Add parameters to a command. Encoded as null
                  * terminated strings.
                  * @param proxy SPICE proxy server. This can be used by the
@@ -19091,13 +19340,18 @@ public class PveClient extends PveClientBase {
              * Update storage configuration.
              *
              * @param blocksize block size
-             * @param bwlimit Set bandwidth/io limits various operations.
+             * @param bwlimit Set I/O bandwidth limit for various operations (in
+             * KiB/s).
              * @param comstar_hg host group for comstar views
              * @param comstar_tg target group for comstar views
              * @param content Allowed content types. NOTE: the value 'rootdir'
              * is used for Containers, and value 'images' for VMs.
              * @param content_dirs Overrides for default content type
              * directories.
+             * @param create_base_path Create the base directory if it doesn't
+             * exist.
+             * @param create_subdirs Populate the directory with the default
+             * structure.
              * @param data_pool Data Pool (for erasure coding only)
              * @param delete A list of settings you want to delete.
              * @param digest Prevent changes if current configuration file has
@@ -19125,7 +19379,9 @@ public class PveClient extends PveClientBase {
              * per guest. Use '-1' for unlimited.
              * @param maxfiles Deprecated: use 'prune-backups' instead. Maximal
              * number of backup files per VM. Use '0' for unlimited.
-             * @param mkdir Create the directory if it doesn't exist.
+             * @param mkdir Create the directory if it doesn't exist and
+             * populate it with default sub-dirs. NOTE: Deprecated, use the
+             * 'create-base-path' and 'create-subdirs' options instead.
              * @param monhost IP addresses of monitors (for external clusters).
              * @param mountpoint mount point
              * @param namespace_ Namespace.
@@ -19136,7 +19392,8 @@ public class PveClient extends PveClientBase {
              * underlying raid system.
              * @param nodes List of cluster node names.
              * @param nowritecache disable write caching on the target
-             * @param options NFS mount options (see 'man nfs')
+             * @param options NFS/CIFS mount options (see 'man nfs' or 'man
+             * mount.cifs')
              * @param password Password for accessing the share/datastore.
              * @param pool Pool.
              * @param port For non default port.
@@ -19169,7 +19426,7 @@ public class PveClient extends PveClientBase {
              * @throws JSONException
              */
 
-            public Result update(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String content_dirs, String data_pool, String delete, String digest, Boolean disable, String domain, String encryption_key, String fingerprint, String format, String fs_name, Boolean fuse, String is_mountpoint, String keyring, Boolean krbd, String lio_tpg, String master_pubkey, Integer max_protected_backups, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String pool, Integer port, String preallocation, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
+            public Result update(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String content_dirs, Boolean create_base_path, Boolean create_subdirs, String data_pool, String delete, String digest, Boolean disable, String domain, String encryption_key, String fingerprint, String format, String fs_name, Boolean fuse, String is_mountpoint, String keyring, Boolean krbd, String lio_tpg, String master_pubkey, Integer max_protected_backups, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String pool, Integer port, String preallocation, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("blocksize", blocksize);
                 parameters.put("bwlimit", bwlimit);
@@ -19177,6 +19434,8 @@ public class PveClient extends PveClientBase {
                 parameters.put("comstar_tg", comstar_tg);
                 parameters.put("content", content);
                 parameters.put("content-dirs", content_dirs);
+                parameters.put("create-base-path", create_base_path);
+                parameters.put("create-subdirs", create_subdirs);
                 parameters.put("data-pool", data_pool);
                 parameters.put("delete", delete);
                 parameters.put("digest", digest);
@@ -19268,12 +19527,17 @@ public class PveClient extends PveClientBase {
          * @param authsupported Authsupported.
          * @param base_ Base volume. This volume is automatically activated.
          * @param blocksize block size
-         * @param bwlimit Set bandwidth/io limits various operations.
+         * @param bwlimit Set I/O bandwidth limit for various operations (in
+         * KiB/s).
          * @param comstar_hg host group for comstar views
          * @param comstar_tg target group for comstar views
          * @param content Allowed content types. NOTE: the value 'rootdir' is
          * used for Containers, and value 'images' for VMs.
          * @param content_dirs Overrides for default content type directories.
+         * @param create_base_path Create the base directory if it doesn't
+         * exist.
+         * @param create_subdirs Populate the directory with the default
+         * structure.
          * @param data_pool Data Pool (for erasure coding only)
          * @param datastore Proxmox Backup Server datastore name.
          * @param disable Flag to disable the storage.
@@ -19300,7 +19564,9 @@ public class PveClient extends PveClientBase {
          * guest. Use '-1' for unlimited.
          * @param maxfiles Deprecated: use 'prune-backups' instead. Maximal
          * number of backup files per VM. Use '0' for unlimited.
-         * @param mkdir Create the directory if it doesn't exist.
+         * @param mkdir Create the directory if it doesn't exist and populate it
+         * with default sub-dirs. NOTE: Deprecated, use the 'create-base-path'
+         * and 'create-subdirs' options instead.
          * @param monhost IP addresses of monitors (for external clusters).
          * @param mountpoint mount point
          * @param namespace_ Namespace.
@@ -19310,7 +19576,8 @@ public class PveClient extends PveClientBase {
          * a single ext4 formatted disk with no underlying raid system.
          * @param nodes List of cluster node names.
          * @param nowritecache disable write caching on the target
-         * @param options NFS mount options (see 'man nfs')
+         * @param options NFS/CIFS mount options (see 'man nfs' or 'man
+         * mount.cifs')
          * @param password Password for accessing the share/datastore.
          * @param path File system path.
          * @param pool Pool.
@@ -19347,7 +19614,7 @@ public class PveClient extends PveClientBase {
          * @throws JSONException
          */
 
-        public Result create(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String content_dirs, String data_pool, String datastore, Boolean disable, String domain, String encryption_key, String export, String fingerprint, String format, String fs_name, Boolean fuse, String is_mountpoint, String iscsiprovider, String keyring, Boolean krbd, String lio_tpg, String master_pubkey, Integer max_protected_backups, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String path, String pool, Integer port, String portal, String preallocation, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
+        public Result create(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String content_dirs, Boolean create_base_path, Boolean create_subdirs, String data_pool, String datastore, Boolean disable, String domain, String encryption_key, String export, String fingerprint, String format, String fs_name, Boolean fuse, String is_mountpoint, String iscsiprovider, String keyring, Boolean krbd, String lio_tpg, String master_pubkey, Integer max_protected_backups, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String path, String pool, Integer port, String portal, String preallocation, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("storage", storage);
             parameters.put("type", type);
@@ -19359,6 +19626,8 @@ public class PveClient extends PveClientBase {
             parameters.put("comstar_tg", comstar_tg);
             parameters.put("content", content);
             parameters.put("content-dirs", content_dirs);
+            parameters.put("create-base-path", create_base_path);
+            parameters.put("create-subdirs", create_subdirs);
             parameters.put("data-pool", data_pool);
             parameters.put("datastore", datastore);
             parameters.put("disable", disable);
@@ -19518,6 +19787,11 @@ public class PveClient extends PveClientBase {
                 public PVETfa getTfa() {
                     return tfa == null ? (tfa = new PVETfa(client, this.userid)) : tfa;
                 }
+                private PVEUnlockTfa unlockTfa;
+
+                public PVEUnlockTfa getUnlockTfa() {
+                    return unlockTfa == null ? (unlockTfa = new PVEUnlockTfa(client, this.userid)) : unlockTfa;
+                }
                 private PVEToken token;
 
                 public PVEToken getToken() {
@@ -19556,6 +19830,28 @@ public class PveClient extends PveClientBase {
 
                     public Result readUserTfaType() throws JSONException {
                         return client.get("/access/users/" + this.userid + "/tfa", null);
+                    }
+
+                }
+
+                public class PVEUnlockTfa {
+
+                    private final PveClient client;
+                    private final Object userid;
+
+                    protected PVEUnlockTfa(PveClient client, Object userid) {
+                        this.client = client;
+                        this.userid = userid;
+                    }
+
+                    /**
+                     * Unlock a user's TFA authentication.
+                     *
+                     * @return Result
+                     * @throws JSONException
+                     */
+                    public Result unlockTfa() throws JSONException {
+                        return client.set("/access/users/" + this.userid + "/unlock-tfa", null);
                     }
 
                 }
@@ -20747,21 +21043,6 @@ public class PveClient extends PveClientBase {
                 return client.get("/access/tfa", null);
             }
 
-            /**
-             * Finish a u2f challenge.
-             *
-             * @param response The response to the current authentication
-             * challenge.
-             * @return Result
-             * @throws JSONException
-             */
-
-            public Result verifyTfa(String response) throws JSONException {
-                Map<String, Object> parameters = new HashMap<>();
-                parameters.put("response", response);
-                return client.create("/access/tfa", parameters);
-            }
-
         }
 
         public class PVETicket {
@@ -20789,10 +21070,8 @@ public class PveClient extends PveClientBase {
              * @param password The secret password. This can also be a valid
              * ticket.
              * @param username User name
-             * @param new_format With webauthn the format of half-authenticated
-             * tickts changed. New clients should pass 1 here and not worry
-             * about the old format. The old format is deprecated and will be
-             * retired with PVE-8.0
+             * @param new_format This parameter is now ignored and assumed to be
+             * 1.
              * @param otp One-time password for Two-factor authentication.
              * @param path Verify ticket, and check if user have access 'privs'
              * on 'path'
