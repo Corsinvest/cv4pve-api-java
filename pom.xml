@@ -7,7 +7,23 @@
     <packaging>jar</packaging>
     <name>cv4pve-api-java</name>
     <description>Corsinvest for Proxmox VE Client API JAVA</description>
-    <url>http://www.corsinvest.it</url>
+    <url>http://www.corsinvest.it/cv4pve</url>
+    
+    <licenses>
+        <license>
+            <name>GPL-3.0 license</name>
+            <distribution>>https://www.gnu.org/licenses/gpl-3.0.txt</distribution>
+        </license>
+    </licenses>
+    
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub OWNER Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/corsinvest/cv4pve-api-java</url>
+        </repository>
+    </distributionManagement>
+        
     <developers>
         <developer>
             <id>dc</id>
