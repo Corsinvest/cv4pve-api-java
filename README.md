@@ -33,7 +33,7 @@ The client is generated from a JSON Api on Proxmox VE.
 
 The result is class **Result** and contain methods:
 
-* **getResponse()** returned from Proxmox VE (data,errors,...) JSONObject
+* **getResponse()** returned from Proxmox VE (data,errors,...) JSONObject .
 * **responseInError** (bool) : Contains errors from Proxmox VE.
 * **getStatusCode()** (int) : Status code of the HTTP response.
 * **getReasonPhrase()** (string): The reason phrase which typically is sent by servers together with the status code.
