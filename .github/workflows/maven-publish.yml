@@ -3,7 +3,7 @@
 
 name: Maven Package
 
-on:
+on: 
   release:
     types: [created]
 
