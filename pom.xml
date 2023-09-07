@@ -6,7 +6,7 @@
     <version>8.0.0</version>
     <packaging>jar</packaging>
     <name>cv4pve-api-java</name>
-    <description>Corsinvest for Proxmox VE Client API JAVA</description>
+    <description>Corsinvest for Proxmox VE Client API Java</description>
     <url>http://www.corsinvest.it/cv4pve</url>
     
     <licenses>
@@ -20,7 +20,7 @@
         <repository>
             <id>github</id>
             <name>GitHub OWNER Apache Maven Packages</name>
-            <url>https://maven.pkg.github.com/corsinvest/cv4pve-api-java</url>
+            <url>https://maven.pkg.github.com/corsinvest</url>
         </repository>
     </distributionManagement>
         
