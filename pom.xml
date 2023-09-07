@@ -20,7 +20,7 @@
         <repository>
             <id>github</id>
             <name>GitHub OWNER Apache Maven Packages</name>
-            <url>https://maven.pkg.github.com/corsinvest</url>
+            <url>https://maven.pkg.github.com/corsinvest/cv4pve-api-java</url>
         </repository>
     </distributionManagement>
         
