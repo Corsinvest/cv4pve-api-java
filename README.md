@@ -2,7 +2,7 @@
 
 Proxmox VE Client API Java
 
-[![License](https://img.shields.io/github/license/Corsinvest/cv4pve-api-java.svg)](LICENSE.md) ![GitHub release](https://img.shields.io/github/release/Corsinvest/cv4pve-api-java.svg)
+![GitHub release](https://img.shields.io/github/release/Corsinvest/cv4pve-api-java.svg)
 
 [Proxmox VE Api](https://pve.proxmox.com/pve-docs/api-viewer/)
 
@@ -19,7 +19,7 @@ Corsinvest for Proxmox VE Api Client  (Made in Italy)
 ## Copyright and License
 
 Copyright: Corsinvest Srl
-For licensing details please visit [LICENSE.md](LICENSE.md)
+For licensing details please visit [LICENSE](LICENSE)
 
 ## Commercial Support
 
@@ -71,6 +71,7 @@ The result is class **Result** and contain methods:
 * Minimal dependency library
 * ClientBase lite function
 * Form Proxmox VE 6.2 support Api Token for user
+* Login with One-time password for Two-factor authentication
 
 ## Api token
 

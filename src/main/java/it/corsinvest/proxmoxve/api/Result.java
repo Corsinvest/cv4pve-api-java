@@ -2,7 +2,6 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-
 package it.corsinvest.proxmoxve.api;
 
 import java.net.HttpURLConnection;
@@ -23,8 +22,13 @@ public class Result {
     private final MethodType _methodType;
     private final ResponseType _responseType;
 
-    protected Result(JSONObject response, int statusCode, String reasonPhrase, String requestResource,
-            Map<String, Object> requestParameters, MethodType methodType, ResponseType responseType) {
+    protected Result(JSONObject response,
+            int statusCode,
+            String reasonPhrase,
+            String requestResource,
+            Map<String, Object> requestParameters,
+            MethodType methodType,
+            ResponseType responseType) {
         _response = response;
         _statusCode = statusCode;
         _reasonPhrase = reasonPhrase;

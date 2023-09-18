@@ -2,7 +2,6 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-
 package it.corsinvest.proxmoxve.api;
 
 import java.io.BufferedReader;
@@ -74,7 +73,7 @@ public class PveClientBase {
      * Get the response type that is going to be returned when doing requests
      * (json, png).
      *
-     * @return
+     * @return ResponseType
      */
     public ResponseType getResponseType() {
         return _responseType;
@@ -84,7 +83,7 @@ public class PveClientBase {
      * Set the response type that is going to be returned when doing requests
      * (json, png).
      *
-     * @param responseType
+     * @param responseType Response type
      */
     public void setResponseType(ResponseType responseType) {
         _responseType = responseType;
@@ -95,10 +94,11 @@ public class PveClientBase {
      *
      * @param username user name or &lt;username&gt;@&lt;realm&gt;
      * @param password password connection
-     * @return
-     * @throws JSONException
+     * @return boolean
+     * @throws JSONException 
+     * @throws PveExceptionAuthentication 
      */
-    public boolean login(String username, String password) throws JSONException {
+    public boolean login(String username, String password) throws JSONException, PveExceptionAuthentication {
         String realm = "pam";
         String[] data = username.split("@");
         if (data.length > 1) {
@@ -106,7 +106,7 @@ public class PveClientBase {
             realm = data[1];
         }
 
-        return login(username, password, realm);
+        return login(username, password, realm, null);
     }
 
     /**
@@ -114,26 +114,50 @@ public class PveClientBase {
      *
      * @param username user name
      * @param password password connection
-     * @param realm    pam/pve or custom
-     * @return
+     * @param realm pam/pve or custom
+     *
+     * @return boolean
      * @throws JSONException
+     * @throws PveExceptionAuthentication
      */
-    public boolean login(String username, String password, String realm) throws JSONException {
+    public boolean login(String username, String password, String realm)
+            throws JSONException, PveExceptionAuthentication {
+        return login(username, password, realm, null);
+    }
+
+    /**
+     * Creation ticket from login.
+     *
+     * @param username user name
+     * @param password password connection
+     * @param realm pam/pve or custom
+     * @param otp One-time password for Two-factor authentication.
+     *
+     * @return boolean
+     * @throws JSONException
+     * @throws PveExceptionAuthentication
+     */
+    public boolean login(String username, String password, String realm, String otp)
+            throws JSONException, PveExceptionAuthentication {
         Result result = create("/access/ticket", new HashMap<String, Object>() {
             {
                 put("password", password);
                 put("username", username);
                 put("realm", realm);
+                put("otp", otp);
             }
         });
 
         if (result.isSuccessStatusCode()) {
+            if (result.getResponse().getJSONObject("data").has("NeedTFA")) {
+                throw new PveExceptionAuthentication(result,
+                        "Couldn't authenticate user: missing Two Factor Authentication (TFA)");
+            }
+
             _ticketCSRFPreventionToken = result.getResponse().getJSONObject("data").getString("CSRFPreventionToken");
             _ticketPVEAuthCookie = result.getResponse().getJSONObject("data").getString("ticket");
-            return true;
-        } else {
-            return false;
         }
+        return result.isSuccessStatusCode();
     }
 
     /**
@@ -148,7 +172,7 @@ public class PveClientBase {
     /**
      * Execute method GET
      *
-     * @param resource   Url request
+     * @param resource Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -160,7 +184,7 @@ public class PveClientBase {
     /**
      * Execute method PUT
      *
-     * @param resource   Url request
+     * @param resource Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -172,7 +196,7 @@ public class PveClientBase {
     /**
      * Execute method POST
      *
-     * @param resource   Url request
+     * @param resource Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -184,7 +208,7 @@ public class PveClientBase {
     /**
      * Execute method DELETE
      *
-     * @param resource   Url request
+     * @param resource Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -205,7 +229,7 @@ public class PveClientBase {
     /**
      * Return debug level.
      *
-     * @return
+     * @return int
      */
     public int getDebugLevel() {
         return _debugLevel;
@@ -214,7 +238,7 @@ public class PveClientBase {
     /**
      * Return Api Token
      *
-     * @return
+     * @return String
      */
     public String getApiToken() {
         return _apiToken;
@@ -279,7 +303,7 @@ public class PveClientBase {
         }
 
         // Create a trust manager that does not validate certificate chains
-        TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
+        TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
             @Override
             public java.security.cert.X509Certificate[] getAcceptedIssuers() {
                 return null;
@@ -292,7 +316,7 @@ public class PveClientBase {
             @Override
             public void checkServerTrusted(X509Certificate[] certs, String authType) {
             }
-        } };
+        }};
 
         // Install the all-trusting trust manager
         try {
@@ -425,7 +449,7 @@ public class PveClientBase {
     /**
      * Last result
      *
-     * @return
+     * @return Result
      */
     public Result getLastResult() {
         return _lastResult;
@@ -435,8 +459,8 @@ public class PveClientBase {
      * Add indexed parameter
      *
      * @param parameters Parameters
-     * @param name       Name parameter
-     * @param value      Values
+     * @param name Name parameter
+     * @param value Values
      */
     public static void addIndexedParameter(Map<String, Object> parameters, String name, Map<Integer, String> value) {
         if (value != null) {
@@ -449,8 +473,8 @@ public class PveClientBase {
     /**
      * Wait for task to finish
      *
-     * @param task    Task identifier
-     * @param wait    Millisecond wait next check
+     * @param task Task identifier
+     * @param wait Millisecond wait next check
      * @param timeOut Millisecond timeout
      * @return 0 Success
      * @throws JSONException
@@ -479,7 +503,7 @@ public class PveClientBase {
      * Check task is running
      *
      * @param task Task identifier
-     * @return
+     * @return boolean
      * @throws JSONException
      */
     public boolean taskIsRunning(String task) throws JSONException {
@@ -490,7 +514,7 @@ public class PveClientBase {
      * Return exit status code task
      *
      * @param task Task identifier
-     * @return
+     * @return String
      * @throws JSONException
      */
     public String getExitStatusTask(String task) throws JSONException {
@@ -500,9 +524,9 @@ public class PveClientBase {
     /**
      * Convert JSONArray To List
      *
-     * @param <T>
-     * @param array
-     * @return
+     * @param <T> Type of data
+     * @param array Array JSON
+     * @return T List of Type of data
      * @throws JSONException
      */
     public static <T> List<T> JSONArrayToList(JSONArray array) throws JSONException {
@@ -518,8 +542,8 @@ public class PveClientBase {
     /**
      * Get node from task
      *
-     * @param task
-     * @return
+     * @param task Task
+     * @return String
      */
     public static String getNodeFromTask(String task) {
         return task.split(":")[1];

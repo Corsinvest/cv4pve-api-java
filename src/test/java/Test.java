@@ -4,6 +4,7 @@
  */
 
 import it.corsinvest.proxmoxve.api.PveClient;
+import it.corsinvest.proxmoxve.api.PveExceptionAuthentication;
 import it.corsinvest.proxmoxve.api.Result;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -11,7 +12,7 @@ import org.json.JSONObject;
 
 public class Test {
 
-    public static void main(String[] args) throws JSONException {
+    public static void main(String[] args) throws JSONException, PveExceptionAuthentication {
         PveClient client = new PveClient("10.92.90.101", 8006);
         if (client.login("test@pve", "test12345")) {
             //version
