@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.Proxy;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.security.KeyManagementException;
@@ -45,10 +46,19 @@ public class PveClientBase {
     private Result _lastResult;
     private ResponseType _responseType = ResponseType.JSON;
     private String _apiToken;
+    private Proxy _proxy;
+
 
     public PveClientBase(String hostname, int port) {
         _hostname = hostname;
         _port = port;
+        _proxy = Proxy.NO_PROXY;
+    }
+
+    public PveClientBase(String hostname, int port,Proxy proxy) {
+        _hostname = hostname;
+        _port = port;
+        _proxy = proxy;
     }
 
     /**
@@ -67,6 +77,15 @@ public class PveClientBase {
      */
     public int getPort() {
         return _port;
+    }
+
+    /**
+     * Gets the proxy configured.
+     *
+     * @return int The port.
+     */
+    public Proxy getProxy() {
+        return _proxy;
     }
 
     /**
@@ -354,7 +373,7 @@ public class PveClientBase {
                         url += "?" + urlParams.toString();
                     }
 
-                    httpCon = (HttpURLConnection) new URL(url).openConnection();
+                    httpCon = (HttpURLConnection) new URL(url).openConnection(_proxy);
                     httpCon.setRequestMethod("GET");
                     setToken(httpCon);
                     break;
@@ -368,7 +387,7 @@ public class PveClientBase {
                     });
 
                     byte[] postDataBytes = postData.toString().getBytes("UTF-8");
-                    httpCon = (HttpURLConnection) new URL(url).openConnection();
+                    httpCon = (HttpURLConnection) new URL(url).openConnection(_proxy);
                     httpCon.setRequestMethod(httpMethod);
                     httpCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
                     httpCon.setRequestProperty("Content-Length", String.valueOf(postDataBytes.length));
@@ -380,7 +399,7 @@ public class PveClientBase {
                 }
 
                 case DELETE: {
-                    httpCon = (HttpURLConnection) new URL(url).openConnection();
+                    httpCon = (HttpURLConnection) new URL(url).openConnection(_proxy);
                     httpCon.setRequestMethod("DELETE");
                     setToken(httpCon);
                     break;

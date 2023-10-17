@@ -7,6 +7,7 @@ package it.corsinvest.proxmoxve.api;
 import java.util.HashMap;
 import java.util.Map;
 import org.json.JSONException;
+import java.net.Proxy;
 
 /**
  * Proxmox VE Client
@@ -17,6 +18,11 @@ public class PveClient extends PveClientBase {
 
     public PveClient(String hostname, int port) {
         super(hostname, port);
+        client = this;
+    }
+
+    public PveClient(String hostname, int port, Proxy proxy) {
+        super(hostname, port, proxy);
         client = this;
     }
 
