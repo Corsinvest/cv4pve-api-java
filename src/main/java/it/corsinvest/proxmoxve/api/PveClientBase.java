@@ -7,11 +7,9 @@ package it.corsinvest.proxmoxve.api;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.Proxy;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
@@ -294,31 +292,28 @@ public class PveClientBase {
             case GET:
                 httpMethod = "GET";
                 break;
-
             case SET:
                 httpMethod = "PUT";
                 break;
-
             case CREATE:
                 httpMethod = "POST";
                 break;
-
             case DELETE:
                 httpMethod = "DELETE";
                 break;
-
             default:
                 throw new AssertionError();
         }
 
-        Map params = new LinkedHashMap<>();
+        Map<String, Object> params = new LinkedHashMap<>();
         if (parameters != null) {
             parameters.entrySet().stream().filter((entry) -> (entry.getValue() != null)).forEachOrdered((entry) -> {
-                String value = entry.getValue().toString();
-                if (entry.getValue() instanceof Boolean) {
-                    value = ((Boolean) entry.getValue()) ? "1" : "0";
+                Object value = entry.getValue();
+                if (value instanceof Boolean) {
+                    params.put(entry.getKey(), ((Boolean) value) ? 1 : 0);
+                } else {
+                    params.put(entry.getKey(), value);
                 }
-                params.put(entry.getKey(), value);
             });
         }
 
@@ -364,12 +359,10 @@ public class PveClientBase {
                     if (!params.isEmpty()) {
                         StringBuilder urlParams = new StringBuilder();
                         params.forEach((key, value) -> {
-                            try {
-                                urlParams.append(urlParams.length() > 0 ? "&" : "").append(key).append("=")
-                                        .append(URLEncoder.encode((String) value, "UTF-8"));
-                            } catch (UnsupportedEncodingException ex) {
-                                Logger.getLogger(PveClientBase.class.getName()).log(Level.SEVERE, null, ex);
-                            }
+                            urlParams.append(urlParams.length() > 0 ? "&" : "")
+                                    .append(key)
+                                    .append("=")
+                                    .append(value.toString());
                         });
                         url += "?" + urlParams.toString();
                     }
@@ -382,20 +375,24 @@ public class PveClientBase {
 
                 case SET:
                 case CREATE: {
-                    StringBuilder postData = new StringBuilder();
+                    /*
+                    var postData = new StringBuilder();
                     params.forEach((key, value) -> {
                         postData.append(postData.length() > 0 ? "&" : "").append(key).append("=").append(value);
                     });
 
-                    byte[] postDataBytes = postData.toString().getBytes("UTF-8");
+                    var postDataBytes = postData.toString().getBytes("UTF-8");
+                     */
+
+                    String data = new JSONObject(params).toString();
                     httpCon = (HttpURLConnection) new URL(url).openConnection(_proxy);
                     httpCon.setRequestMethod(httpMethod);
-                    httpCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-                    httpCon.setRequestProperty("Content-Length", String.valueOf(postDataBytes.length));
+                    httpCon.setRequestProperty("Content-Type", "application/json");
+                    httpCon.setRequestProperty("Content-Length", String.valueOf(data.length()));
                     setToken(httpCon);
 
                     httpCon.setDoOutput(true);
-                    httpCon.getOutputStream().write(postDataBytes);
+                    httpCon.getOutputStream().write(data.getBytes("UTF-8"));
                     break;
                 }
 
@@ -507,6 +504,7 @@ public class PveClientBase {
         if (timeOut < wait) {
             timeOut = wait + 5000;
         }
+
         long timeStart = System.currentTimeMillis();
         long waitTime = System.currentTimeMillis();
         while (isRunning && (System.currentTimeMillis() - timeStart) < timeOut) {
@@ -550,7 +548,7 @@ public class PveClientBase {
      * @throws JSONException
      */
     public static <T> List<T> JSONArrayToList(JSONArray array) throws JSONException {
-        List<T> ret = new ArrayList<>();
+        ArrayList<T> ret = new ArrayList<T>();
         if (array != null) {
             for (int i = 0; i < array.length(); i++) {
                 ret.add((T) array.get(i));

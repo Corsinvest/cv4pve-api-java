@@ -5,6 +5,7 @@
 package it.corsinvest.proxmoxve.api;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.json.JSONException;
 
@@ -679,7 +680,7 @@ public class PveClient extends PveClientBase {
                          * @throws JSONException
                          */
 
-                        public Result updateSendmailEndpoint(String author, String comment, String delete, String digest, Boolean disable, String from_address, String mailto, String mailto_user) throws JSONException {
+                        public Result updateSendmailEndpoint(String author, String comment, List<Object> delete, String digest, Boolean disable, String from_address, List<Object> mailto, List<Object> mailto_user) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("author", author);
                             parameters.put("comment", comment);
@@ -729,7 +730,7 @@ public class PveClient extends PveClientBase {
                      * @throws JSONException
                      */
 
-                    public Result createSendmailEndpoint(String name, String author, String comment, Boolean disable, String from_address, String mailto, String mailto_user) throws JSONException {
+                    public Result createSendmailEndpoint(String name, String author, String comment, Boolean disable, String from_address, List<Object> mailto, List<Object> mailto_user) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
                         parameters.put("author", author);
@@ -816,7 +817,7 @@ public class PveClient extends PveClientBase {
                          * @throws JSONException
                          */
 
-                        public Result updateGotifyEndpoint(String comment, String delete, String digest, Boolean disable, String server, String token) throws JSONException {
+                        public Result updateGotifyEndpoint(String comment, List<Object> delete, String digest, Boolean disable, String server, String token) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("comment", comment);
                             parameters.put("delete", delete);
@@ -964,7 +965,7 @@ public class PveClient extends PveClientBase {
                          * @throws JSONException
                          */
 
-                        public Result updateSmtpEndpoint(String author, String comment, String delete, String digest, Boolean disable, String from_address, String mailto, String mailto_user, String mode, String password, Integer port, String server, String username) throws JSONException {
+                        public Result updateSmtpEndpoint(String author, String comment, List<Object> delete, String digest, Boolean disable, String from_address, List<Object> mailto, List<Object> mailto_user, String mode, String password, Integer port, String server, String username) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("author", author);
                             parameters.put("comment", comment);
@@ -1028,7 +1029,7 @@ public class PveClient extends PveClientBase {
                      * @throws JSONException
                      */
 
-                    public Result createSmtpEndpoint(String from_address, String name, String server, String author, String comment, Boolean disable, String mailto, String mailto_user, String mode, String password, Integer port, String username) throws JSONException {
+                    public Result createSmtpEndpoint(String from_address, String name, String server, String author, String comment, Boolean disable, List<Object> mailto, List<Object> mailto_user, String mode, String password, Integer port, String username) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("from-address", from_address);
                         parameters.put("name", name);
@@ -1209,7 +1210,7 @@ public class PveClient extends PveClientBase {
                      * @throws JSONException
                      */
 
-                    public Result updateMatcher(String comment, String delete, String digest, Boolean disable, Boolean invert_match, String match_calendar, String match_field, String match_severity, String mode, String target) throws JSONException {
+                    public Result updateMatcher(String comment, List<Object> delete, String digest, Boolean disable, Boolean invert_match, List<Object> match_calendar, List<Object> match_field, List<Object> match_severity, String mode, List<Object> target) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("comment", comment);
                         parameters.put("delete", delete);
@@ -1266,7 +1267,7 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result createMatcher(String name, String comment, Boolean disable, Boolean invert_match, String match_calendar, String match_field, String match_severity, String mode, String target) throws JSONException {
+                public Result createMatcher(String name, String comment, Boolean disable, Boolean invert_match, List<Object> match_calendar, List<Object> match_field, List<Object> match_severity, String mode, List<Object> target) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("name", name);
                     parameters.put("comment", comment);
@@ -2902,7 +2903,7 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result updateJob(Boolean all, Integer bwlimit, String comment, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, String notes_template, String notification_policy, String notification_target, String performance, Integer pigz, String pool, Boolean protected_, String prune_backups, Boolean quiet, Boolean remove, Boolean repeat_missed, String schedule, String script, String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+                public Result updateJob(Boolean all, Integer bwlimit, String comment, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, List<Object> exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, String notes_template, String notification_policy, String notification_target, String performance, Integer pigz, String pool, Boolean protected_, String prune_backups, Boolean quiet, Boolean remove, Boolean repeat_missed, String schedule, String script, String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("all", all);
                     parameters.put("bwlimit", bwlimit);
@@ -3041,7 +3042,7 @@ public class PveClient extends PveClientBase {
              * @throws JSONException
              */
 
-            public Result createJob(Boolean all, Integer bwlimit, String comment, String compress, String dow, String dumpdir, Boolean enabled, String exclude, String exclude_path, String id, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, String notes_template, String notification_policy, String notification_target, String performance, Integer pigz, String pool, Boolean protected_, String prune_backups, Boolean quiet, Boolean remove, Boolean repeat_missed, String schedule, String script, String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+            public Result createJob(Boolean all, Integer bwlimit, String comment, String compress, String dow, String dumpdir, Boolean enabled, String exclude, List<Object> exclude_path, String id, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, String notes_template, String notification_policy, String notification_target, String performance, Integer pigz, String pool, Boolean protected_, String prune_backups, Boolean quiet, Boolean remove, Boolean repeat_missed, String schedule, String script, String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("all", all);
                 parameters.put("bwlimit", bwlimit);
@@ -4598,7 +4599,7 @@ public class PveClient extends PveClientBase {
                      * @throws JSONException
                      */
 
-                    public Result update(String delete, String description, String digest, String map, Boolean mdev) throws JSONException {
+                    public Result update(String delete, String description, String digest, List<Object> map, Boolean mdev) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("delete", delete);
                         parameters.put("description", description);
@@ -4658,7 +4659,7 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result create(String id, String map, String description, Boolean mdev) throws JSONException {
+                public Result create(String id, List<Object> map, String description, Boolean mdev) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("id", id);
                     parameters.put("map", map);
@@ -4676,7 +4677,7 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result create(String id, String map) throws JSONException {
+                public Result create(String id, List<Object> map) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("id", id);
                     parameters.put("map", map);
@@ -4742,7 +4743,7 @@ public class PveClient extends PveClientBase {
                      * @throws JSONException
                      */
 
-                    public Result update(String map, String delete, String description, String digest) throws JSONException {
+                    public Result update(List<Object> map, String delete, String description, String digest) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("map", map);
                         parameters.put("delete", delete);
@@ -4759,7 +4760,7 @@ public class PveClient extends PveClientBase {
                      * @throws JSONException
                      */
 
-                    public Result update(String map) throws JSONException {
+                    public Result update(List<Object> map) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("map", map);
                         return client.set("/cluster/mapping/usb/" + this.id + "", parameters);
@@ -4803,7 +4804,7 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result create(String id, String map, String description) throws JSONException {
+                public Result create(String id, List<Object> map, String description) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("id", id);
                     parameters.put("map", map);
@@ -4820,7 +4821,7 @@ public class PveClient extends PveClientBase {
                  * @throws JSONException
                  */
 
-                public Result create(String id, String map) throws JSONException {
+                public Result create(String id, List<Object> map) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("id", id);
                     parameters.put("map", map);
@@ -4996,7 +4997,7 @@ public class PveClient extends PveClientBase {
                              * @throws JSONException
                              */
 
-                            public Result update(String delete, String dhcp_dns_server, String dhcp_range, String digest, String dnszoneprefix, String gateway, Boolean snat) throws JSONException {
+                            public Result update(String delete, String dhcp_dns_server, List<Object> dhcp_range, String digest, String dnszoneprefix, String gateway, Boolean snat) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("delete", delete);
                                 parameters.put("dhcp-dns-server", dhcp_dns_server);
@@ -5065,7 +5066,7 @@ public class PveClient extends PveClientBase {
                          * @throws JSONException
                          */
 
-                        public Result create(String subnet, String type, String dhcp_dns_server, String dhcp_range, String dnszoneprefix, String gateway, Boolean snat) throws JSONException {
+                        public Result create(String subnet, String type, String dhcp_dns_server, List<Object> dhcp_range, String dnszoneprefix, String gateway, Boolean snat) throws JSONException {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("subnet", subnet);
                             parameters.put("type", type);
@@ -8423,7 +8424,7 @@ public class PveClient extends PveClientBase {
                              * @return Result
                              * @throws JSONException
                              */
-                            public Result exec(String command, String input_data) throws JSONException {
+                            public Result exec(List<Object> command, String input_data) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("command", command);
                                 parameters.put("input-data", input_data);
@@ -8440,7 +8441,7 @@ public class PveClient extends PveClientBase {
                              * @throws JSONException
                              */
 
-                            public Result exec(String command) throws JSONException {
+                            public Result exec(List<Object> command) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("command", command);
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/exec", parameters);
@@ -15470,7 +15471,7 @@ public class PveClient extends PveClientBase {
                  * @return Result
                  * @throws JSONException
                  */
-                public Result vzdump(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, String exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String notes_template, String notification_policy, String notification_target, String performance, Integer pigz, String pool, Boolean protected_, String prune_backups, Boolean quiet, Boolean remove, String script, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+                public Result vzdump(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, List<Object> exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String notes_template, String notification_policy, String notification_target, String performance, Integer pigz, String pool, Boolean protected_, String prune_backups, Boolean quiet, Boolean remove, String script, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("all", all);
                     parameters.put("bwlimit", bwlimit);
