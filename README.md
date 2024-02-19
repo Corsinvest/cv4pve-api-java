@@ -130,12 +130,3 @@ if (client.login("root", "password", "pam")) {
         System.out.println(retDeleSnap.getResponse().get("data"));
 }
 ```
-
-## Escape string
-
-For escape string use **URLEncoder.encode**
-
-```java
-Map<Integer, String> netN = new HashMap<>();
-netN.put(1, URLEncoder.encode("name=eth0,rate=15,bridge=vmbr0,firewall=1,gw=xx.xx.xx.xx,ip=xx.xx.xx.xx/24,hwaddr=02:00:be:0f:f2:63",StandardCharsets.UTF_8));
-```
