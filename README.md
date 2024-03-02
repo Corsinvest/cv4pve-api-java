@@ -73,6 +73,7 @@ The result is class **Result** and contain methods:
 * Form Proxmox VE 6.2 support Api Token for user
 * Login with One-time password for Two-factor authentication
 * Support for Proxy
+* Set Timeout for the Connection.
 
 ## Api token
 

@@ -45,6 +45,7 @@ public class PveClientBase {
     private ResponseType _responseType = ResponseType.JSON;
     private String _apiToken;
     private Proxy _proxy = Proxy.NO_PROXY;
+    private int _timeout = 0;
 
     public PveClientBase(String hostname, int port) {
         _hostname = hostname;
@@ -108,6 +109,27 @@ public class PveClientBase {
     }
 
     /**
+     * Set timeout connection
+     *
+     * @param timeout
+     */
+    public void setTimeout(int timeout) {
+        if (timeout < 0) {
+            throw new IllegalArgumentException("timeout can not be negative");
+        }
+        _timeout = timeout;
+    }
+
+    /**
+     * Return timeout connection
+     *
+     * @return
+     */
+    public int getTimeout() {
+        return _timeout;
+    }
+
+    /**
      * Creation ticket from login.
      *
      * @param username user name or &lt;username&gt;@&lt;realm&gt;
@@ -132,7 +154,7 @@ public class PveClientBase {
      *
      * @param username user name
      * @param password password connection
-     * @param realm pam/pve or custom
+     * @param realm    pam/pve or custom
      *
      * @return boolean
      * @throws JSONException
@@ -148,8 +170,8 @@ public class PveClientBase {
      *
      * @param username user name
      * @param password password connection
-     * @param realm pam/pve or custom
-     * @param otp One-time password for Two-factor authentication.
+     * @param realm    pam/pve or custom
+     * @param otp      One-time password for Two-factor authentication.
      *
      * @return boolean
      * @throws JSONException
@@ -190,7 +212,7 @@ public class PveClientBase {
     /**
      * Execute method GET
      *
-     * @param resource Url request
+     * @param resource   Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -202,7 +224,7 @@ public class PveClientBase {
     /**
      * Execute method PUT
      *
-     * @param resource Url request
+     * @param resource   Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -214,7 +236,7 @@ public class PveClientBase {
     /**
      * Execute method POST
      *
-     * @param resource Url request
+     * @param resource   Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -226,7 +248,7 @@ public class PveClientBase {
     /**
      * Execute method DELETE
      *
-     * @param resource Url request
+     * @param resource   Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -282,6 +304,12 @@ public class PveClientBase {
         }
     }
 
+    private void setConnectionTimeout(HttpURLConnection httpCon) {
+        if (_timeout > 0) {
+            httpCon.setConnectTimeout(_timeout);
+        }
+    }
+
     private Result executeAction(String resource, MethodType methodType, Map<String, Object> parameters)
             throws JSONException {
         String url = getApiUrl() + resource;
@@ -310,7 +338,7 @@ public class PveClientBase {
             parameters.entrySet().stream().filter((entry) -> (entry.getValue() != null)).forEachOrdered((entry) -> {
                 Object value = entry.getValue();
                 if (value instanceof Boolean) {
-                    params.put(entry.getKey(), ((Boolean) value) ? 1 : 0);
+                    params.put(entry.getKey(), Boolean.TRUE.equals(value) ? 1 : 0);
                 } else {
                     params.put(entry.getKey(), value);
                 }
@@ -318,7 +346,7 @@ public class PveClientBase {
         }
 
         // Create a trust manager that does not validate certificate chains
-        TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
+        TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
             @Override
             public java.security.cert.X509Certificate[] getAcceptedIssuers() {
                 return null;
@@ -331,7 +359,7 @@ public class PveClientBase {
             @Override
             public void checkServerTrusted(X509Certificate[] certs, String authType) {
             }
-        }};
+        } };
 
         // Install the all-trusting trust manager
         try {
@@ -369,26 +397,19 @@ public class PveClientBase {
 
                     httpCon = (HttpURLConnection) new URL(url).openConnection(_proxy);
                     httpCon.setRequestMethod("GET");
+                    setConnectionTimeout(httpCon);
                     setToken(httpCon);
                     break;
                 }
 
                 case SET:
                 case CREATE: {
-                    /*
-                    var postData = new StringBuilder();
-                    params.forEach((key, value) -> {
-                        postData.append(postData.length() > 0 ? "&" : "").append(key).append("=").append(value);
-                    });
-
-                    var postDataBytes = postData.toString().getBytes("UTF-8");
-                     */
-
                     String data = new JSONObject(params).toString();
                     httpCon = (HttpURLConnection) new URL(url).openConnection(_proxy);
                     httpCon.setRequestMethod(httpMethod);
                     httpCon.setRequestProperty("Content-Type", "application/json");
                     httpCon.setRequestProperty("Content-Length", String.valueOf(data.length()));
+                    setConnectionTimeout(httpCon);
                     setToken(httpCon);
 
                     httpCon.setDoOutput(true);
@@ -399,6 +420,7 @@ public class PveClientBase {
                 case DELETE: {
                     httpCon = (HttpURLConnection) new URL(url).openConnection(_proxy);
                     httpCon.setRequestMethod("DELETE");
+                    setConnectionTimeout(httpCon);
                     setToken(httpCon);
                     break;
                 }
@@ -476,8 +498,8 @@ public class PveClientBase {
      * Add indexed parameter
      *
      * @param parameters Parameters
-     * @param name Name parameter
-     * @param value Values
+     * @param name       Name parameter
+     * @param value      Values
      */
     public static void addIndexedParameter(Map<String, Object> parameters, String name, Map<Integer, String> value) {
         if (value != null) {
@@ -490,8 +512,8 @@ public class PveClientBase {
     /**
      * Wait for task to finish
      *
-     * @param task Task identifier
-     * @param wait Millisecond wait next check
+     * @param task    Task identifier
+     * @param wait    Millisecond wait next check
      * @param timeOut Millisecond timeout
      * @return 0 Success
      * @throws JSONException
@@ -542,7 +564,7 @@ public class PveClientBase {
     /**
      * Convert JSONArray To List
      *
-     * @param <T> Type of data
+     * @param <T>   Type of data
      * @param array Array JSON
      * @return T List of Type of data
      * @throws JSONException
