@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>it.corsinvest.proxmoxve</groupId>
     <artifactId>cv4pve-api-java</artifactId>
-    <version>8.1.3</version>
+    <version>8.1.4</version>
     <packaging>jar</packaging>
     <name>cv4pve-api-java</name>
     <description>Corsinvest for Proxmox VE Client API Java</description>

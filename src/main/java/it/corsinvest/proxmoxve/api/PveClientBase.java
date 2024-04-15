@@ -46,7 +46,7 @@ public class PveClientBase {
     private String _apiToken;
     private Proxy _proxy = Proxy.NO_PROXY;
     private int _timeout = 0;
-    private boolean _verifyCertificate = false;
+    private boolean _validateCertificate = false;
 
     public PveClientBase(String hostname, int port) {
         _hostname = hostname;
@@ -72,21 +72,21 @@ public class PveClientBase {
     }
 
     /**
-     * Get Verify Certificate
+     * Get Validate Certificate
      *
      * @return bool
      */
-    public boolean getVerifyCertificate() {
-        return _verifyCertificate;
+    public boolean getValidateCertificate() {
+        return _validateCertificate;
     }
 
     /**
-     * Set proxy
+     * Set Validate Certificate
      *
-     * @param verifyCertificate
+     * @param validateCertificate
      */
-    public void setVerifyCertificate(boolean verifyCertificate) {
-        _verifyCertificate = verifyCertificate;
+    public void setValidateCertificate(boolean validateCertificate) {
+        _validateCertificate = validateCertificate;
     }
 
     /**
@@ -364,7 +364,7 @@ public class PveClientBase {
             });
         }
 
-        if (!_verifyCertificate) {
+        if (!_validateCertificate) {
             // Create a trust manager that does not validate certificate chains
             TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
                 @Override
