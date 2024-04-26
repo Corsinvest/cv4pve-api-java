@@ -2842,6 +2842,7 @@ public class PveClient extends PveClientBase {
                  * globs). Paths starting with '/' are anchored to the
                  * container's root, other paths match relative to each
                  * subdirectory.
+                 * @param fleecing Options for backup fleecing (VM only).
                  * @param ionice Set IO priority when using the BFQ scheduler.
                  * For snapshot and suspend mode backups of VMs, this only
                  * affects the compressor. A value of 8 means the idle priority
@@ -2849,11 +2850,12 @@ public class PveClient extends PveClientBase {
                  * specified value.
                  * @param lockwait Maximal time to wait for the global lock
                  * (minutes).
-                 * @param mailnotification Deprecated: use 'notification-policy'
-                 * instead. Enum: always,failure
-                 * @param mailto Comma-separated list of email addresses or
-                 * users that should receive email notifications. Has no effect
-                 * if the 'notification-target' option is set at the same time.
+                 * @param mailnotification Deprecated: use notification
+                 * targets/matchers instead. Specify when to send a notification
+                 * mail Enum: always,failure
+                 * @param mailto Deprecated: Use notification targets/matchers
+                 * instead. Comma-separated list of email addresses or users
+                 * that should receive email notifications.
                  * @param maxfiles Deprecated: use 'prune-backups' instead.
                  * Maximal number of backup files per guest system.
                  * @param mode Backup mode. Enum: snapshot,suspend,stop
@@ -2865,13 +2867,18 @@ public class PveClient extends PveClientBase {
                  * might be added in the future. Needs to be a single line,
                  * newline and backslash need to be escaped as '\n' and '\\'
                  * respectively.
-                 * @param notification_policy Specify when to send a
-                 * notification Enum: always,failure,never
-                 * @param notification_target Determine the target to which
-                 * notifications should be sent. Can either be a notification
-                 * endpoint or a notification group. This option takes
-                 * precedence over 'mailto', meaning that if both are set, the
-                 * 'mailto' option will be ignored.
+                 * @param notification_mode Determine which notification system
+                 * to use. If set to 'legacy-sendmail', vzdump will consider the
+                 * mailto/mailnotification parameters and send emails to the
+                 * specified address(es) via the 'sendmail' command. If set to
+                 * 'notification-system', a notification will be sent via PVE's
+                 * notification system, and the mailto and mailnotification will
+                 * be ignored. If set to 'auto' (default setting), an email will
+                 * be sent if mailto is set, and the notification system will be
+                 * used if not. Enum: auto,legacy-sendmail,notification-system
+                 * @param notification_policy Deprecated: Do not use Enum:
+                 * always,failure,never
+                 * @param notification_target Deprecated: Do not use
                  * @param performance Other performance-related settings.
                  * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1
                  * uses half of cores, N&amp;gt;1 uses N as thread count.
@@ -2898,12 +2905,13 @@ public class PveClient extends PveClientBase {
                  * @param tmpdir Store temporary files to specified directory.
                  * @param vmid The ID of the guest system you want to backup.
                  * @param zstd Zstd threads. N=0 uses half of the available
-                 * cores, N&amp;gt;0 uses N as thread count.
+                 * cores, if N is set to a value bigger than 0, N is used as
+                 * thread count.
                  * @return Result
                  * @throws JSONException
                  */
 
-                public Result updateJob(Boolean all, Integer bwlimit, String comment, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, List<Object> exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, String notes_template, String notification_policy, String notification_target, String performance, Integer pigz, String pool, Boolean protected_, String prune_backups, Boolean quiet, Boolean remove, Boolean repeat_missed, String schedule, String script, String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+                public Result updateJob(Boolean all, Integer bwlimit, String comment, String compress, String delete, String dow, String dumpdir, Boolean enabled, String exclude, List<Object> exclude_path, String fleecing, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, String notes_template, String notification_mode, String notification_policy, String notification_target, String performance, Integer pigz, String pool, Boolean protected_, String prune_backups, Boolean quiet, Boolean remove, Boolean repeat_missed, String schedule, String script, String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("all", all);
                     parameters.put("bwlimit", bwlimit);
@@ -2915,6 +2923,7 @@ public class PveClient extends PveClientBase {
                     parameters.put("enabled", enabled);
                     parameters.put("exclude", exclude);
                     parameters.put("exclude-path", exclude_path);
+                    parameters.put("fleecing", fleecing);
                     parameters.put("ionice", ionice);
                     parameters.put("lockwait", lockwait);
                     parameters.put("mailnotification", mailnotification);
@@ -2923,6 +2932,7 @@ public class PveClient extends PveClientBase {
                     parameters.put("mode", mode);
                     parameters.put("node", node);
                     parameters.put("notes-template", notes_template);
+                    parameters.put("notification-mode", notification_mode);
                     parameters.put("notification-policy", notification_policy);
                     parameters.put("notification-target", notification_target);
                     parameters.put("performance", performance);
@@ -2983,6 +2993,7 @@ public class PveClient extends PveClientBase {
              * @param exclude_path Exclude certain files/directories (shell
              * globs). Paths starting with '/' are anchored to the container's
              * root, other paths match relative to each subdirectory.
+             * @param fleecing Options for backup fleecing (VM only).
              * @param id Job ID (will be autogenerated).
              * @param ionice Set IO priority when using the BFQ scheduler. For
              * snapshot and suspend mode backups of VMs, this only affects the
@@ -2991,11 +3002,12 @@ public class PveClient extends PveClientBase {
              * value.
              * @param lockwait Maximal time to wait for the global lock
              * (minutes).
-             * @param mailnotification Deprecated: use 'notification-policy'
-             * instead. Enum: always,failure
-             * @param mailto Comma-separated list of email addresses or users
-             * that should receive email notifications. Has no effect if the
-             * 'notification-target' option is set at the same time.
+             * @param mailnotification Deprecated: use notification
+             * targets/matchers instead. Specify when to send a notification
+             * mail Enum: always,failure
+             * @param mailto Deprecated: Use notification targets/matchers
+             * instead. Comma-separated list of email addresses or users that
+             * should receive email notifications.
              * @param maxfiles Deprecated: use 'prune-backups' instead. Maximal
              * number of backup files per guest system.
              * @param mode Backup mode. Enum: snapshot,suspend,stop
@@ -3006,13 +3018,18 @@ public class PveClient extends PveClientBase {
              * {{node}}, and {{vmid}}, but more might be added in the future.
              * Needs to be a single line, newline and backslash need to be
              * escaped as '\n' and '\\' respectively.
-             * @param notification_policy Specify when to send a notification
-             * Enum: always,failure,never
-             * @param notification_target Determine the target to which
-             * notifications should be sent. Can either be a notification
-             * endpoint or a notification group. This option takes precedence
-             * over 'mailto', meaning that if both are set, the 'mailto' option
-             * will be ignored.
+             * @param notification_mode Determine which notification system to
+             * use. If set to 'legacy-sendmail', vzdump will consider the
+             * mailto/mailnotification parameters and send emails to the
+             * specified address(es) via the 'sendmail' command. If set to
+             * 'notification-system', a notification will be sent via PVE's
+             * notification system, and the mailto and mailnotification will be
+             * ignored. If set to 'auto' (default setting), an email will be
+             * sent if mailto is set, and the notification system will be used
+             * if not. Enum: auto,legacy-sendmail,notification-system
+             * @param notification_policy Deprecated: Do not use Enum:
+             * always,failure,never
+             * @param notification_target Deprecated: Do not use
              * @param performance Other performance-related settings.
              * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1 uses
              * half of cores, N&amp;gt;1 uses N as thread count.
@@ -3037,12 +3054,12 @@ public class PveClient extends PveClientBase {
              * @param tmpdir Store temporary files to specified directory.
              * @param vmid The ID of the guest system you want to backup.
              * @param zstd Zstd threads. N=0 uses half of the available cores,
-             * N&amp;gt;0 uses N as thread count.
+             * if N is set to a value bigger than 0, N is used as thread count.
              * @return Result
              * @throws JSONException
              */
 
-            public Result createJob(Boolean all, Integer bwlimit, String comment, String compress, String dow, String dumpdir, Boolean enabled, String exclude, List<Object> exclude_path, String id, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, String notes_template, String notification_policy, String notification_target, String performance, Integer pigz, String pool, Boolean protected_, String prune_backups, Boolean quiet, Boolean remove, Boolean repeat_missed, String schedule, String script, String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+            public Result createJob(Boolean all, Integer bwlimit, String comment, String compress, String dow, String dumpdir, Boolean enabled, String exclude, List<Object> exclude_path, String fleecing, String id, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String node, String notes_template, String notification_mode, String notification_policy, String notification_target, String performance, Integer pigz, String pool, Boolean protected_, String prune_backups, Boolean quiet, Boolean remove, Boolean repeat_missed, String schedule, String script, String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("all", all);
                 parameters.put("bwlimit", bwlimit);
@@ -3053,6 +3070,7 @@ public class PveClient extends PveClientBase {
                 parameters.put("enabled", enabled);
                 parameters.put("exclude", exclude);
                 parameters.put("exclude-path", exclude_path);
+                parameters.put("fleecing", fleecing);
                 parameters.put("id", id);
                 parameters.put("ionice", ionice);
                 parameters.put("lockwait", lockwait);
@@ -3062,6 +3080,7 @@ public class PveClient extends PveClientBase {
                 parameters.put("mode", mode);
                 parameters.put("node", node);
                 parameters.put("notes-template", notes_template);
+                parameters.put("notification-mode", notification_mode);
                 parameters.put("notification-policy", notification_policy);
                 parameters.put("notification-target", notification_target);
                 parameters.put("performance", performance);
@@ -4594,7 +4613,8 @@ public class PveClient extends PveClientBase {
                      * file has a different digest. This can be used to prevent
                      * concurrent modifications.
                      * @param map A list of maps for the cluster nodes.
-                     * @param mdev
+                     * @param mdev Marks the device(s) as being capable of
+                     * providing mediated devices.
                      * @return Result
                      * @throws JSONException
                      */
@@ -4654,7 +4674,8 @@ public class PveClient extends PveClientBase {
                  * @param id The ID of the logical PCI mapping.
                  * @param map A list of maps for the cluster nodes.
                  * @param description Description of the logical PCI device.
-                 * @param mdev
+                 * @param mdev Marks the device(s) as being capable of providing
+                 * mediated devices.
                  * @return Result
                  * @throws JSONException
                  */
@@ -8841,7 +8862,7 @@ public class PveClient extends PveClientBase {
                          * `ostype` indicates a Microsoft Windows OS.
                          * @param lock_ Lock/unlock the VM. Enum:
                          * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
-                         * @param machine Specifies the QEMU machine type.
+                         * @param machine Specify the QEMU machine.
                          * @param memory Memory properties.
                          * @param migrate_downtime Set maximum tolerated
                          * downtime (in seconds) for migrations.
@@ -9160,7 +9181,7 @@ public class PveClient extends PveClientBase {
                          * `ostype` indicates a Microsoft Windows OS.
                          * @param lock_ Lock/unlock the VM. Enum:
                          * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
-                         * @param machine Specifies the QEMU machine type.
+                         * @param machine Specify the QEMU machine.
                          * @param memory Memory properties.
                          * @param migrate_downtime Set maximum tolerated
                          * downtime (in seconds) for migrations.
@@ -9761,7 +9782,7 @@ public class PveClient extends PveClientBase {
                              *
                              * @param force_cpu Override QEMU's -cpu argument
                              * with the given string.
-                             * @param machine Specifies the QEMU machine type.
+                             * @param machine Specify the QEMU machine.
                              * @param migratedfrom The cluster node name.
                              * @param migration_network CIDR of the (sub)
                              * network that is used for migration.
@@ -9824,23 +9845,26 @@ public class PveClient extends PveClientBase {
 
                             /**
                              * Stop virtual machine. The qemu process will exit
-                             * immediately. Thisis akin to pulling the power
+                             * immediately. This is akin to pulling the power
                              * plug of a running computer and may damage the VM
-                             * data
+                             * data.
                              *
                              * @param keepActive Do not deactivate storage
                              * volumes.
                              * @param migratedfrom The cluster node name.
+                             * @param overrule_shutdown Try to abort active
+                             * 'qmshutdown' tasks before stopping.
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
                              * @param timeout Wait maximal timeout seconds.
                              * @return Result
                              * @throws JSONException
                              */
-                            public Result vmStop(Boolean keepActive, String migratedfrom, Boolean skiplock, Integer timeout) throws JSONException {
+                            public Result vmStop(Boolean keepActive, String migratedfrom, Boolean overrule_shutdown, Boolean skiplock, Integer timeout) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("keepActive", keepActive);
                                 parameters.put("migratedfrom", migratedfrom);
+                                parameters.put("overrule-shutdown", overrule_shutdown);
                                 parameters.put("skiplock", skiplock);
                                 parameters.put("timeout", timeout);
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/status/stop", parameters);
@@ -9848,9 +9872,9 @@ public class PveClient extends PveClientBase {
 
                             /**
                              * Stop virtual machine. The qemu process will exit
-                             * immediately. Thisis akin to pulling the power
+                             * immediately. This is akin to pulling the power
                              * plug of a running computer and may damage the VM
-                             * data
+                             * data.
                              *
                              * @return Result
                              * @throws JSONException
@@ -9915,10 +9939,9 @@ public class PveClient extends PveClientBase {
 
                             /**
                              * Shutdown virtual machine. This is similar to
-                             * pressing the power button on a physical
-                             * machine.This will send an ACPI event for the
-                             * guest OS, which should then proceed to a clean
-                             * shutdown.
+                             * pressing the power button on a physical machine.
+                             * This will send an ACPI event for the guest OS,
+                             * which should then proceed to a clean shutdown.
                              *
                              * @param forceStop Make sure the VM stops.
                              * @param keepActive Do not deactivate storage
@@ -9940,10 +9963,9 @@ public class PveClient extends PveClientBase {
 
                             /**
                              * Shutdown virtual machine. This is similar to
-                             * pressing the power button on a physical
-                             * machine.This will send an ACPI event for the
-                             * guest OS, which should then proceed to a clean
-                             * shutdown.
+                             * pressing the power button on a physical machine.
+                             * This will send an ACPI event for the guest OS,
+                             * which should then proceed to a clean shutdown.
                              *
                              * @return Result
                              * @throws JSONException
@@ -11078,14 +11100,14 @@ public class PveClient extends PveClientBase {
                  * within the guest OS. Enum:
                  * de,de-ch,da,en-gb,en-us,es,fi,fr,fr-be,fr-ca,fr-ch,hu,is,it,ja,lt,mk,nl,no,pl,pt,pt-br,sv,sl,tr
                  * @param kvm Enable/disable KVM hardware virtualization.
-                 * @param live_restore Start the VM immediately from the backup
-                 * and restore in background. PBS only.
+                 * @param live_restore Start the VM immediately while importing
+                 * or restoring in the background.
                  * @param localtime Set the real time clock (RTC) to local time.
                  * This is enabled by default if the `ostype` indicates a
                  * Microsoft Windows OS.
                  * @param lock_ Lock/unlock the VM. Enum:
                  * backup,clone,create,migrate,rollback,snapshot,snapshot-delete,suspending,suspended
-                 * @param machine Specifies the QEMU machine type.
+                 * @param machine Specify the QEMU machine.
                  * @param memory Memory properties.
                  * @param migrate_downtime Set maximum tolerated downtime (in
                  * seconds) for migrations.
@@ -11731,13 +11753,16 @@ public class PveClient extends PveClientBase {
                              * Stop the container. This will abruptly stop all
                              * processes running in the container.
                              *
+                             * @param overrule_shutdown Try to abort active
+                             * 'vzshutdown' tasks before stopping.
                              * @param skiplock Ignore locks - only root is
                              * allowed to use this option.
                              * @return Result
                              * @throws JSONException
                              */
-                            public Result vmStop(Boolean skiplock) throws JSONException {
+                            public Result vmStop(Boolean overrule_shutdown, Boolean skiplock) throws JSONException {
                                 Map<String, Object> parameters = new HashMap<>();
+                                parameters.put("overrule-shutdown", overrule_shutdown);
                                 parameters.put("skiplock", skiplock);
                                 return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/status/stop", parameters);
                             }
@@ -15417,6 +15442,7 @@ public class PveClient extends PveClientBase {
                  * globs). Paths starting with '/' are anchored to the
                  * container's root, other paths match relative to each
                  * subdirectory.
+                 * @param fleecing Options for backup fleecing (VM only).
                  * @param ionice Set IO priority when using the BFQ scheduler.
                  * For snapshot and suspend mode backups of VMs, this only
                  * affects the compressor. A value of 8 means the idle priority
@@ -15424,11 +15450,12 @@ public class PveClient extends PveClientBase {
                  * specified value.
                  * @param lockwait Maximal time to wait for the global lock
                  * (minutes).
-                 * @param mailnotification Deprecated: use 'notification-policy'
-                 * instead. Enum: always,failure
-                 * @param mailto Comma-separated list of email addresses or
-                 * users that should receive email notifications. Has no effect
-                 * if the 'notification-target' option is set at the same time.
+                 * @param mailnotification Deprecated: use notification
+                 * targets/matchers instead. Specify when to send a notification
+                 * mail Enum: always,failure
+                 * @param mailto Deprecated: Use notification targets/matchers
+                 * instead. Comma-separated list of email addresses or users
+                 * that should receive email notifications.
                  * @param maxfiles Deprecated: use 'prune-backups' instead.
                  * Maximal number of backup files per guest system.
                  * @param mode Backup mode. Enum: snapshot,suspend,stop
@@ -15439,13 +15466,18 @@ public class PveClient extends PveClientBase {
                  * might be added in the future. Needs to be a single line,
                  * newline and backslash need to be escaped as '\n' and '\\'
                  * respectively.
-                 * @param notification_policy Specify when to send a
-                 * notification Enum: always,failure,never
-                 * @param notification_target Determine the target to which
-                 * notifications should be sent. Can either be a notification
-                 * endpoint or a notification group. This option takes
-                 * precedence over 'mailto', meaning that if both are set, the
-                 * 'mailto' option will be ignored.
+                 * @param notification_mode Determine which notification system
+                 * to use. If set to 'legacy-sendmail', vzdump will consider the
+                 * mailto/mailnotification parameters and send emails to the
+                 * specified address(es) via the 'sendmail' command. If set to
+                 * 'notification-system', a notification will be sent via PVE's
+                 * notification system, and the mailto and mailnotification will
+                 * be ignored. If set to 'auto' (default setting), an email will
+                 * be sent if mailto is set, and the notification system will be
+                 * used if not. Enum: auto,legacy-sendmail,notification-system
+                 * @param notification_policy Deprecated: Do not use Enum:
+                 * always,failure,never
+                 * @param notification_target Deprecated: Do not use
                  * @param performance Other performance-related settings.
                  * @param pigz Use pigz instead of gzip when N&amp;gt;0. N=1
                  * uses half of cores, N&amp;gt;1 uses N as thread count.
@@ -15467,11 +15499,12 @@ public class PveClient extends PveClientBase {
                  * @param tmpdir Store temporary files to specified directory.
                  * @param vmid The ID of the guest system you want to backup.
                  * @param zstd Zstd threads. N=0 uses half of the available
-                 * cores, N&amp;gt;0 uses N as thread count.
+                 * cores, if N is set to a value bigger than 0, N is used as
+                 * thread count.
                  * @return Result
                  * @throws JSONException
                  */
-                public Result vzdump(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, List<Object> exclude_path, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String notes_template, String notification_policy, String notification_target, String performance, Integer pigz, String pool, Boolean protected_, String prune_backups, Boolean quiet, Boolean remove, String script, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+                public Result vzdump(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude, List<Object> exclude_path, String fleecing, Integer ionice, Integer lockwait, String mailnotification, String mailto, Integer maxfiles, String mode, String notes_template, String notification_mode, String notification_policy, String notification_target, String performance, Integer pigz, String pool, Boolean protected_, String prune_backups, Boolean quiet, Boolean remove, String script, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("all", all);
                     parameters.put("bwlimit", bwlimit);
@@ -15479,6 +15512,7 @@ public class PveClient extends PveClientBase {
                     parameters.put("dumpdir", dumpdir);
                     parameters.put("exclude", exclude);
                     parameters.put("exclude-path", exclude_path);
+                    parameters.put("fleecing", fleecing);
                     parameters.put("ionice", ionice);
                     parameters.put("lockwait", lockwait);
                     parameters.put("mailnotification", mailnotification);
@@ -15486,6 +15520,7 @@ public class PveClient extends PveClientBase {
                     parameters.put("maxfiles", maxfiles);
                     parameters.put("mode", mode);
                     parameters.put("notes-template", notes_template);
+                    parameters.put("notification-mode", notification_mode);
                     parameters.put("notification-policy", notification_policy);
                     parameters.put("notification-target", notification_target);
                     parameters.put("performance", performance);
@@ -16886,6 +16921,11 @@ public class PveClient extends PveClientBase {
                     public PVEDownloadUrl getDownloadUrl() {
                         return downloadUrl == null ? (downloadUrl = new PVEDownloadUrl(client, this.node, this.storage)) : downloadUrl;
                     }
+                    private PVEImportMetadata importMetadata;
+
+                    public PVEImportMetadata getImportMetadata() {
+                        return importMetadata == null ? (importMetadata = new PVEImportMetadata(client, this.node, this.storage)) : importMetadata;
+                    }
 
                     public class PVEPrunebackups {
 
@@ -17520,6 +17560,36 @@ public class PveClient extends PveClientBase {
                             parameters.put("filename", filename);
                             parameters.put("url", url);
                             return client.create("/nodes/" + this.node + "/storage/" + this.storage + "/download-url", parameters);
+                        }
+
+                    }
+
+                    public class PVEImportMetadata {
+
+                        private final PveClient client;
+                        private final Object node;
+                        private final Object storage;
+
+                        protected PVEImportMetadata(PveClient client, Object node, Object storage) {
+                            this.client = client;
+                            this.node = node;
+                            this.storage = storage;
+                        }
+
+                        /**
+                         * Get the base parameters for creating a guest which
+                         * imports data from a foreign importable guest, like an
+                         * ESXi VM
+                         *
+                         * @param volume Volume identifier for the guest
+                         * archive/entry.
+                         * @return Result
+                         * @throws JSONException
+                         */
+                        public Result getImportMetadata(String volume) throws JSONException {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("volume", volume);
+                            return client.get("/nodes/" + this.node + "/storage/" + this.storage + "/import-metadata", parameters);
                         }
 
                     }
@@ -18817,6 +18887,8 @@ public class PveClient extends PveClientBase {
                      * established timeout.
                      * @param nf_conntrack_tcp_timeout_syn_recv Conntrack syn
                      * recv timeout.
+                     * @param nftables Enable nftables based firewall (tech
+                     * preview)
                      * @param nosmurfs Enable SMURFS filter.
                      * @param protection_synflood Enable synflood protection
                      * @param protection_synflood_burst Synflood protection rate
@@ -18833,7 +18905,7 @@ public class PveClient extends PveClientBase {
                      * @throws JSONException
                      */
 
-                    public Result setOptions(String delete, String digest, Boolean enable, String log_level_in, String log_level_out, Boolean log_nf_conntrack, Boolean ndp, Boolean nf_conntrack_allow_invalid, String nf_conntrack_helpers, Integer nf_conntrack_max, Integer nf_conntrack_tcp_timeout_established, Integer nf_conntrack_tcp_timeout_syn_recv, Boolean nosmurfs, Boolean protection_synflood, Integer protection_synflood_burst, Integer protection_synflood_rate, String smurf_log_level, String tcp_flags_log_level, Boolean tcpflags) throws JSONException {
+                    public Result setOptions(String delete, String digest, Boolean enable, String log_level_in, String log_level_out, Boolean log_nf_conntrack, Boolean ndp, Boolean nf_conntrack_allow_invalid, String nf_conntrack_helpers, Integer nf_conntrack_max, Integer nf_conntrack_tcp_timeout_established, Integer nf_conntrack_tcp_timeout_syn_recv, Boolean nftables, Boolean nosmurfs, Boolean protection_synflood, Integer protection_synflood_burst, Integer protection_synflood_rate, String smurf_log_level, String tcp_flags_log_level, Boolean tcpflags) throws JSONException {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("delete", delete);
                         parameters.put("digest", digest);
@@ -18847,6 +18919,7 @@ public class PveClient extends PveClientBase {
                         parameters.put("nf_conntrack_max", nf_conntrack_max);
                         parameters.put("nf_conntrack_tcp_timeout_established", nf_conntrack_tcp_timeout_established);
                         parameters.put("nf_conntrack_tcp_timeout_syn_recv", nf_conntrack_tcp_timeout_syn_recv);
+                        parameters.put("nftables", nftables);
                         parameters.put("nosmurfs", nosmurfs);
                         parameters.put("protection_synflood", protection_synflood);
                         parameters.put("protection_synflood_burst", protection_synflood_burst);
@@ -19375,7 +19448,7 @@ public class PveClient extends PveClientBase {
                  * concurrent modifications.
                  * @param startall_onboot_delay Initial delay in seconds, before
                  * starting all the Virtual Guests with on-boot enabled.
-                 * @param wakeonlan MAC address for wake on LAN
+                 * @param wakeonlan Node specific wake on LAN settings.
                  * @return Result
                  * @throws JSONException
                  */
@@ -19836,7 +19909,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login (requires
-                 * 'root@pam') Enum: ceph_install,login,upgrade
+                 * 'root@pam') Enum: upgrade,ceph_install,login
                  * @param cmd_opts Add parameters to a command. Encoded as null
                  * terminated strings.
                  * @param height sets the height of the console in pixels.
@@ -19882,7 +19955,7 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  *
                  * @param cmd Run specific command or default to login (requires
-                 * 'root@pam') Enum: ceph_install,login,upgrade
+                 * 'root@pam') Enum: upgrade,ceph_install,login
                  * @param cmd_opts Add parameters to a command. Encoded as null
                  * terminated strings.
                  * @return Result
@@ -19949,7 +20022,7 @@ public class PveClient extends PveClientBase {
                  * Creates a SPICE shell.
                  *
                  * @param cmd Run specific command or default to login (requires
-                 * 'root@pam') Enum: ceph_install,login,upgrade
+                 * 'root@pam') Enum: upgrade,ceph_install,login
                  * @param cmd_opts Add parameters to a command. Encoded as null
                  * terminated strings.
                  * @param proxy SPICE proxy server. This can be used by the
@@ -20523,7 +20596,8 @@ public class PveClient extends PveClientBase {
              * while allowing direct I/O. Only use this if data does not need to
              * be any more safe than on a single ext4 formatted disk with no
              * underlying raid system.
-             * @param nodes List of cluster node names.
+             * @param nodes List of nodes for which the storage configuration
+             * applies.
              * @param nowritecache disable write caching on the target
              * @param options NFS/CIFS mount options (see 'man nfs' or 'man
              * mount.cifs')
@@ -20544,7 +20618,13 @@ public class PveClient extends PveClientBase {
              * parameter value).
              * @param server Server IP or DNS name.
              * @param server2 Backup volfile server IP or DNS name.
-             * @param shared Mark storage as shared.
+             * @param shared Indicate that this is a single storage with the
+             * same contents on all nodes (or all listed in the 'nodes' option).
+             * It will not make the contents of a local storage automatically
+             * accessible to other nodes, it just marks an already shared
+             * storage as such!
+             * @param skip_cert_verification Disable TLS certificate
+             * verification, only enable on fully trusted networks!
              * @param smbversion SMB protocol version. 'default' if not set,
              * negotiates the highest SMB2+ version supported by both the client
              * and server. Enum: default,2.0,2.1,3,3.0,3.11
@@ -20559,7 +20639,7 @@ public class PveClient extends PveClientBase {
              * @throws JSONException
              */
 
-            public Result update(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String content_dirs, Boolean create_base_path, Boolean create_subdirs, String data_pool, String delete, String digest, Boolean disable, String domain, String encryption_key, String fingerprint, String format, String fs_name, Boolean fuse, String is_mountpoint, String keyring, Boolean krbd, String lio_tpg, String master_pubkey, Integer max_protected_backups, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String pool, Integer port, String preallocation, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
+            public Result update(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String content_dirs, Boolean create_base_path, Boolean create_subdirs, String data_pool, String delete, String digest, Boolean disable, String domain, String encryption_key, String fingerprint, String format, String fs_name, Boolean fuse, String is_mountpoint, String keyring, Boolean krbd, String lio_tpg, String master_pubkey, Integer max_protected_backups, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String pool, Integer port, String preallocation, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, Boolean shared, Boolean skip_cert_verification, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String transport, String username) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("blocksize", blocksize);
                 parameters.put("bwlimit", bwlimit);
@@ -20604,6 +20684,7 @@ public class PveClient extends PveClientBase {
                 parameters.put("server", server);
                 parameters.put("server2", server2);
                 parameters.put("shared", shared);
+                parameters.put("skip-cert-verification", skip_cert_verification);
                 parameters.put("smbversion", smbversion);
                 parameters.put("sparse", sparse);
                 parameters.put("subdir", subdir);
@@ -20630,7 +20711,7 @@ public class PveClient extends PveClientBase {
          * Storage index.
          *
          * @param type Only list storage of specific type Enum:
-         * btrfs,cephfs,cifs,dir,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,pbs,rbd,zfs,zfspool
+         * btrfs,cephfs,cifs,dir,esxi,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,pbs,rbd,zfs,zfspool
          * @return Result
          * @throws JSONException
          */
@@ -20656,7 +20737,7 @@ public class PveClient extends PveClientBase {
          *
          * @param storage The storage identifier.
          * @param type Storage type. Enum:
-         * btrfs,cephfs,cifs,dir,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,pbs,rbd,zfs,zfspool
+         * btrfs,cephfs,cifs,dir,esxi,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,pbs,rbd,zfs,zfspool
          * @param authsupported Authsupported.
          * @param base_ Base volume. This volume is automatically activated.
          * @param blocksize block size
@@ -20707,7 +20788,8 @@ public class PveClient extends PveClientBase {
          * and causes data errors to be unrecoverable from while allowing direct
          * I/O. Only use this if data does not need to be any more safe than on
          * a single ext4 formatted disk with no underlying raid system.
-         * @param nodes List of cluster node names.
+         * @param nodes List of nodes for which the storage configuration
+         * applies.
          * @param nowritecache disable write caching on the target
          * @param options NFS/CIFS mount options (see 'man nfs' or 'man
          * mount.cifs')
@@ -20730,7 +20812,12 @@ public class PveClient extends PveClientBase {
          * @param server Server IP or DNS name.
          * @param server2 Backup volfile server IP or DNS name.
          * @param share CIFS share.
-         * @param shared Mark storage as shared.
+         * @param shared Indicate that this is a single storage with the same
+         * contents on all nodes (or all listed in the 'nodes' option). It will
+         * not make the contents of a local storage automatically accessible to
+         * other nodes, it just marks an already shared storage as such!
+         * @param skip_cert_verification Disable TLS certificate verification,
+         * only enable on fully trusted networks!
          * @param smbversion SMB protocol version. 'default' if not set,
          * negotiates the highest SMB2+ version supported by both the client and
          * server. Enum: default,2.0,2.1,3,3.0,3.11
@@ -20747,7 +20834,7 @@ public class PveClient extends PveClientBase {
          * @throws JSONException
          */
 
-        public Result create(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String content_dirs, Boolean create_base_path, Boolean create_subdirs, String data_pool, String datastore, Boolean disable, String domain, String encryption_key, String export, String fingerprint, String format, String fs_name, Boolean fuse, String is_mountpoint, String iscsiprovider, String keyring, Boolean krbd, String lio_tpg, String master_pubkey, Integer max_protected_backups, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String path, String pool, Integer port, String portal, String preallocation, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
+        public Result create(String storage, String type, String authsupported, String base_, String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content, String content_dirs, Boolean create_base_path, Boolean create_subdirs, String data_pool, String datastore, Boolean disable, String domain, String encryption_key, String export, String fingerprint, String format, String fs_name, Boolean fuse, String is_mountpoint, String iscsiprovider, String keyring, Boolean krbd, String lio_tpg, String master_pubkey, Integer max_protected_backups, Integer maxfiles, Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password, String path, String pool, Integer port, String portal, String preallocation, String prune_backups, Boolean saferemove, String saferemove_throughput, String server, String server2, String share, Boolean shared, Boolean skip_cert_verification, String smbversion, Boolean sparse, String subdir, Boolean tagged_only, String target, String thinpool, String transport, String username, String vgname, String volume) throws JSONException {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("storage", storage);
             parameters.put("type", type);
@@ -20800,6 +20887,7 @@ public class PveClient extends PveClientBase {
             parameters.put("server2", server2);
             parameters.put("share", share);
             parameters.put("shared", shared);
+            parameters.put("skip-cert-verification", skip_cert_verification);
             parameters.put("smbversion", smbversion);
             parameters.put("sparse", sparse);
             parameters.put("subdir", subdir);
@@ -20818,7 +20906,7 @@ public class PveClient extends PveClientBase {
          *
          * @param storage The storage identifier.
          * @param type Storage type. Enum:
-         * btrfs,cephfs,cifs,dir,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,pbs,rbd,zfs,zfspool
+         * btrfs,cephfs,cifs,dir,esxi,glusterfs,iscsi,iscsidirect,lvm,lvmthin,nfs,pbs,rbd,zfs,zfspool
          * @return Result
          * @throws JSONException
          */
@@ -22050,7 +22138,8 @@ public class PveClient extends PveClientBase {
                     /**
                      * Delete a TFA entry by ID.
                      *
-                     * @param password The current password.
+                     * @param password The current password of the user
+                     * performing the change.
                      * @return Result
                      * @throws JSONException
                      */
@@ -22089,7 +22178,8 @@ public class PveClient extends PveClientBase {
                      * entries from one another
                      * @param enable Whether the entry should be enabled for
                      * login.
-                     * @param password The current password.
+                     * @param password The current password of the user
+                     * performing the change.
                      * @return Result
                      * @throws JSONException
                      */
@@ -22134,7 +22224,8 @@ public class PveClient extends PveClientBase {
                  * original challenge string
                  * @param description A description to distinguish multiple
                  * entries from one another
-                 * @param password The current password.
+                 * @param password The current password of the user performing
+                 * the change.
                  * @param totp A totp URI.
                  * @param value The current value for the provided totp URI, or
                  * a Webauthn/U2F challenge response
@@ -22269,9 +22360,28 @@ public class PveClient extends PveClientBase {
              *
              * @param password The new password.
              * @param userid Full User ID, in the `name@realm` format.
+             * @param confirmation_password The current password of the user
+             * performing the change.
              * @return Result
              * @throws JSONException
              */
+            public Result changePassword(String password, String userid, String confirmation_password) throws JSONException {
+                Map<String, Object> parameters = new HashMap<>();
+                parameters.put("password", password);
+                parameters.put("userid", userid);
+                parameters.put("confirmation-password", confirmation_password);
+                return client.set("/access/password", parameters);
+            }
+
+            /**
+             * Change user password.
+             *
+             * @param password The new password.
+             * @param userid Full User ID, in the `name@realm` format.
+             * @return Result
+             * @throws JSONException
+             */
+
             public Result changePassword(String password, String userid) throws JSONException {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("password", password);
