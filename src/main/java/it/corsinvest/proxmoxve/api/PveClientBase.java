@@ -173,7 +173,7 @@ public class PveClientBase {
      *
      * @param username user name
      * @param password password connection
-     * @param realm pam/pve or custom
+     * @param realm    pam/pve or custom
      *
      * @return boolean
      * @throws JSONException
@@ -189,8 +189,8 @@ public class PveClientBase {
      *
      * @param username user name
      * @param password password connection
-     * @param realm pam/pve or custom
-     * @param otp One-time password for Two-factor authentication.
+     * @param realm    pam/pve or custom
+     * @param otp      One-time password for Two-factor authentication.
      *
      * @return boolean
      * @throws JSONException
@@ -231,7 +231,7 @@ public class PveClientBase {
     /**
      * Execute method GET
      *
-     * @param resource Url request
+     * @param resource   Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -243,7 +243,7 @@ public class PveClientBase {
     /**
      * Execute method PUT
      *
-     * @param resource Url request
+     * @param resource   Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -255,7 +255,7 @@ public class PveClientBase {
     /**
      * Execute method POST
      *
-     * @param resource Url request
+     * @param resource   Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -267,7 +267,7 @@ public class PveClientBase {
     /**
      * Execute method DELETE
      *
-     * @param resource Url request
+     * @param resource   Url request
      * @param parameters Additional parameters
      * @return Result
      * @throws JSONException
@@ -366,7 +366,7 @@ public class PveClientBase {
 
         if (!_validateCertificate) {
             // Create a trust manager that does not validate certificate chains
-            TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
+            TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
                 @Override
                 public java.security.cert.X509Certificate[] getAcceptedIssuers() {
                     return null;
@@ -379,7 +379,7 @@ public class PveClientBase {
                 @Override
                 public void checkServerTrusted(X509Certificate[] certs, String authType) {
                 }
-            }};
+            } };
 
             // Install the all-trusting trust manager
             try {
@@ -519,8 +519,8 @@ public class PveClientBase {
      * Add indexed parameter
      *
      * @param parameters Parameters
-     * @param name Name parameter
-     * @param value Values
+     * @param name       Name parameter
+     * @param value      Values
      */
     public static void addIndexedParameter(Map<String, Object> parameters, String name, Map<Integer, String> value) {
         if (value != null) {
@@ -533,8 +533,8 @@ public class PveClientBase {
     /**
      * Wait for task to finish
      *
-     * @param task Task identifier
-     * @param wait Millisecond wait next check
+     * @param task    Task identifier
+     * @param wait    Millisecond wait next check
      * @param timeOut Millisecond timeout
      * @return 0 Success
      * @throws JSONException
@@ -585,7 +585,7 @@ public class PveClientBase {
     /**
      * Convert JSONArray To List
      *
-     * @param <T> Type of data
+     * @param <T>   Type of data
      * @param array Array JSON
      * @return T List of Type of data
      * @throws JSONException
