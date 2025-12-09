@@ -9,44 +9,42 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.Proxy;
-import java.net.URL;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Proxmox VE Client Base
  */
 public class PveClientBase {
 
+    private static final Logger logger = Logger.getLogger(PveClientBase.class.getName());
+
     private String _ticketCSRFPreventionToken;
     private String _ticketPVEAuthCookie;
     private final String _hostname;
     private final int _port;
-    private int _debugLevel;
     private Result _lastResult;
     private ResponseType _responseType = ResponseType.JSON;
     private String _apiToken;
     private Proxy _proxy = Proxy.NO_PROXY;
     private int _timeout = 0;
     private boolean _validateCertificate = false;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public PveClientBase(String hostname, int port) {
         _hostname = hostname;
@@ -56,7 +54,7 @@ public class PveClientBase {
     /**
      * Gets the hostname configured.
      *
-     * @return string The hostname.
+     * @return String The configured hostname.
      */
     public String getHostname() {
         return _hostname;
@@ -65,7 +63,7 @@ public class PveClientBase {
     /**
      * Gets the port configured.
      *
-     * @return int The port.
+     * @return int The configured port.
      */
     public int getPort() {
         return _port;
@@ -74,7 +72,7 @@ public class PveClientBase {
     /**
      * Get Validate Certificate
      *
-     * @return bool
+     * @return boolean Whether SSL certificate validation is enabled
      */
     public boolean getValidateCertificate() {
         return _validateCertificate;
@@ -83,7 +81,7 @@ public class PveClientBase {
     /**
      * Set Validate Certificate
      *
-     * @param validateCertificate
+     * @param validateCertificate Whether to validate SSL certificates
      */
     public void setValidateCertificate(boolean validateCertificate) {
         _validateCertificate = validateCertificate;
@@ -92,7 +90,7 @@ public class PveClientBase {
     /**
      * Get proxy
      *
-     * @return Proxy
+     * @return Proxy Current proxy configuration
      */
     public Proxy getProxy() {
         return _proxy;
@@ -101,7 +99,7 @@ public class PveClientBase {
     /**
      * Set proxy
      *
-     * @param proxy
+     * @param proxy Proxy configuration to use
      */
     public void setProxy(Proxy proxy) {
         _proxy = proxy;
@@ -111,7 +109,7 @@ public class PveClientBase {
      * Get the response type that is going to be returned when doing requests
      * (json, png).
      *
-     * @return ResponseType
+     * @return ResponseType Current response type configuration
      */
     public ResponseType getResponseType() {
         return _responseType;
@@ -121,7 +119,7 @@ public class PveClientBase {
      * Set the response type that is going to be returned when doing requests
      * (json, png).
      *
-     * @param responseType Response type
+     * @param responseType Response type to set
      */
     public void setResponseType(ResponseType responseType) {
         _responseType = responseType;
@@ -130,7 +128,7 @@ public class PveClientBase {
     /**
      * Set timeout connection
      *
-     * @param timeout
+     * @param timeout Connection timeout in milliseconds
      */
     public void setTimeout(int timeout) {
         if (timeout < 0) {
@@ -142,7 +140,7 @@ public class PveClientBase {
     /**
      * Return timeout connection
      *
-     * @return
+     * @return int Connection timeout in milliseconds
      */
     public int getTimeout() {
         return _timeout;
@@ -153,13 +151,12 @@ public class PveClientBase {
      *
      * @param username user name or &lt;username&gt;@&lt;realm&gt;
      * @param password password connection
-     * @return boolean
-     * @throws JSONException
-     * @throws PveExceptionAuthentication
+     * @return boolean indicating if login was successful
+     * @throws PveExceptionAuthentication if authentication fails
      */
-    public boolean login(String username, String password) throws JSONException, PveExceptionAuthentication {
-        String realm = "pam";
-        String[] data = username.split("@");
+    public boolean login(String username, String password) throws PveExceptionAuthentication {
+        var realm = "pam";
+        var data = username.split("@");
         if (data.length > 1) {
             username = data[0];
             realm = data[1];
@@ -174,13 +171,11 @@ public class PveClientBase {
      * @param username user name
      * @param password password connection
      * @param realm    pam/pve or custom
-     *
-     * @return boolean
-     * @throws JSONException
-     * @throws PveExceptionAuthentication
+     * @return boolean indicating if login was successful
+     * @throws PveExceptionAuthentication if authentication fails
      */
     public boolean login(String username, String password, String realm)
-            throws JSONException, PveExceptionAuthentication {
+            throws PveExceptionAuthentication {
         return login(username, password, realm, null);
     }
 
@@ -191,30 +186,29 @@ public class PveClientBase {
      * @param password password connection
      * @param realm    pam/pve or custom
      * @param otp      One-time password for Two-factor authentication.
-     *
-     * @return boolean
-     * @throws JSONException
-     * @throws PveExceptionAuthentication
+     * @return boolean indicating if login was successful
+     * @throws PveExceptionAuthentication if authentication fails
      */
     public boolean login(String username, String password, String realm, String otp)
-            throws JSONException, PveExceptionAuthentication {
-        Result result = create("/access/ticket", new HashMap<String, Object>() {
-            {
-                put("password", password);
-                put("username", username);
-                put("realm", realm);
-                put("otp", otp);
-            }
-        });
+            throws PveExceptionAuthentication {
+        var params = new java.util.HashMap<String, Object>();
+        params.put("password", password);
+        params.put("username", username);
+        params.put("realm", realm);
+        if (otp != null) {
+            params.put("otp", otp);
+        }
+        var result = create("/access/ticket", params);
 
         if (result.isSuccessStatusCode()) {
-            if (result.getResponse().getJSONObject("data").has("NeedTFA")) {
+            var dataNode = result.getData();
+            if (dataNode.has("NeedTFA")) {
                 throw new PveExceptionAuthentication(result,
                         "Couldn't authenticate user: missing Two Factor Authentication (TFA)");
             }
 
-            _ticketCSRFPreventionToken = result.getResponse().getJSONObject("data").getString("CSRFPreventionToken");
-            _ticketPVEAuthCookie = result.getResponse().getJSONObject("data").getString("ticket");
+            _ticketCSRFPreventionToken = dataNode.get("CSRFPreventionToken").asText();
+            _ticketPVEAuthCookie = dataNode.get("ticket").asText();
         }
         return result.isSuccessStatusCode();
     }
@@ -231,73 +225,51 @@ public class PveClientBase {
     /**
      * Execute method GET
      *
-     * @param resource   Url request
+     * @param resource   URL request
      * @param parameters Additional parameters
      * @return Result
-     * @throws JSONException
      */
-    public Result get(String resource, Map<String, Object> parameters) throws JSONException {
+    public Result get(String resource, Map<String, Object> parameters) {
         return executeAction(resource, MethodType.GET, parameters);
     }
 
     /**
      * Execute method PUT
      *
-     * @param resource   Url request
+     * @param resource   URL request
      * @param parameters Additional parameters
      * @return Result
-     * @throws JSONException
      */
-    public Result set(String resource, Map<String, Object> parameters) throws JSONException {
+    public Result set(String resource, Map<String, Object> parameters) {
         return executeAction(resource, MethodType.SET, parameters);
     }
 
     /**
      * Execute method POST
      *
-     * @param resource   Url request
+     * @param resource   URL request
      * @param parameters Additional parameters
      * @return Result
-     * @throws JSONException
      */
-    public Result create(String resource, Map<String, Object> parameters) throws JSONException {
+    public Result create(String resource, Map<String, Object> parameters) {
         return executeAction(resource, MethodType.CREATE, parameters);
     }
 
     /**
      * Execute method DELETE
      *
-     * @param resource   Url request
+     * @param resource   URL request
      * @param parameters Additional parameters
      * @return Result
-     * @throws JSONException
      */
-    public Result delete(String resource, Map<String, Object> parameters) throws JSONException {
+    public Result delete(String resource, Map<String, Object> parameters) {
         return executeAction(resource, MethodType.DELETE, parameters);
-    }
-
-    /**
-     * Set debug level
-     *
-     * @param value 0 - nothing 1 - Url and method 2 - Url and method and result
-     */
-    public void setDebugLevel(int value) {
-        _debugLevel = value;
-    }
-
-    /**
-     * Return debug level.
-     *
-     * @return int
-     */
-    public int getDebugLevel() {
-        return _debugLevel;
     }
 
     /**
      * Return Api Token
      *
-     * @return String
+     * @return String API token string
      */
     public String getApiToken() {
         return _apiToken;
@@ -306,7 +278,7 @@ public class PveClientBase {
     /**
      * Set Api Token format USER@REALM!TOKENID=UUID
      *
-     * @param apiToken
+     * @param apiToken API token string
      */
     public void setApiToken(String apiToken) {
         _apiToken = apiToken;
@@ -329,33 +301,109 @@ public class PveClientBase {
         }
     }
 
-    private Result executeAction(String resource, MethodType methodType, Map<String, Object> parameters)
-            throws JSONException {
-        String url = getApiUrl() + resource;
+    /**
+     * Configure SSL context for a specific HTTPS connection (not global)
+     *
+     * @param httpsConn The HTTPS connection to configure
+     */
+    private void configureTrustAllSSL(HttpsURLConnection httpsConn) {
+        if (!_validateCertificate) {
+            try {
+                // Create trust manager that trusts all certificates
+                var trustAllCerts = new TrustManager[] {
+                    new X509TrustManager() {
+                        @Override
+                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                            return null;
+                        }
+                        @Override
+                        public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                        }
+                        @Override
+                        public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                        }
+                    }
+                };
 
-        // decode http method
-        String httpMethod = "";
-        switch (methodType) {
-            case GET:
-                httpMethod = "GET";
-                break;
-            case SET:
-                httpMethod = "PUT";
-                break;
-            case CREATE:
-                httpMethod = "POST";
-                break;
-            case DELETE:
-                httpMethod = "DELETE";
-                break;
-            default:
-                throw new AssertionError();
+                // Create SSL context
+                var sc = SSLContext.getInstance("TLS");
+                sc.init(null, trustAllCerts, new java.security.SecureRandom());
+
+                // Apply to THIS connection only (not global)
+                httpsConn.setSSLSocketFactory(sc.getSocketFactory());
+
+                // Set hostname verifier for THIS connection only
+                httpsConn.setHostnameVerifier((hostname, session) -> true);
+
+            } catch (NoSuchAlgorithmException | KeyManagementException ex) {
+                logger.log(Level.SEVERE, "Failed to configure SSL", ex);
+            }
+        }
+    }
+
+    /**
+     * Build URL-encoded query string from parameters
+     *
+     * @param params Parameters to encode
+     * @return URL-encoded query string
+     */
+    private String buildQueryString(Map<String, Object> params) {
+        var query = new StringBuilder();
+        params.forEach((key, value) -> {
+            if (query.length() > 0) {
+                query.append("&");
+            }
+            query.append(URLEncoder.encode(key, StandardCharsets.UTF_8))
+                 .append("=")
+                 .append(URLEncoder.encode(value.toString(), StandardCharsets.UTF_8));
+        });
+        return query.toString();
+    }
+
+    /**
+     * Read response from HTTP connection, handling both success and error streams
+     *
+     * @param httpCon HTTP connection
+     * @param statusCode HTTP status code
+     * @return Response body as string
+     * @throws IOException if reading fails
+     */
+    private String readResponse(HttpURLConnection httpCon, int statusCode) throws IOException {
+        // Choose the correct stream based on status code
+        var stream = (statusCode >= 200 && statusCode < 400)
+            ? httpCon.getInputStream()
+            : httpCon.getErrorStream();
+
+        if (stream == null) {
+            return "";
         }
 
-        Map<String, Object> params = new LinkedHashMap<>();
+        try (var reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            var sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            return sb.toString();
+        }
+    }
+
+    private Result executeAction(String resource, MethodType methodType, Map<String, Object> parameters) {
+        var url = getApiUrl() + resource;
+
+        // decode http method
+        var httpMethod = switch (methodType) {
+            case GET -> "GET";
+            case SET -> "PUT";
+            case CREATE -> "POST";
+            case DELETE -> "DELETE";
+            default -> throw new AssertionError();
+        };
+
+        var params = new LinkedHashMap<String, Object>();
         if (parameters != null) {
             parameters.entrySet().stream().filter((entry) -> (entry.getValue() != null)).forEachOrdered((entry) -> {
-                Object value = entry.getValue();
+                var value = entry.getValue();
                 if (value instanceof Boolean) {
                     params.put(entry.getKey(), Boolean.TRUE.equals(value) ? 1 : 0);
                 } else {
@@ -364,59 +412,25 @@ public class PveClientBase {
             });
         }
 
-        if (!_validateCertificate) {
-            // Create a trust manager that does not validate certificate chains
-            TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
-                @Override
-                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                    return null;
-                }
-
-                @Override
-                public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                }
-
-                @Override
-                public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                }
-            } };
-
-            // Install the all-trusting trust manager
-            try {
-                SSLContext sc = SSLContext.getInstance("SSL");
-                sc.init(null, trustAllCerts, new java.security.SecureRandom());
-                HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-            } catch (NoSuchAlgorithmException | KeyManagementException ex) {
-                Logger.getLogger(PveClientBase.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-
-        // Create all-trusting host name verifier
-        HostnameVerifier allHostsValid = (String hostname, SSLSession session) -> true;
-
-        // Install the all-trusting host verifier
-        HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
-
-        int statusCode = 0;
-        String reasonPhrase = "";
-        JSONObject response = new JSONObject();
+        var statusCode = 0;
+        var reasonPhrase = "";
+        JsonNode response = null;
         HttpURLConnection httpCon = null;
 
         try {
             switch (methodType) {
                 case GET: {
                     if (!params.isEmpty()) {
-                        StringBuilder urlParams = new StringBuilder();
-                        params.forEach((key, value) -> {
-                            urlParams.append(urlParams.length() > 0 ? "&" : "")
-                                    .append(key)
-                                    .append("=")
-                                    .append(value.toString());
-                        });
-                        url += "?" + urlParams.toString();
+                        url += "?" + buildQueryString(params);
                     }
 
-                    httpCon = (HttpURLConnection) new URL(url).openConnection(_proxy);
+                    httpCon = (HttpURLConnection) URI.create(url).toURL().openConnection(_proxy);
+
+                    // Configure SSL for this connection only (not global)
+                    if (httpCon instanceof HttpsURLConnection httpsConn) {
+                        configureTrustAllSSL(httpsConn);
+                    }
+
                     httpCon.setRequestMethod("GET");
                     setConnectionTimeout(httpCon);
                     setToken(httpCon);
@@ -425,21 +439,33 @@ public class PveClientBase {
 
                 case SET:
                 case CREATE: {
-                    String data = new JSONObject(params).toString();
-                    httpCon = (HttpURLConnection) new URL(url).openConnection(_proxy);
+                    var data = objectMapper.writeValueAsString(params);
+                    httpCon = (HttpURLConnection) URI.create(url).toURL().openConnection(_proxy);
+
+                    // Configure SSL for this connection only (not global)
+                    if (httpCon instanceof HttpsURLConnection httpsConn) {
+                        configureTrustAllSSL(httpsConn);
+                    }
+
                     httpCon.setRequestMethod(httpMethod);
-                    httpCon.setRequestProperty("Content-Type", "application/json");
+                    httpCon.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                     httpCon.setRequestProperty("Content-Length", String.valueOf(data.length()));
                     setConnectionTimeout(httpCon);
                     setToken(httpCon);
 
                     httpCon.setDoOutput(true);
-                    httpCon.getOutputStream().write(data.getBytes("UTF-8"));
+                    httpCon.getOutputStream().write(data.getBytes(StandardCharsets.UTF_8));
                     break;
                 }
 
                 case DELETE: {
-                    httpCon = (HttpURLConnection) new URL(url).openConnection(_proxy);
+                    httpCon = (HttpURLConnection) URI.create(url).toURL().openConnection(_proxy);
+
+                    // Configure SSL for this connection only (not global)
+                    if (httpCon instanceof HttpsURLConnection httpsConn) {
+                        configureTrustAllSSL(httpsConn);
+                    }
+
                     httpCon.setRequestMethod("DELETE");
                     setConnectionTimeout(httpCon);
                     setToken(httpCon);
@@ -447,43 +473,40 @@ public class PveClientBase {
                 }
             }
 
-            if (getDebugLevel() >= 1) {
-                System.out.println("Method: " + httpMethod + " , Url: " + url);
-                if (methodType != MethodType.GET) {
-                    System.out.println("Parameters:");
-                    params.forEach((key, value) -> {
-                        System.out.println(key + " : " + value);
-                    });
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, "Method: {0}, Url: {1}", new Object[] { httpMethod, url });
+                if (methodType != MethodType.GET && !params.isEmpty()) {
+                    var paramsStr = new StringBuilder("Parameters:");
+                    params.forEach((key, value) -> paramsStr.append("\n  ").append(key).append(" : ").append(value));
+                    logger.fine(paramsStr.toString());
                 }
             }
 
             statusCode = httpCon.getResponseCode();
             reasonPhrase = httpCon.getResponseMessage();
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpCon.getInputStream()))) {
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line).append("\n");
-                }
+            // Read response using the appropriate stream (success or error)
+            String responseBody = readResponse(httpCon, statusCode);
 
+            if (!responseBody.isEmpty()) {
                 switch (getResponseType()) {
                     case JSON:
-                        response = new JSONObject(sb.toString());
+                        response = objectMapper.readTree(responseBody);
                         break;
 
                     case PNG:
-                        response = new JSONObject("data:image/png;base64,"
-                                + new String(Base64.getEncoder().encode(sb.toString().getBytes())));
+                        response = objectMapper.createObjectNode()
+                                .put("data", "data:image/png;base64,"
+                                        + Base64.getEncoder().encodeToString(responseBody.getBytes(StandardCharsets.UTF_8)));
                         break;
 
                     default:
                         throw new AssertionError();
                 }
-
             }
+
         } catch (IOException ex) {
-            Logger.getLogger(PveClientBase.class.getName()).log(Level.SEVERE, null, ex);
+            logger.log(Level.SEVERE, "Error executing request", ex);
         }
 
         _lastResult = new Result(response,
@@ -494,14 +517,22 @@ public class PveClientBase {
                 methodType,
                 getResponseType());
 
-        if (getDebugLevel() >= 2) {
-            System.out.println(response.toString(2));
-            System.out.println("StatusCode:          " + _lastResult.getStatusCode());
-            System.out.println("ReasonPhrase:        " + _lastResult.getReasonPhrase());
-            System.out.println("IsSuccessStatusCode: " + _lastResult.isSuccessStatusCode());
-        }
-        if (getDebugLevel() > 0) {
-            System.out.println("=============================");
+        if (logger.isLoggable(Level.FINER)) {
+            logger.log(Level.FINER, """
+                    Response: {0}
+                    StatusCode: {1}
+                    ReasonPhrase: {2}
+                    IsSuccessStatusCode: {3}
+                    =============================
+                    """,
+                    new Object[] {
+                            response != null ? response.toPrettyString() : "null",
+                            _lastResult.getStatusCode(),
+                            _lastResult.getReasonPhrase(),
+                            _lastResult.isSuccessStatusCode()
+                    });
+        } else if (logger.isLoggable(Level.FINE)) {
+            logger.fine("=============================");
         }
         return _lastResult;
     }
@@ -518,9 +549,9 @@ public class PveClientBase {
     /**
      * Add indexed parameter
      *
-     * @param parameters Parameters
-     * @param name       Name parameter
-     * @param value      Values
+     * @param parameters Parameters map to add to
+     * @param name       Name parameter to use as prefix
+     * @param value      Values map with index as key
      */
     public static void addIndexedParameter(Map<String, Object> parameters, String name, Map<Integer, String> value) {
         if (value != null) {
@@ -536,11 +567,10 @@ public class PveClientBase {
      * @param task    Task identifier
      * @param wait    Millisecond wait next check
      * @param timeOut Millisecond timeout
-     * @return 0 Success
-     * @throws JSONException
+     * @return boolean True if task finished within timeout, false otherwise
      */
-    public boolean waitForTaskToFinish(String task, long wait, long timeOut) throws JSONException {
-        boolean isRunning = true;
+    public boolean waitForTaskToFinish(String task, long wait, long timeOut) {
+        var isRunning = true;
         if (wait <= 0) {
             wait = 500;
         }
@@ -548,8 +578,8 @@ public class PveClientBase {
             timeOut = wait + 5000;
         }
 
-        long timeStart = System.currentTimeMillis();
-        long waitTime = System.currentTimeMillis();
+        var timeStart = System.currentTimeMillis();
+        var waitTime = System.currentTimeMillis();
         while (isRunning && (System.currentTimeMillis() - timeStart) < timeOut) {
             if ((System.currentTimeMillis() - waitTime) >= wait) {
                 waitTime = System.currentTimeMillis();
@@ -564,40 +594,20 @@ public class PveClientBase {
      * Check task is running
      *
      * @param task Task identifier
-     * @return boolean
-     * @throws JSONException
+     * @return boolean True if task is running, false otherwise
      */
-    public boolean taskIsRunning(String task) throws JSONException {
-        return readTaskStatus(task).getResponse().getJSONObject("data").getString("status").equals("running");
+    public boolean taskIsRunning(String task) {
+        return readTaskStatus(task).getData().get("status").asText().equals("running");
     }
 
     /**
      * Return exit status code task
      *
      * @param task Task identifier
-     * @return String
-     * @throws JSONException
+     * @return String Exit status of the task
      */
-    public String getExitStatusTask(String task) throws JSONException {
-        return readTaskStatus(task).getResponse().getJSONObject("data").getString("exitstatus");
-    }
-
-    /**
-     * Convert JSONArray To List
-     *
-     * @param <T>   Type of data
-     * @param array Array JSON
-     * @return T List of Type of data
-     * @throws JSONException
-     */
-    public static <T> List<T> JSONArrayToList(JSONArray array) throws JSONException {
-        ArrayList<T> ret = new ArrayList<T>();
-        if (array != null) {
-            for (int i = 0; i < array.length(); i++) {
-                ret.add((T) array.get(i));
-            }
-        }
-        return ret;
+    public String getExitStatusTask(String task) {
+        return readTaskStatus(task).getData().get("exitstatus").asText();
     }
 
     /**
@@ -613,11 +623,10 @@ public class PveClientBase {
     /**
      * Read task status.
      *
-     * @param task
-     * @return Result
-     * @throws JSONException
+     * @param task Task identifier to read status for
+     * @return Result containing task status information
      */
-    private Result readTaskStatus(String task) throws JSONException {
+    private Result readTaskStatus(String task) {
         return get("/nodes/" + getNodeFromTask(task) + "/tasks/" + task + "/status", null);
     }
 }

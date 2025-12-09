@@ -8,15 +8,25 @@ package it.corsinvest.proxmoxve.api;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.json.JSONException;
 
 /**
- * Proxmox VE Client
+ * Proxmox VE Client for interacting with the Proxmox Virtual Environment API.
+ * This class provides a high-level interface for managing Proxmox VE resources
+ * including clusters, nodes, virtual machines, storage, and access control.
+ *
+ * The client handles authentication, request construction, and response parsing
+ * to provide a convenient Java API for Proxmox VE administration tasks.
  */
 public class PveClient extends PveClientBase {
 
     private final PveClient client;
 
+    /**
+     * Creates a new Proxmox VE client instance.
+     *
+     * @param hostname the hostname or IP address of the Proxmox VE server
+     * @param port     the port number for the API (typically 8006)
+     */
     public PveClient(String hostname, int port) {
         super(hostname, port);
         client = this;
@@ -138,6 +148,12 @@ public class PveClient extends PveClientBase {
             return mapping == null ? (mapping = new PVEMapping(client)) : mapping;
         }
 
+        private PVEBulkAction bulkAction;
+
+        public PVEBulkAction getBulkAction() {
+            return bulkAction == null ? (bulkAction = new PVEBulkAction(client)) : bulkAction;
+        }
+
         private PVESdn sdn;
 
         public PVESdn getSdn() {
@@ -207,10 +223,9 @@ public class PveClient extends PveClientBase {
                  * @param force Will remove the jobconfig entry, but will not cleanup.
                  * @param keep  Keep replicated data at target (do not remove).
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result delete(Boolean force, Boolean keep) throws JSONException {
+                public Result delete(Boolean force, Boolean keep) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("force", force);
                     parameters.put("keep", keep);
@@ -221,10 +236,9 @@ public class PveClient extends PveClientBase {
                  * Mark replication job for removal.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result delete() throws JSONException {
+                public Result delete() {
                     return client.delete("/cluster/replication/" + this.id + "", null);
                 }
 
@@ -232,10 +246,9 @@ public class PveClient extends PveClientBase {
                  * Read replication job configuration.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result read() throws JSONException {
+                public Result read() {
                     return client.get("/cluster/replication/" + this.id + "", null);
                 }
 
@@ -259,11 +272,10 @@ public class PveClient extends PveClientBase {
                  *                   `systemd` calendar events.
                  * @param source     For internal use, to detect if the guest was stolen.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result update(String comment, String delete, String digest, Boolean disable, Float rate,
-                        String remove_job, String schedule, String source) throws JSONException {
+                        String remove_job, String schedule, String source) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("comment", comment);
                     parameters.put("delete", delete);
@@ -280,10 +292,9 @@ public class PveClient extends PveClientBase {
                  * Update replication job configuration.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result update() throws JSONException {
+                public Result update() {
                     return client.set("/cluster/replication/" + this.id + "", null);
                 }
 
@@ -293,10 +304,9 @@ public class PveClient extends PveClientBase {
              * List replication jobs.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/cluster/replication", null);
             }
 
@@ -322,11 +332,10 @@ public class PveClient extends PveClientBase {
              *                   `systemd` calendar events.
              * @param source     For internal use, to detect if the guest was stolen.
              * @return Result
-             * @throws JSONException
              */
 
             public Result create(String id, String target, String type, String comment, Boolean disable, Float rate,
-                    String remove_job, String schedule, String source) throws JSONException {
+                    String remove_job, String schedule, String source) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("id", id);
                 parameters.put("target", target);
@@ -350,10 +359,9 @@ public class PveClient extends PveClientBase {
              * @param type   Section type.
              *               Enum: local
              * @return Result
-             * @throws JSONException
              */
 
-            public Result create(String id, String target, String type) throws JSONException {
+            public Result create(String id, String target, String type) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("id", id);
                 parameters.put("target", target);
@@ -408,10 +416,9 @@ public class PveClient extends PveClientBase {
                      * Remove Metric server.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete() throws JSONException {
+                    public Result delete() {
                         return client.delete("/cluster/metrics/server/" + this.id + "", null);
                     }
 
@@ -419,10 +426,9 @@ public class PveClient extends PveClientBase {
                      * Read metric server configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result read() throws JSONException {
+                    public Result read() {
                         return client.get("/cluster/metrics/server/" + this.id + "", null);
                     }
 
@@ -473,7 +479,6 @@ public class PveClient extends PveClientBase {
                      * @param verify_certificate       Set to 0 to disable certificate verification
                      *                                 for https endpoints.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result create(int port, String server, String type, String api_path_prefix, String bucket,
@@ -481,8 +486,7 @@ public class PveClient extends PveClientBase {
                             String organization, String otel_compression, String otel_headers,
                             Integer otel_max_body_size, String otel_path, String otel_protocol,
                             String otel_resource_attributes, Integer otel_timeout, Boolean otel_verify_ssl, String path,
-                            String proto, Integer timeout, String token, Boolean verify_certificate)
-                            throws JSONException {
+                            String proto, Integer timeout, String token, Boolean verify_certificate) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("port", port);
                         parameters.put("server", server);
@@ -518,10 +522,9 @@ public class PveClient extends PveClientBase {
                      * @param type   Plugin type.
                      *               Enum: graphite,influxdb,opentelemetry
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result create(int port, String server, String type) throws JSONException {
+                    public Result create(int port, String server, String type) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("port", port);
                         parameters.put("server", server);
@@ -578,7 +581,6 @@ public class PveClient extends PveClientBase {
                      * @param verify_certificate       Set to 0 to disable certificate verification
                      *                                 for https endpoints.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result update(int port, String server, String api_path_prefix, String bucket, String delete,
@@ -586,8 +588,7 @@ public class PveClient extends PveClientBase {
                             String organization, String otel_compression, String otel_headers,
                             Integer otel_max_body_size, String otel_path, String otel_protocol,
                             String otel_resource_attributes, Integer otel_timeout, Boolean otel_verify_ssl, String path,
-                            String proto, Integer timeout, String token, Boolean verify_certificate)
-                            throws JSONException {
+                            String proto, Integer timeout, String token, Boolean verify_certificate) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("port", port);
                         parameters.put("server", server);
@@ -622,10 +623,9 @@ public class PveClient extends PveClientBase {
                      * @param port   server network port
                      * @param server server dns name or IP address
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result update(int port, String server) throws JSONException {
+                    public Result update(int port, String server) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("port", port);
                         parameters.put("server", server);
@@ -638,10 +638,9 @@ public class PveClient extends PveClientBase {
                  * List configured metric servers.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result serverIndex() throws JSONException {
+                public Result serverIndex() {
                     return client.get("/cluster/metrics/server", null);
                 }
 
@@ -662,15 +661,17 @@ public class PveClient extends PveClientBase {
                  *                   history unless `start-time` is also set
                  * @param local_only Only return metrics for the current node instead of the
                  *                   whole cluster
+                 * @param node_list  Only return metrics from nodes passed as comma-separated
+                 *                   list
                  * @param start_time Only include metrics with a timestamp &amp;gt; start-time.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result export(Boolean history, Boolean local_only, Integer start_time) throws JSONException {
+                public Result export(Boolean history, Boolean local_only, String node_list, Integer start_time) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("history", history);
                     parameters.put("local-only", local_only);
+                    parameters.put("node-list", node_list);
                     parameters.put("start-time", start_time);
                     return client.get("/cluster/metrics/export", parameters);
                 }
@@ -679,10 +680,9 @@ public class PveClient extends PveClientBase {
                  * Retrieve metrics of the cluster.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result export() throws JSONException {
+                public Result export() {
                     return client.get("/cluster/metrics/export", null);
                 }
 
@@ -692,10 +692,9 @@ public class PveClient extends PveClientBase {
              * Metrics index.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/cluster/metrics", null);
             }
 
@@ -752,10 +751,9 @@ public class PveClient extends PveClientBase {
                  * Returns known notification metadata fields
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getMatcherFields() throws JSONException {
+                public Result getMatcherFields() {
                     return client.get("/cluster/notifications/matcher-fields", null);
                 }
 
@@ -773,10 +771,9 @@ public class PveClient extends PveClientBase {
                  * Returns known notification metadata fields and their known values
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getMatcherFieldValues() throws JSONException {
+                public Result getMatcherFieldValues() {
                     return client.get("/cluster/notifications/matcher-field-values", null);
                 }
 
@@ -839,10 +836,9 @@ public class PveClient extends PveClientBase {
                          * Remove sendmail endpoint
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result deleteSendmailEndpoint() throws JSONException {
+                        public Result deleteSendmailEndpoint() {
                             return client.delete("/cluster/notifications/endpoints/sendmail/" + this.name + "", null);
                         }
 
@@ -850,10 +846,9 @@ public class PveClient extends PveClientBase {
                          * Return a specific sendmail endpoint
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result getSendmailEndpoint() throws JSONException {
+                        public Result getSendmailEndpoint() {
                             return client.get("/cluster/notifications/endpoints/sendmail/" + this.name + "", null);
                         }
 
@@ -871,12 +866,11 @@ public class PveClient extends PveClientBase {
                          * @param mailto       List of email recipients
                          * @param mailto_user  List of users
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result updateSendmailEndpoint(String author, String comment, List<Object> delete,
                                 String digest, Boolean disable, String from_address, List<Object> mailto,
-                                List<Object> mailto_user) throws JSONException {
+                                List<Object> mailto_user) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("author", author);
                             parameters.put("comment", comment);
@@ -894,10 +888,9 @@ public class PveClient extends PveClientBase {
                          * Update existing sendmail endpoint
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateSendmailEndpoint() throws JSONException {
+                        public Result updateSendmailEndpoint() {
                             return client.set("/cluster/notifications/endpoints/sendmail/" + this.name + "", null);
                         }
 
@@ -907,10 +900,9 @@ public class PveClient extends PveClientBase {
                      * Returns a list of all sendmail endpoints
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getSendmailEndpoints() throws JSONException {
+                    public Result getSendmailEndpoints() {
                         return client.get("/cluster/notifications/endpoints/sendmail", null);
                     }
 
@@ -925,11 +917,10 @@ public class PveClient extends PveClientBase {
                      * @param mailto       List of email recipients
                      * @param mailto_user  List of users
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result createSendmailEndpoint(String name, String author, String comment, Boolean disable,
-                            String from_address, List<Object> mailto, List<Object> mailto_user) throws JSONException {
+                            String from_address, List<Object> mailto, List<Object> mailto_user) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
                         parameters.put("author", author);
@@ -946,10 +937,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param name The name of the endpoint.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result createSendmailEndpoint(String name) throws JSONException {
+                    public Result createSendmailEndpoint(String name) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
                         return client.create("/cluster/notifications/endpoints/sendmail", parameters);
@@ -982,10 +972,9 @@ public class PveClient extends PveClientBase {
                          * Remove gotify endpoint
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result deleteGotifyEndpoint() throws JSONException {
+                        public Result deleteGotifyEndpoint() {
                             return client.delete("/cluster/notifications/endpoints/gotify/" + this.name + "", null);
                         }
 
@@ -993,10 +982,9 @@ public class PveClient extends PveClientBase {
                          * Return a specific gotify endpoint
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result getGotifyEndpoint() throws JSONException {
+                        public Result getGotifyEndpoint() {
                             return client.get("/cluster/notifications/endpoints/gotify/" + this.name + "", null);
                         }
 
@@ -1011,11 +999,10 @@ public class PveClient extends PveClientBase {
                          * @param server  Server URL
                          * @param token   Secret token
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result updateGotifyEndpoint(String comment, List<Object> delete, String digest,
-                                Boolean disable, String server, String token) throws JSONException {
+                                Boolean disable, String server, String token) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("comment", comment);
                             parameters.put("delete", delete);
@@ -1030,10 +1017,9 @@ public class PveClient extends PveClientBase {
                          * Update existing gotify endpoint
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateGotifyEndpoint() throws JSONException {
+                        public Result updateGotifyEndpoint() {
                             return client.set("/cluster/notifications/endpoints/gotify/" + this.name + "", null);
                         }
 
@@ -1043,10 +1029,9 @@ public class PveClient extends PveClientBase {
                      * Returns a list of all gotify endpoints
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getGotifyEndpoints() throws JSONException {
+                    public Result getGotifyEndpoints() {
                         return client.get("/cluster/notifications/endpoints/gotify", null);
                     }
 
@@ -1059,11 +1044,10 @@ public class PveClient extends PveClientBase {
                      * @param comment Comment
                      * @param disable Disable this target
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result createGotifyEndpoint(String name, String server, String token, String comment,
-                            Boolean disable) throws JSONException {
+                            Boolean disable) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
                         parameters.put("server", server);
@@ -1080,10 +1064,9 @@ public class PveClient extends PveClientBase {
                      * @param server Server URL
                      * @param token  Secret token
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result createGotifyEndpoint(String name, String server, String token) throws JSONException {
+                    public Result createGotifyEndpoint(String name, String server, String token) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
                         parameters.put("server", server);
@@ -1118,10 +1101,9 @@ public class PveClient extends PveClientBase {
                          * Remove smtp endpoint
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result deleteSmtpEndpoint() throws JSONException {
+                        public Result deleteSmtpEndpoint() {
                             return client.delete("/cluster/notifications/endpoints/smtp/" + this.name + "", null);
                         }
 
@@ -1129,10 +1111,9 @@ public class PveClient extends PveClientBase {
                          * Return a specific smtp endpoint
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result getSmtpEndpoint() throws JSONException {
+                        public Result getSmtpEndpoint() {
                             return client.get("/cluster/notifications/endpoints/smtp/" + this.name + "", null);
                         }
 
@@ -1159,13 +1140,12 @@ public class PveClient extends PveClientBase {
                          * @param server       The address of the SMTP server.
                          * @param username     Username for SMTP authentication
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result updateSmtpEndpoint(String author, String comment, List<Object> delete,
                                 String digest, Boolean disable, String from_address, List<Object> mailto,
                                 List<Object> mailto_user, String mode, String password, Integer port, String server,
-                                String username) throws JSONException {
+                                String username) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("author", author);
                             parameters.put("comment", comment);
@@ -1187,10 +1167,9 @@ public class PveClient extends PveClientBase {
                          * Update existing smtp endpoint
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateSmtpEndpoint() throws JSONException {
+                        public Result updateSmtpEndpoint() {
                             return client.set("/cluster/notifications/endpoints/smtp/" + this.name + "", null);
                         }
 
@@ -1200,10 +1179,9 @@ public class PveClient extends PveClientBase {
                      * Returns a list of all smtp endpoints
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getSmtpEndpoints() throws JSONException {
+                    public Result getSmtpEndpoints() {
                         return client.get("/cluster/notifications/endpoints/smtp", null);
                     }
 
@@ -1227,12 +1205,11 @@ public class PveClient extends PveClientBase {
                      *                     25 for insecure plain-text connections.
                      * @param username     Username for SMTP authentication
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result createSmtpEndpoint(String from_address, String name, String server, String author,
                             String comment, Boolean disable, List<Object> mailto, List<Object> mailto_user, String mode,
-                            String password, Integer port, String username) throws JSONException {
+                            String password, Integer port, String username) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("from-address", from_address);
                         parameters.put("name", name);
@@ -1256,11 +1233,9 @@ public class PveClient extends PveClientBase {
                      * @param name         The name of the endpoint.
                      * @param server       The address of the SMTP server.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result createSmtpEndpoint(String from_address, String name, String server)
-                            throws JSONException {
+                    public Result createSmtpEndpoint(String from_address, String name, String server) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("from-address", from_address);
                         parameters.put("name", name);
@@ -1295,10 +1270,9 @@ public class PveClient extends PveClientBase {
                          * Remove webhook endpoint
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result deleteWebhookEndpoint() throws JSONException {
+                        public Result deleteWebhookEndpoint() {
                             return client.delete("/cluster/notifications/endpoints/webhook/" + this.name + "", null);
                         }
 
@@ -1306,10 +1280,9 @@ public class PveClient extends PveClientBase {
                          * Return a specific webhook endpoint
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result getWebhookEndpoint() throws JSONException {
+                        public Result getWebhookEndpoint() {
                             return client.get("/cluster/notifications/endpoints/webhook/" + this.name + "", null);
                         }
 
@@ -1334,12 +1307,11 @@ public class PveClient extends PveClientBase {
                          *                value&amp;gt;
                          * @param url     Server URL
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result updateWebhookEndpoint(String body, String comment, List<Object> delete,
                                 String digest, Boolean disable, List<Object> header, String method, List<Object> secret,
-                                String url) throws JSONException {
+                                String url) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("body", body);
                             parameters.put("comment", comment);
@@ -1357,10 +1329,9 @@ public class PveClient extends PveClientBase {
                          * Update existing webhook endpoint
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateWebhookEndpoint() throws JSONException {
+                        public Result updateWebhookEndpoint() {
                             return client.set("/cluster/notifications/endpoints/webhook/" + this.name + "", null);
                         }
 
@@ -1370,10 +1341,9 @@ public class PveClient extends PveClientBase {
                      * Returns a list of all webhook endpoints
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getWebhookEndpoints() throws JSONException {
+                    public Result getWebhookEndpoints() {
                         return client.get("/cluster/notifications/endpoints/webhook", null);
                     }
 
@@ -1396,12 +1366,10 @@ public class PveClient extends PveClientBase {
                      *                name=&amp;lt;name&amp;gt;,value=&amp;lt;base64 of
                      *                value&amp;gt;
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result createWebhookEndpoint(String method, String name, String url, String body,
-                            String comment, Boolean disable, List<Object> header, List<Object> secret)
-                            throws JSONException {
+                            String comment, Boolean disable, List<Object> header, List<Object> secret) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("method", method);
                         parameters.put("name", name);
@@ -1422,10 +1390,9 @@ public class PveClient extends PveClientBase {
                      * @param name   The name of the endpoint.
                      * @param url    Server URL
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result createWebhookEndpoint(String method, String name, String url) throws JSONException {
+                    public Result createWebhookEndpoint(String method, String name, String url) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("method", method);
                         parameters.put("name", name);
@@ -1439,10 +1406,9 @@ public class PveClient extends PveClientBase {
                  * Index for all available endpoint types.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result endpointsIndex() throws JSONException {
+                public Result endpointsIndex() {
                     return client.get("/cluster/notifications/endpoints", null);
                 }
 
@@ -1488,10 +1454,9 @@ public class PveClient extends PveClientBase {
                          * Send a test notification to a provided target.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result testTarget() throws JSONException {
+                        public Result testTarget() {
                             return client.create("/cluster/notifications/targets/" + this.name + "/test", null);
                         }
 
@@ -1503,10 +1468,9 @@ public class PveClient extends PveClientBase {
                  * Returns a list of all entities that can be used as notification targets.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getAllTargets() throws JSONException {
+                public Result getAllTargets() {
                     return client.get("/cluster/notifications/targets", null);
                 }
 
@@ -1537,10 +1501,9 @@ public class PveClient extends PveClientBase {
                      * Remove matcher
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result deleteMatcher() throws JSONException {
+                    public Result deleteMatcher() {
                         return client.delete("/cluster/notifications/matchers/" + this.name + "", null);
                     }
 
@@ -1548,10 +1511,9 @@ public class PveClient extends PveClientBase {
                      * Return a specific matcher
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getMatcher() throws JSONException {
+                    public Result getMatcher() {
                         return client.get("/cluster/notifications/matchers/" + this.name + "", null);
                     }
 
@@ -1575,12 +1537,11 @@ public class PveClient extends PveClientBase {
                      *                       Enum: all,any
                      * @param target         Targets to notify on match
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result updateMatcher(String comment, List<Object> delete, String digest, Boolean disable,
                             Boolean invert_match, List<Object> match_calendar, List<Object> match_field,
-                            List<Object> match_severity, String mode, List<Object> target) throws JSONException {
+                            List<Object> match_severity, String mode, List<Object> target) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("comment", comment);
                         parameters.put("delete", delete);
@@ -1599,10 +1560,9 @@ public class PveClient extends PveClientBase {
                      * Update existing matcher
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updateMatcher() throws JSONException {
+                    public Result updateMatcher() {
                         return client.set("/cluster/notifications/matchers/" + this.name + "", null);
                     }
 
@@ -1612,10 +1572,9 @@ public class PveClient extends PveClientBase {
                  * Returns a list of all matchers
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getMatchers() throws JSONException {
+                public Result getMatchers() {
                     return client.get("/cluster/notifications/matchers", null);
                 }
 
@@ -1636,12 +1595,11 @@ public class PveClient extends PveClientBase {
                  *                       Enum: all,any
                  * @param target         Targets to notify on match
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result createMatcher(String name, String comment, Boolean disable, Boolean invert_match,
                         List<Object> match_calendar, List<Object> match_field, List<Object> match_severity, String mode,
-                        List<Object> target) throws JSONException {
+                        List<Object> target) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("name", name);
                     parameters.put("comment", comment);
@@ -1660,10 +1618,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param name Name of the matcher.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result createMatcher(String name) throws JSONException {
+                public Result createMatcher(String name) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("name", name);
                     return client.create("/cluster/notifications/matchers", parameters);
@@ -1675,10 +1632,9 @@ public class PveClient extends PveClientBase {
              * Index for notification-related API endpoints.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/cluster/notifications", null);
             }
 
@@ -1734,10 +1690,9 @@ public class PveClient extends PveClientBase {
                  * Return the version of the cluster join API available on this node.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result joinApiVersion() throws JSONException {
+                public Result joinApiVersion() {
                     return client.get("/cluster/config/apiversion", null);
                 }
 
@@ -1768,10 +1723,9 @@ public class PveClient extends PveClientBase {
                      * Removes a node from the cluster configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delnode() throws JSONException {
+                    public Result delnode() {
                         return client.delete("/cluster/config/nodes/" + this.node + "", null);
                     }
 
@@ -1787,11 +1741,10 @@ public class PveClient extends PveClientBase {
                      * @param nodeid      Node id for this node.
                      * @param votes       Number of votes for this node
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result addnode(Integer apiversion, Boolean force, Map<Integer, String> linkN,
-                            String new_node_ip, Integer nodeid, Integer votes) throws JSONException {
+                            String new_node_ip, Integer nodeid, Integer votes) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("apiversion", apiversion);
                         parameters.put("force", force);
@@ -1806,10 +1759,9 @@ public class PveClient extends PveClientBase {
                      * Adds a node to the cluster configuration. This call is for internal use.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result addnode() throws JSONException {
+                    public Result addnode() {
                         return client.create("/cluster/config/nodes/" + this.node + "", null);
                     }
 
@@ -1819,10 +1771,9 @@ public class PveClient extends PveClientBase {
                  * Corosync node list.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result nodes() throws JSONException {
+                public Result nodes() {
                     return client.get("/cluster/config/nodes", null);
                 }
 
@@ -1841,10 +1792,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param node The node for which the joinee gets the nodeinfo.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result joinInfo(String node) throws JSONException {
+                public Result joinInfo(String node) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("node", node);
                     return client.get("/cluster/config/join", parameters);
@@ -1854,10 +1804,9 @@ public class PveClient extends PveClientBase {
                  * Get information needed to join this cluster over the connected node.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result joinInfo() throws JSONException {
+                public Result joinInfo() {
                     return client.get("/cluster/config/join", null);
                 }
 
@@ -1875,11 +1824,10 @@ public class PveClient extends PveClientBase {
                  * @param nodeid      Node id for this node.
                  * @param votes       Number of votes for this node
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result join(String fingerprint, String hostname, String password, Boolean force,
-                        Map<Integer, String> linkN, Integer nodeid, Integer votes) throws JSONException {
+                        Map<Integer, String> linkN, Integer nodeid, Integer votes) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("fingerprint", fingerprint);
                     parameters.put("hostname", hostname);
@@ -1900,10 +1848,9 @@ public class PveClient extends PveClientBase {
                  * @param hostname    Hostname (or IP) of an existing cluster member.
                  * @param password    Superuser (root) password of peer node.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result join(String fingerprint, String hostname, String password) throws JSONException {
+                public Result join(String fingerprint, String hostname, String password) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("fingerprint", fingerprint);
                     parameters.put("hostname", hostname);
@@ -1925,10 +1872,9 @@ public class PveClient extends PveClientBase {
                  * Get corosync totem protocol settings.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result totem() throws JSONException {
+                public Result totem() {
                     return client.get("/cluster/config/totem", null);
                 }
 
@@ -1946,10 +1892,9 @@ public class PveClient extends PveClientBase {
                  * Get QDevice status
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result status() throws JSONException {
+                public Result status() {
                     return client.get("/cluster/config/qdevice", null);
                 }
 
@@ -1959,10 +1904,9 @@ public class PveClient extends PveClientBase {
              * Directory index.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/cluster/config", null);
             }
 
@@ -1976,11 +1920,9 @@ public class PveClient extends PveClientBase {
              * @param nodeid      Node id for this node.
              * @param votes       Number of votes for this node.
              * @return Result
-             * @throws JSONException
              */
 
-            public Result create(String clustername, Map<Integer, String> linkN, Integer nodeid, Integer votes)
-                    throws JSONException {
+            public Result create(String clustername, Map<Integer, String> linkN, Integer nodeid, Integer votes) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("clustername", clustername);
                 parameters.put("nodeid", nodeid);
@@ -1995,10 +1937,9 @@ public class PveClient extends PveClientBase {
              * 
              * @param clustername The name of the cluster.
              * @return Result
-             * @throws JSONException
              */
 
-            public Result create(String clustername) throws JSONException {
+            public Result create(String clustername) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("clustername", clustername);
                 return client.create("/cluster/config", parameters);
@@ -2098,10 +2039,9 @@ public class PveClient extends PveClientBase {
                          * @param digest Prevent changes if current configuration file has a different
                          *               digest. This can be used to prevent concurrent modifications.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result deleteRule(String digest) throws JSONException {
+                        public Result deleteRule(String digest) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("digest", digest);
                             return client.delete("/cluster/firewall/groups/" + this.group + "/" + this.pos + "",
@@ -2112,10 +2052,9 @@ public class PveClient extends PveClientBase {
                          * Delete rule.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result deleteRule() throws JSONException {
+                        public Result deleteRule() {
                             return client.delete("/cluster/firewall/groups/" + this.group + "/" + this.pos + "", null);
                         }
 
@@ -2123,10 +2062,9 @@ public class PveClient extends PveClientBase {
                          * Get single rule data.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result getRule() throws JSONException {
+                        public Result getRule() {
                             return client.get("/cluster/firewall/groups/" + this.group + "/" + this.pos + "", null);
                         }
 
@@ -2178,13 +2116,11 @@ public class PveClient extends PveClientBase {
                          * @param type      Rule type.
                          *                  Enum: in,out,forward,group
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result updateRule(String action, String comment, String delete, String dest,
                                 String digest, String dport, Integer enable, String icmp_type, String iface, String log,
-                                String macro, Integer moveto, String proto, String source, String sport, String type)
-                                throws JSONException {
+                                String macro, Integer moveto, String proto, String source, String sport, String type) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("action", action);
                             parameters.put("comment", comment);
@@ -2210,10 +2146,9 @@ public class PveClient extends PveClientBase {
                          * Modify rule data.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateRule() throws JSONException {
+                        public Result updateRule() {
                             return client.set("/cluster/firewall/groups/" + this.group + "/" + this.pos + "", null);
                         }
 
@@ -2223,10 +2158,9 @@ public class PveClient extends PveClientBase {
                      * Delete security group.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result deleteSecurityGroup() throws JSONException {
+                    public Result deleteSecurityGroup() {
                         return client.delete("/cluster/firewall/groups/" + this.group + "", null);
                     }
 
@@ -2234,10 +2168,9 @@ public class PveClient extends PveClientBase {
                      * List rules.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getRules() throws JSONException {
+                    public Result getRules() {
                         return client.get("/cluster/firewall/groups/" + this.group + "", null);
                     }
 
@@ -2287,12 +2220,11 @@ public class PveClient extends PveClientBase {
                      *                  '80:85', and you can use comma separated list to match
                      *                  several ports or ranges.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result createRule(String action, String type, String comment, String dest, String digest,
                             String dport, Integer enable, String icmp_type, String iface, String log, String macro,
-                            Integer pos, String proto, String source, String sport) throws JSONException {
+                            Integer pos, String proto, String source, String sport) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
                         parameters.put("type", type);
@@ -2320,10 +2252,9 @@ public class PveClient extends PveClientBase {
                      * @param type   Rule type.
                      *               Enum: in,out,forward,group
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result createRule(String action, String type) throws JSONException {
+                    public Result createRule(String action, String type) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
                         parameters.put("type", type);
@@ -2336,10 +2267,9 @@ public class PveClient extends PveClientBase {
                  * List security groups.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result listSecurityGroups() throws JSONException {
+                public Result listSecurityGroups() {
                     return client.get("/cluster/firewall/groups", null);
                 }
 
@@ -2354,11 +2284,9 @@ public class PveClient extends PveClientBase {
                  *                to the same value as 'name' to update the 'comment' of an
                  *                existing group.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result createSecurityGroup(String group, String comment, String digest, String rename)
-                        throws JSONException {
+                public Result createSecurityGroup(String group, String comment, String digest, String rename) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
                     parameters.put("comment", comment);
@@ -2372,10 +2300,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param group Security Group name.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result createSecurityGroup(String group) throws JSONException {
+                public Result createSecurityGroup(String group) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
                     return client.create("/cluster/firewall/groups", parameters);
@@ -2410,10 +2337,9 @@ public class PveClient extends PveClientBase {
                      * @param digest Prevent changes if current configuration file has a different
                      *               digest. This can be used to prevent concurrent modifications.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result deleteRule(String digest) throws JSONException {
+                    public Result deleteRule(String digest) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("digest", digest);
                         return client.delete("/cluster/firewall/rules/" + this.pos + "", parameters);
@@ -2423,10 +2349,9 @@ public class PveClient extends PveClientBase {
                      * Delete rule.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result deleteRule() throws JSONException {
+                    public Result deleteRule() {
                         return client.delete("/cluster/firewall/rules/" + this.pos + "", null);
                     }
 
@@ -2434,10 +2359,9 @@ public class PveClient extends PveClientBase {
                      * Get single rule data.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getRule() throws JSONException {
+                    public Result getRule() {
                         return client.get("/cluster/firewall/rules/" + this.pos + "", null);
                     }
 
@@ -2489,13 +2413,11 @@ public class PveClient extends PveClientBase {
                      * @param type      Rule type.
                      *                  Enum: in,out,forward,group
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result updateRule(String action, String comment, String delete, String dest, String digest,
                             String dport, Integer enable, String icmp_type, String iface, String log, String macro,
-                            Integer moveto, String proto, String source, String sport, String type)
-                            throws JSONException {
+                            Integer moveto, String proto, String source, String sport, String type) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
                         parameters.put("comment", comment);
@@ -2520,10 +2442,9 @@ public class PveClient extends PveClientBase {
                      * Modify rule data.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updateRule() throws JSONException {
+                    public Result updateRule() {
                         return client.set("/cluster/firewall/rules/" + this.pos + "", null);
                     }
 
@@ -2533,10 +2454,9 @@ public class PveClient extends PveClientBase {
                  * List rules.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getRules() throws JSONException {
+                public Result getRules() {
                     return client.get("/cluster/firewall/rules", null);
                 }
 
@@ -2586,12 +2506,11 @@ public class PveClient extends PveClientBase {
                  *                  '80:85', and you can use comma separated list to match
                  *                  several ports or ranges.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result createRule(String action, String type, String comment, String dest, String digest,
                         String dport, Integer enable, String icmp_type, String iface, String log, String macro,
-                        Integer pos, String proto, String source, String sport) throws JSONException {
+                        Integer pos, String proto, String source, String sport) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("action", action);
                     parameters.put("type", type);
@@ -2619,10 +2538,9 @@ public class PveClient extends PveClientBase {
                  * @param type   Rule type.
                  *               Enum: in,out,forward,group
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result createRule(String action, String type) throws JSONException {
+                public Result createRule(String action, String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("action", action);
                     parameters.put("type", type);
@@ -2673,10 +2591,9 @@ public class PveClient extends PveClientBase {
                          * @param digest Prevent changes if current configuration file has a different
                          *               digest. This can be used to prevent concurrent modifications.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result removeIp(String digest) throws JSONException {
+                        public Result removeIp(String digest) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("digest", digest);
                             return client.delete("/cluster/firewall/ipset/" + this.name + "/" + this.cidr + "",
@@ -2687,10 +2604,9 @@ public class PveClient extends PveClientBase {
                          * Remove IP or Network from IPSet.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result removeIp() throws JSONException {
+                        public Result removeIp() {
                             return client.delete("/cluster/firewall/ipset/" + this.name + "/" + this.cidr + "", null);
                         }
 
@@ -2698,10 +2614,9 @@ public class PveClient extends PveClientBase {
                          * Read IP or Network settings from IPSet.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result readIp() throws JSONException {
+                        public Result readIp() {
                             return client.get("/cluster/firewall/ipset/" + this.name + "/" + this.cidr + "", null);
                         }
 
@@ -2713,10 +2628,9 @@ public class PveClient extends PveClientBase {
                          *                digest. This can be used to prevent concurrent modifications.
                          * @param nomatch
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateIp(String comment, String digest, Boolean nomatch) throws JSONException {
+                        public Result updateIp(String comment, String digest, Boolean nomatch) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("comment", comment);
                             parameters.put("digest", digest);
@@ -2729,10 +2643,9 @@ public class PveClient extends PveClientBase {
                          * Update IP or Network settings
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateIp() throws JSONException {
+                        public Result updateIp() {
                             return client.set("/cluster/firewall/ipset/" + this.name + "/" + this.cidr + "", null);
                         }
 
@@ -2743,10 +2656,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param force Delete all members of the IPSet, if there are any.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result deleteIpset(Boolean force) throws JSONException {
+                    public Result deleteIpset(Boolean force) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("force", force);
                         return client.delete("/cluster/firewall/ipset/" + this.name + "", parameters);
@@ -2756,10 +2668,9 @@ public class PveClient extends PveClientBase {
                      * Delete IPSet
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result deleteIpset() throws JSONException {
+                    public Result deleteIpset() {
                         return client.delete("/cluster/firewall/ipset/" + this.name + "", null);
                     }
 
@@ -2767,10 +2678,9 @@ public class PveClient extends PveClientBase {
                      * List IPSet content
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getIpset() throws JSONException {
+                    public Result getIpset() {
                         return client.get("/cluster/firewall/ipset/" + this.name + "", null);
                     }
 
@@ -2781,10 +2691,9 @@ public class PveClient extends PveClientBase {
                      * @param comment
                      * @param nomatch
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result createIp(String cidr, String comment, Boolean nomatch) throws JSONException {
+                    public Result createIp(String cidr, String comment, Boolean nomatch) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
                         parameters.put("comment", comment);
@@ -2797,10 +2706,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param cidr Network/IP specification in CIDR format.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result createIp(String cidr) throws JSONException {
+                    public Result createIp(String cidr) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
                         return client.create("/cluster/firewall/ipset/" + this.name + "", parameters);
@@ -2812,10 +2720,9 @@ public class PveClient extends PveClientBase {
                  * List IPSets
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result ipsetIndex() throws JSONException {
+                public Result ipsetIndex() {
                     return client.get("/cluster/firewall/ipset", null);
                 }
 
@@ -2829,11 +2736,9 @@ public class PveClient extends PveClientBase {
                  * @param rename  Rename an existing IPSet. You can set 'rename' to the same
                  *                value as 'name' to update the 'comment' of an existing IPSet.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result createIpset(String name, String comment, String digest, String rename)
-                        throws JSONException {
+                public Result createIpset(String name, String comment, String digest, String rename) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("name", name);
                     parameters.put("comment", comment);
@@ -2847,10 +2752,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param name IP set name.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result createIpset(String name) throws JSONException {
+                public Result createIpset(String name) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("name", name);
                     return client.create("/cluster/firewall/ipset", parameters);
@@ -2885,10 +2789,9 @@ public class PveClient extends PveClientBase {
                      * @param digest Prevent changes if current configuration file has a different
                      *               digest. This can be used to prevent concurrent modifications.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result removeAlias(String digest) throws JSONException {
+                    public Result removeAlias(String digest) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("digest", digest);
                         return client.delete("/cluster/firewall/aliases/" + this.name + "", parameters);
@@ -2898,10 +2801,9 @@ public class PveClient extends PveClientBase {
                      * Remove IP or Network alias.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result removeAlias() throws JSONException {
+                    public Result removeAlias() {
                         return client.delete("/cluster/firewall/aliases/" + this.name + "", null);
                     }
 
@@ -2909,10 +2811,9 @@ public class PveClient extends PveClientBase {
                      * Read alias.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result readAlias() throws JSONException {
+                    public Result readAlias() {
                         return client.get("/cluster/firewall/aliases/" + this.name + "", null);
                     }
 
@@ -2925,11 +2826,9 @@ public class PveClient extends PveClientBase {
                      *                digest. This can be used to prevent concurrent modifications.
                      * @param rename  Rename an existing alias.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updateAlias(String cidr, String comment, String digest, String rename)
-                            throws JSONException {
+                    public Result updateAlias(String cidr, String comment, String digest, String rename) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
                         parameters.put("comment", comment);
@@ -2943,10 +2842,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param cidr Network/IP specification in CIDR format.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updateAlias(String cidr) throws JSONException {
+                    public Result updateAlias(String cidr) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cidr", cidr);
                         return client.set("/cluster/firewall/aliases/" + this.name + "", parameters);
@@ -2958,10 +2856,9 @@ public class PveClient extends PveClientBase {
                  * List aliases
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getAliases() throws JSONException {
+                public Result getAliases() {
                     return client.get("/cluster/firewall/aliases", null);
                 }
 
@@ -2972,10 +2869,9 @@ public class PveClient extends PveClientBase {
                  * @param name    Alias name.
                  * @param comment
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result createAlias(String cidr, String name, String comment) throws JSONException {
+                public Result createAlias(String cidr, String name, String comment) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("cidr", cidr);
                     parameters.put("name", name);
@@ -2989,10 +2885,9 @@ public class PveClient extends PveClientBase {
                  * @param cidr Network/IP specification in CIDR format.
                  * @param name Alias name.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result createAlias(String cidr, String name) throws JSONException {
+                public Result createAlias(String cidr, String name) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("cidr", cidr);
                     parameters.put("name", name);
@@ -3013,10 +2908,9 @@ public class PveClient extends PveClientBase {
                  * Get Firewall options.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getOptions() throws JSONException {
+                public Result getOptions() {
                     return client.get("/cluster/firewall/options", null);
                 }
 
@@ -3037,12 +2931,10 @@ public class PveClient extends PveClientBase {
                  * @param policy_out     Output policy.
                  *                       Enum: ACCEPT,REJECT,DROP
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result setOptions(String delete, String digest, Boolean ebtables, Integer enable,
-                        String log_ratelimit, String policy_forward, String policy_in, String policy_out)
-                        throws JSONException {
+                        String log_ratelimit, String policy_forward, String policy_in, String policy_out) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("delete", delete);
                     parameters.put("digest", digest);
@@ -3059,10 +2951,9 @@ public class PveClient extends PveClientBase {
                  * Set Firewall options.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result setOptions() throws JSONException {
+                public Result setOptions() {
                     return client.set("/cluster/firewall/options", null);
                 }
 
@@ -3080,10 +2971,9 @@ public class PveClient extends PveClientBase {
                  * List available macros
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getMacros() throws JSONException {
+                public Result getMacros() {
                     return client.get("/cluster/firewall/macros", null);
                 }
 
@@ -3104,10 +2994,9 @@ public class PveClient extends PveClientBase {
                  * @param type Only list references of specified type.
                  *             Enum: alias,ipset
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result refs(String type) throws JSONException {
+                public Result refs(String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     return client.get("/cluster/firewall/refs", parameters);
@@ -3118,10 +3007,9 @@ public class PveClient extends PveClientBase {
                  * properties.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result refs() throws JSONException {
+                public Result refs() {
                     return client.get("/cluster/firewall/refs", null);
                 }
 
@@ -3131,10 +3019,9 @@ public class PveClient extends PveClientBase {
              * Directory index.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/cluster/firewall", null);
             }
 
@@ -3182,10 +3069,9 @@ public class PveClient extends PveClientBase {
                      * used in ExtJS tree views.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getVolumeBackupIncluded() throws JSONException {
+                    public Result getVolumeBackupIncluded() {
                         return client.get("/cluster/backup/" + this.id + "/included_volumes", null);
                     }
 
@@ -3195,10 +3081,9 @@ public class PveClient extends PveClientBase {
                  * Delete vzdump backup job definition.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result deleteJob() throws JSONException {
+                public Result deleteJob() {
                     return client.delete("/cluster/backup/" + this.id + "", null);
                 }
 
@@ -3206,10 +3091,9 @@ public class PveClient extends PveClientBase {
                  * Read vzdump backup job definition.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result readJob() throws JSONException {
+                public Result readJob() {
                     return client.get("/cluster/backup/" + this.id + "", null);
                 }
 
@@ -3312,7 +3196,6 @@ public class PveClient extends PveClientBase {
                  *                                  cores, if N is set to a value bigger than 0,
                  *                                  N is used as thread count.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result updateJob(Boolean all, Integer bwlimit, String comment, String compress, String delete,
@@ -3322,8 +3205,7 @@ public class PveClient extends PveClientBase {
                         String pbs_change_detection_mode, String performance, Integer pigz, String pool,
                         Boolean protected_, String prune_backups, Boolean quiet, Boolean remove, Boolean repeat_missed,
                         String schedule, String script, String starttime, Boolean stdexcludes, Boolean stop,
-                        Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd)
-                        throws JSONException {
+                        Integer stopwait, String storage, String tmpdir, String vmid, Integer zstd) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("all", all);
                     parameters.put("bwlimit", bwlimit);
@@ -3371,10 +3253,9 @@ public class PveClient extends PveClientBase {
                  * Update vzdump backup job definition.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result updateJob() throws JSONException {
+                public Result updateJob() {
                     return client.set("/cluster/backup/" + this.id + "", null);
                 }
 
@@ -3384,10 +3265,9 @@ public class PveClient extends PveClientBase {
              * List vzdump backup schedule.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/cluster/backup", null);
             }
 
@@ -3490,7 +3370,6 @@ public class PveClient extends PveClientBase {
              *                                  cores, if N is set to a value bigger than 0,
              *                                  N is used as thread count.
              * @return Result
-             * @throws JSONException
              */
 
             public Result createJob(Boolean all, Integer bwlimit, String comment, String compress, String dow,
@@ -3500,7 +3379,7 @@ public class PveClient extends PveClientBase {
                     String pbs_change_detection_mode, String performance, Integer pigz, String pool, Boolean protected_,
                     String prune_backups, Boolean quiet, Boolean remove, Boolean repeat_missed, String schedule,
                     String script, String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait,
-                    String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+                    String storage, String tmpdir, String vmid, Integer zstd) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("all", all);
                 parameters.put("bwlimit", bwlimit);
@@ -3548,10 +3427,9 @@ public class PveClient extends PveClientBase {
              * Create new vzdump backup job.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result createJob() throws JSONException {
+            public Result createJob() {
                 return client.create("/cluster/backup", null);
             }
 
@@ -3583,10 +3461,9 @@ public class PveClient extends PveClientBase {
                  * Shows all guests which are not covered by any backup job.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getGuestsNotInBackup() throws JSONException {
+                public Result getGuestsNotInBackup() {
                     return client.get("/cluster/backup-info/not-backed-up", null);
                 }
 
@@ -3596,10 +3473,9 @@ public class PveClient extends PveClientBase {
              * Index for backup info related endpoints
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/cluster/backup-info", null);
             }
 
@@ -3684,10 +3560,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param node Target node.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result migrate(String node) throws JSONException {
+                        public Result migrate(String node) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("node", node);
                             return client.create("/cluster/ha/resources/" + this.sid + "/migrate", parameters);
@@ -3710,10 +3585,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param node Target node.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result relocate(String node) throws JSONException {
+                        public Result relocate(String node) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("node", node);
                             return client.create("/cluster/ha/resources/" + this.sid + "/relocate", parameters);
@@ -3724,11 +3598,24 @@ public class PveClient extends PveClientBase {
                     /**
                      * Delete resource configuration.
                      * 
+                     * @param purge Remove this resource from rules that reference it, deleting the
+                     *              rule if this resource is the only resource in the rule
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete() throws JSONException {
+                    public Result delete(Boolean purge) {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("purge", purge);
+                        return client.delete("/cluster/ha/resources/" + this.sid + "", parameters);
+                    }
+
+                    /**
+                     * Delete resource configuration.
+                     * 
+                     * @return Result
+                     */
+
+                    public Result delete() {
                         return client.delete("/cluster/ha/resources/" + this.sid + "", null);
                     }
 
@@ -3736,10 +3623,9 @@ public class PveClient extends PveClientBase {
                      * Read resource configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result read() throws JSONException {
+                    public Result read() {
                         return client.get("/cluster/ha/resources/" + this.sid + "", null);
                     }
 
@@ -3763,11 +3649,10 @@ public class PveClient extends PveClientBase {
                      * @param state        Requested resource state.
                      *                     Enum: started,stopped,enabled,disabled,ignored
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result update(String comment, String delete, String digest, Boolean failback, String group,
-                            Integer max_relocate, Integer max_restart, String state) throws JSONException {
+                            Integer max_relocate, Integer max_restart, String state) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("comment", comment);
                         parameters.put("delete", delete);
@@ -3784,10 +3669,9 @@ public class PveClient extends PveClientBase {
                      * Update resource configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result update() throws JSONException {
+                    public Result update() {
                         return client.set("/cluster/ha/resources/" + this.sid + "", null);
                     }
 
@@ -3799,10 +3683,9 @@ public class PveClient extends PveClientBase {
                  * @param type Only list resources of specific type
                  *             Enum: ct,vm
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index(String type) throws JSONException {
+                public Result index(String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     return client.get("/cluster/ha/resources", parameters);
@@ -3812,10 +3695,9 @@ public class PveClient extends PveClientBase {
                  * List HA resources.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/cluster/ha/resources", null);
                 }
 
@@ -3842,11 +3724,10 @@ public class PveClient extends PveClientBase {
                  * @param type         Resource type.
                  *                     Enum: ct,vm
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result create(String sid, String comment, Boolean failback, String group, Integer max_relocate,
-                        Integer max_restart, String state, String type) throws JSONException {
+                        Integer max_restart, String state, String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("sid", sid);
                     parameters.put("comment", comment);
@@ -3867,10 +3748,9 @@ public class PveClient extends PveClientBase {
                  *            ct:100). For virtual machines and containers, you can simply use
                  *            the VM or CT id as a shortcut (example: 100).
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result create(String sid) throws JSONException {
+                public Result create(String sid) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("sid", sid);
                     return client.create("/cluster/ha/resources", parameters);
@@ -3903,10 +3783,9 @@ public class PveClient extends PveClientBase {
                      * Delete ha group configuration. (deprecated in favor of HA rules)
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete() throws JSONException {
+                    public Result delete() {
                         return client.delete("/cluster/ha/groups/" + this.group + "", null);
                     }
 
@@ -3914,10 +3793,9 @@ public class PveClient extends PveClientBase {
                      * Read ha group configuration. (deprecated in favor of HA rules)
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result read() throws JSONException {
+                    public Result read() {
                         return client.get("/cluster/ha/groups/" + this.group + "", null);
                     }
 
@@ -3937,11 +3815,10 @@ public class PveClient extends PveClientBase {
                      * @param restricted Resources bound to restricted groups may only run on nodes
                      *                   defined by the group.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result update(String comment, String delete, String digest, String nodes, Boolean nofailback,
-                            Boolean restricted) throws JSONException {
+                            Boolean restricted) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("comment", comment);
                         parameters.put("delete", delete);
@@ -3956,10 +3833,9 @@ public class PveClient extends PveClientBase {
                      * Update ha group configuration. (deprecated in favor of HA rules)
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result update() throws JSONException {
+                    public Result update() {
                         return client.set("/cluster/ha/groups/" + this.group + "", null);
                     }
 
@@ -3969,10 +3845,9 @@ public class PveClient extends PveClientBase {
                  * Get HA groups. (deprecated in favor of HA rules)
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/cluster/ha/groups", null);
                 }
 
@@ -3991,11 +3866,10 @@ public class PveClient extends PveClientBase {
                  * @param type       Group type.
                  *                   Enum: group
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result create(String group, String nodes, String comment, Boolean nofailback, Boolean restricted,
-                        String type) throws JSONException {
+                        String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
                     parameters.put("nodes", nodes);
@@ -4012,10 +3886,9 @@ public class PveClient extends PveClientBase {
                  * @param group The HA group identifier.
                  * @param nodes List of cluster node names with optional priority.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result create(String group, String nodes) throws JSONException {
+                public Result create(String group, String nodes) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("group", group);
                     parameters.put("nodes", nodes);
@@ -4049,10 +3922,9 @@ public class PveClient extends PveClientBase {
                      * Delete HA rule.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result deleteRule() throws JSONException {
+                    public Result deleteRule() {
                         return client.delete("/cluster/ha/rules/" + this.rule + "", null);
                     }
 
@@ -4060,10 +3932,9 @@ public class PveClient extends PveClientBase {
                      * Read HA rule.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result readRule() throws JSONException {
+                    public Result readRule() {
                         return client.get("/cluster/ha/rules/" + this.rule + "", null);
                     }
 
@@ -4089,11 +3960,10 @@ public class PveClient extends PveClientBase {
                      * @param strict    Describes whether the node affinity rule is strict or
                      *                  non-strict.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result updateRule(String type, String affinity, String comment, String delete, String digest,
-                            Boolean disable, String nodes, String resources, Boolean strict) throws JSONException {
+                            Boolean disable, String nodes, String resources, Boolean strict) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("type", type);
                         parameters.put("affinity", affinity);
@@ -4113,10 +3983,9 @@ public class PveClient extends PveClientBase {
                      * @param type HA rule type.
                      *             Enum: node-affinity,resource-affinity
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updateRule(String type) throws JSONException {
+                    public Result updateRule(String type) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("type", type);
                         return client.set("/cluster/ha/rules/" + this.rule + "", parameters);
@@ -4132,10 +4001,9 @@ public class PveClient extends PveClientBase {
                  * @param type     Limit the returned list to the specified rule type.
                  *                 Enum: node-affinity,resource-affinity
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index(String resource, String type) throws JSONException {
+                public Result index(String resource, String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("resource", resource);
                     parameters.put("type", type);
@@ -4146,10 +4014,9 @@ public class PveClient extends PveClientBase {
                  * Get HA rules.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/cluster/ha/rules", null);
                 }
 
@@ -4172,11 +4039,10 @@ public class PveClient extends PveClientBase {
                  * @param strict    Describes whether the node affinity rule is strict or
                  *                  non-strict.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result createRule(String resources, String rule, String type, String affinity, String comment,
-                        Boolean disable, String nodes, Boolean strict) throws JSONException {
+                        Boolean disable, String nodes, Boolean strict) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("resources", resources);
                     parameters.put("rule", rule);
@@ -4199,10 +4065,9 @@ public class PveClient extends PveClientBase {
                  * @param type      HA rule type.
                  *                  Enum: node-affinity,resource-affinity
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result createRule(String resources, String rule, String type) throws JSONException {
+                public Result createRule(String resources, String rule, String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("resources", resources);
                     parameters.put("rule", rule);
@@ -4244,10 +4109,9 @@ public class PveClient extends PveClientBase {
                      * Get HA manger status.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result status() throws JSONException {
+                    public Result status() {
                         return client.get("/cluster/ha/status/current", null);
                     }
 
@@ -4265,10 +4129,9 @@ public class PveClient extends PveClientBase {
                      * Get full HA manger status, including LRM status.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result managerStatus() throws JSONException {
+                    public Result managerStatus() {
                         return client.get("/cluster/ha/status/manager_status", null);
                     }
 
@@ -4278,10 +4141,9 @@ public class PveClient extends PveClientBase {
                  * Directory index.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/cluster/ha/status", null);
                 }
 
@@ -4291,10 +4153,9 @@ public class PveClient extends PveClientBase {
              * Directory index.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/cluster/ha", null);
             }
 
@@ -4369,10 +4230,9 @@ public class PveClient extends PveClientBase {
                      * Delete ACME plugin configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result deletePlugin() throws JSONException {
+                    public Result deletePlugin() {
                         return client.delete("/cluster/acme/plugins/" + this.id + "", null);
                     }
 
@@ -4380,10 +4240,9 @@ public class PveClient extends PveClientBase {
                      * Get ACME plugin configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getPluginConfig() throws JSONException {
+                    public Result getPluginConfig() {
                         return client.get("/cluster/acme/plugins/" + this.id + "", null);
                     }
 
@@ -4404,11 +4263,10 @@ public class PveClient extends PveClientBase {
                      *                         validation. Allows to cope with a long TTL of DNS
                      *                         records.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result updatePlugin(String api, String data, String delete, String digest, Boolean disable,
-                            String nodes, Integer validation_delay) throws JSONException {
+                            String nodes, Integer validation_delay) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("api", api);
                         parameters.put("data", data);
@@ -4424,10 +4282,9 @@ public class PveClient extends PveClientBase {
                      * Update ACME plugin configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updatePlugin() throws JSONException {
+                    public Result updatePlugin() {
                         return client.set("/cluster/acme/plugins/" + this.id + "", null);
                     }
 
@@ -4439,10 +4296,9 @@ public class PveClient extends PveClientBase {
                  * @param type Only list ACME plugins of a specific type
                  *             Enum: dns,standalone
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index(String type) throws JSONException {
+                public Result index(String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     return client.get("/cluster/acme/plugins", parameters);
@@ -4452,10 +4308,9 @@ public class PveClient extends PveClientBase {
                  * ACME plugin index.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/cluster/acme/plugins", null);
                 }
 
@@ -4475,11 +4330,10 @@ public class PveClient extends PveClientBase {
                  *                         validation. Allows to cope with a long TTL of DNS
                  *                         records.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result addPlugin(String id, String type, String api, String data, Boolean disable, String nodes,
-                        Integer validation_delay) throws JSONException {
+                        Integer validation_delay) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("id", id);
                     parameters.put("type", type);
@@ -4498,10 +4352,9 @@ public class PveClient extends PveClientBase {
                  * @param type ACME challenge type.
                  *             Enum: dns,standalone
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result addPlugin(String id, String type) throws JSONException {
+                public Result addPlugin(String id, String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("id", id);
                     parameters.put("type", type);
@@ -4535,10 +4388,9 @@ public class PveClient extends PveClientBase {
                      * Deactivate existing ACME account at CA.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result deactivateAccount() throws JSONException {
+                    public Result deactivateAccount() {
                         return client.delete("/cluster/acme/account/" + this.name + "", null);
                     }
 
@@ -4546,10 +4398,9 @@ public class PveClient extends PveClientBase {
                      * Return existing ACME account information.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getAccount() throws JSONException {
+                    public Result getAccount() {
                         return client.get("/cluster/acme/account/" + this.name + "", null);
                     }
 
@@ -4559,10 +4410,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param contact Contact email addresses.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updateAccount(String contact) throws JSONException {
+                    public Result updateAccount(String contact) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("contact", contact);
                         return client.set("/cluster/acme/account/" + this.name + "", parameters);
@@ -4573,10 +4423,9 @@ public class PveClient extends PveClientBase {
                      * new account information triggers a refresh.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updateAccount() throws JSONException {
+                    public Result updateAccount() {
                         return client.set("/cluster/acme/account/" + this.name + "", null);
                     }
 
@@ -4586,10 +4435,9 @@ public class PveClient extends PveClientBase {
                  * ACMEAccount index.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result accountIndex() throws JSONException {
+                public Result accountIndex() {
                     return client.get("/cluster/acme/account", null);
                 }
 
@@ -4604,11 +4452,10 @@ public class PveClient extends PveClientBase {
                  * @param tos_url      URL of CA TermsOfService - setting this indicates
                  *                     agreement.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result registerAccount(String contact, String directory, String eab_hmac_key, String eab_kid,
-                        String name, String tos_url) throws JSONException {
+                        String name, String tos_url) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("contact", contact);
                     parameters.put("directory", directory);
@@ -4624,10 +4471,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param contact Contact email addresses.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result registerAccount(String contact) throws JSONException {
+                public Result registerAccount(String contact) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("contact", contact);
                     return client.create("/cluster/acme/account", parameters);
@@ -4649,10 +4495,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param directory URL of ACME CA directory endpoint.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getTos(String directory) throws JSONException {
+                public Result getTos(String directory) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("directory", directory);
                     return client.get("/cluster/acme/tos", parameters);
@@ -4663,10 +4508,9 @@ public class PveClient extends PveClientBase {
                  * /cluster/acme/meta.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getTos() throws JSONException {
+                public Result getTos() {
                     return client.get("/cluster/acme/tos", null);
                 }
 
@@ -4685,10 +4529,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param directory URL of ACME CA directory endpoint.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getMeta(String directory) throws JSONException {
+                public Result getMeta(String directory) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("directory", directory);
                     return client.get("/cluster/acme/meta", parameters);
@@ -4698,10 +4541,9 @@ public class PveClient extends PveClientBase {
                  * Retrieve ACME Directory Meta Information
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getMeta() throws JSONException {
+                public Result getMeta() {
                     return client.get("/cluster/acme/meta", null);
                 }
 
@@ -4719,10 +4561,9 @@ public class PveClient extends PveClientBase {
                  * Get named known ACME directory endpoints.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getDirectories() throws JSONException {
+                public Result getDirectories() {
                     return client.get("/cluster/acme/directories", null);
                 }
 
@@ -4740,10 +4581,9 @@ public class PveClient extends PveClientBase {
                  * Get schema of ACME challenge types.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result challengeschema() throws JSONException {
+                public Result challengeschema() {
                     return client.get("/cluster/acme/challenge-schema", null);
                 }
 
@@ -4753,10 +4593,9 @@ public class PveClient extends PveClientBase {
              * ACMEAccount index.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/cluster/acme", null);
             }
 
@@ -4802,10 +4641,9 @@ public class PveClient extends PveClientBase {
                  * @param scope
                  *              Enum: all,versions
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result metadata(String scope) throws JSONException {
+                public Result metadata(String scope) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("scope", scope);
                     return client.get("/cluster/ceph/metadata", parameters);
@@ -4815,10 +4653,9 @@ public class PveClient extends PveClientBase {
                  * Get ceph metadata.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result metadata() throws JSONException {
+                public Result metadata() {
                     return client.get("/cluster/ceph/metadata", null);
                 }
 
@@ -4836,10 +4673,9 @@ public class PveClient extends PveClientBase {
                  * Get ceph status.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result status() throws JSONException {
+                public Result status() {
                     return client.get("/cluster/ceph/status", null);
                 }
 
@@ -4870,10 +4706,9 @@ public class PveClient extends PveClientBase {
                      * Get the status of a specific ceph flag.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getFlag() throws JSONException {
+                    public Result getFlag() {
                         return client.get("/cluster/ceph/flags/" + this.flag + "", null);
                     }
 
@@ -4882,10 +4717,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param value The new value of the flag
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updateFlag(boolean value) throws JSONException {
+                    public Result updateFlag(boolean value) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("value", value);
                         return client.set("/cluster/ceph/flags/" + this.flag + "", parameters);
@@ -4897,10 +4731,9 @@ public class PveClient extends PveClientBase {
                  * get the status of all ceph flags
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getAllFlags() throws JSONException {
+                public Result getAllFlags() {
                     return client.get("/cluster/ceph/flags", null);
                 }
 
@@ -4922,12 +4755,11 @@ public class PveClient extends PveClientBase {
                  * @param noup         OSDs are not allowed to start.
                  * @param pause        Pauses read and writes.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result setFlags(Boolean nobackfill, Boolean nodeep_scrub, Boolean nodown, Boolean noin,
                         Boolean noout, Boolean norebalance, Boolean norecover, Boolean noscrub, Boolean notieragent,
-                        Boolean noup, Boolean pause) throws JSONException {
+                        Boolean noup, Boolean pause) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("nobackfill", nobackfill);
                     parameters.put("nodeep-scrub", nodeep_scrub);
@@ -4947,10 +4779,9 @@ public class PveClient extends PveClientBase {
                  * Set/Unset multiple ceph flags at once.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result setFlags() throws JSONException {
+                public Result setFlags() {
                     return client.set("/cluster/ceph/flags", null);
                 }
 
@@ -4960,10 +4791,9 @@ public class PveClient extends PveClientBase {
              * Cluster ceph index.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result cephindex() throws JSONException {
+            public Result cephindex() {
                 return client.get("/cluster/ceph", null);
             }
 
@@ -5014,10 +4844,9 @@ public class PveClient extends PveClientBase {
                      * Delete realm-sync job definition.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result deleteJob() throws JSONException {
+                    public Result deleteJob() {
                         return client.delete("/cluster/jobs/realm-sync/" + this.id + "", null);
                     }
 
@@ -5025,10 +4854,9 @@ public class PveClient extends PveClientBase {
                      * Read realm-sync job definition.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result readJob() throws JSONException {
+                    public Result readJob() {
                         return client.get("/cluster/jobs/realm-sync/" + this.id + "", null);
                     }
 
@@ -5053,11 +4881,10 @@ public class PveClient extends PveClientBase {
                      * @param scope           Select what to sync.
                      *                        Enum: users,groups,both
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result createJob(String schedule, String comment, Boolean enable_new, Boolean enabled,
-                            String realm, String remove_vanished, String scope) throws JSONException {
+                            String realm, String remove_vanished, String scope) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("schedule", schedule);
                         parameters.put("comment", comment);
@@ -5075,10 +4902,9 @@ public class PveClient extends PveClientBase {
                      * @param schedule Backup schedule. The format is a subset of `systemd` calendar
                      *                 events.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result createJob(String schedule) throws JSONException {
+                    public Result createJob(String schedule) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("schedule", schedule);
                         return client.create("/cluster/jobs/realm-sync/" + this.id + "", parameters);
@@ -5105,11 +4931,10 @@ public class PveClient extends PveClientBase {
                      * @param scope           Select what to sync.
                      *                        Enum: users,groups,both
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result updateJob(String schedule, String comment, String delete, Boolean enable_new,
-                            Boolean enabled, String remove_vanished, String scope) throws JSONException {
+                            Boolean enabled, String remove_vanished, String scope) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("schedule", schedule);
                         parameters.put("comment", comment);
@@ -5127,10 +4952,9 @@ public class PveClient extends PveClientBase {
                      * @param schedule Backup schedule. The format is a subset of `systemd` calendar
                      *                 events.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updateJob(String schedule) throws JSONException {
+                    public Result updateJob(String schedule) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("schedule", schedule);
                         return client.set("/cluster/jobs/realm-sync/" + this.id + "", parameters);
@@ -5142,10 +4966,9 @@ public class PveClient extends PveClientBase {
                  * List configured realm-sync-jobs.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result syncjobIndex() throws JSONException {
+                public Result syncjobIndex() {
                     return client.get("/cluster/jobs/realm-sync", null);
                 }
 
@@ -5168,11 +4991,9 @@ public class PveClient extends PveClientBase {
                  * @param starttime  UNIX timestamp to start the calculation from. Defaults to
                  *                   the current time.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result scheduleAnalyze(String schedule, Integer iterations, Integer starttime)
-                        throws JSONException {
+                public Result scheduleAnalyze(String schedule, Integer iterations, Integer starttime) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("schedule", schedule);
                     parameters.put("iterations", iterations);
@@ -5186,10 +5007,9 @@ public class PveClient extends PveClientBase {
                  * @param schedule Job schedule. The format is a subset of `systemd` calendar
                  *                 events.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result scheduleAnalyze(String schedule) throws JSONException {
+                public Result scheduleAnalyze(String schedule) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("schedule", schedule);
                     return client.get("/cluster/jobs/schedule-analyze", parameters);
@@ -5201,10 +5021,9 @@ public class PveClient extends PveClientBase {
              * Index for jobs related endpoints.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/cluster/jobs", null);
             }
 
@@ -5261,10 +5080,9 @@ public class PveClient extends PveClientBase {
                      * Remove directory mapping.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete() throws JSONException {
+                    public Result delete() {
                         return client.delete("/cluster/mapping/dir/" + this.id + "", null);
                     }
 
@@ -5272,10 +5090,9 @@ public class PveClient extends PveClientBase {
                      * Get directory mapping.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result get() throws JSONException {
+                    public Result get() {
                         return client.get("/cluster/mapping/dir/" + this.id + "", null);
                     }
 
@@ -5289,11 +5106,9 @@ public class PveClient extends PveClientBase {
                      *                    modifications.
                      * @param map         A list of maps for the cluster nodes.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result update(String delete, String description, String digest, List<Object> map)
-                            throws JSONException {
+                    public Result update(String delete, String description, String digest, List<Object> map) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("delete", delete);
                         parameters.put("description", description);
@@ -5306,10 +5121,9 @@ public class PveClient extends PveClientBase {
                      * Update a directory mapping.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result update() throws JSONException {
+                    public Result update() {
                         return client.set("/cluster/mapping/dir/" + this.id + "", null);
                     }
 
@@ -5322,10 +5136,9 @@ public class PveClient extends PveClientBase {
                  *                   correctness, and adds relevant diagnostics for the
                  *                   directory to the response.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index(String check_node) throws JSONException {
+                public Result index(String check_node) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("check-node", check_node);
                     return client.get("/cluster/mapping/dir", parameters);
@@ -5335,10 +5148,9 @@ public class PveClient extends PveClientBase {
                  * List directory mapping
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/cluster/mapping/dir", null);
                 }
 
@@ -5349,10 +5161,9 @@ public class PveClient extends PveClientBase {
                  * @param map         A list of maps for the cluster nodes.
                  * @param description Description of the directory mapping
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result create(String id, List<Object> map, String description) throws JSONException {
+                public Result create(String id, List<Object> map, String description) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("id", id);
                     parameters.put("map", map);
@@ -5366,10 +5177,9 @@ public class PveClient extends PveClientBase {
                  * @param id  The ID of the directory mapping
                  * @param map A list of maps for the cluster nodes.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result create(String id, List<Object> map) throws JSONException {
+                public Result create(String id, List<Object> map) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("id", id);
                     parameters.put("map", map);
@@ -5403,10 +5213,9 @@ public class PveClient extends PveClientBase {
                      * Remove Hardware Mapping.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete() throws JSONException {
+                    public Result delete() {
                         return client.delete("/cluster/mapping/pci/" + this.id + "", null);
                     }
 
@@ -5414,10 +5223,9 @@ public class PveClient extends PveClientBase {
                      * Get PCI Mapping.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result get() throws JSONException {
+                    public Result get() {
                         return client.get("/cluster/mapping/pci/" + this.id + "", null);
                     }
 
@@ -5436,11 +5244,10 @@ public class PveClient extends PveClientBase {
                      * @param mdev                   Marks the device(s) as being capable of
                      *                               providing mediated devices.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result update(String delete, String description, String digest,
-                            Boolean live_migration_capable, List<Object> map, Boolean mdev) throws JSONException {
+                            Boolean live_migration_capable, List<Object> map, Boolean mdev) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("delete", delete);
                         parameters.put("description", description);
@@ -5455,10 +5262,9 @@ public class PveClient extends PveClientBase {
                      * Update a hardware mapping.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result update() throws JSONException {
+                    public Result update() {
                         return client.set("/cluster/mapping/pci/" + this.id + "", null);
                     }
 
@@ -5471,10 +5277,9 @@ public class PveClient extends PveClientBase {
                  *                   correctness, and adds relevant diagnostics for the devices
                  *                   to the response.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index(String check_node) throws JSONException {
+                public Result index(String check_node) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("check-node", check_node);
                     return client.get("/cluster/mapping/pci", parameters);
@@ -5484,10 +5289,9 @@ public class PveClient extends PveClientBase {
                  * List PCI Hardware Mapping
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/cluster/mapping/pci", null);
                 }
 
@@ -5503,11 +5307,10 @@ public class PveClient extends PveClientBase {
                  * @param mdev                   Marks the device(s) as being capable of
                  *                               providing mediated devices.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result create(String id, List<Object> map, String description, Boolean live_migration_capable,
-                        Boolean mdev) throws JSONException {
+                        Boolean mdev) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("id", id);
                     parameters.put("map", map);
@@ -5523,10 +5326,9 @@ public class PveClient extends PveClientBase {
                  * @param id  The ID of the logical PCI mapping.
                  * @param map A list of maps for the cluster nodes.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result create(String id, List<Object> map) throws JSONException {
+                public Result create(String id, List<Object> map) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("id", id);
                     parameters.put("map", map);
@@ -5560,10 +5362,9 @@ public class PveClient extends PveClientBase {
                      * Remove Hardware Mapping.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete() throws JSONException {
+                    public Result delete() {
                         return client.delete("/cluster/mapping/usb/" + this.id + "", null);
                     }
 
@@ -5571,10 +5372,9 @@ public class PveClient extends PveClientBase {
                      * Get USB Mapping.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result get() throws JSONException {
+                    public Result get() {
                         return client.get("/cluster/mapping/usb/" + this.id + "", null);
                     }
 
@@ -5588,11 +5388,9 @@ public class PveClient extends PveClientBase {
                      *                    different digest. This can be used to prevent concurrent
                      *                    modifications.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result update(List<Object> map, String delete, String description, String digest)
-                            throws JSONException {
+                    public Result update(List<Object> map, String delete, String description, String digest) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("map", map);
                         parameters.put("delete", delete);
@@ -5606,10 +5404,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param map A list of maps for the cluster nodes.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result update(List<Object> map) throws JSONException {
+                    public Result update(List<Object> map) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("map", map);
                         return client.set("/cluster/mapping/usb/" + this.id + "", parameters);
@@ -5623,10 +5420,9 @@ public class PveClient extends PveClientBase {
                  * @param check_node If given, checks the configurations on the given node for
                  *                   correctness, and adds relevant errors to the devices.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index(String check_node) throws JSONException {
+                public Result index(String check_node) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("check-node", check_node);
                     return client.get("/cluster/mapping/usb", parameters);
@@ -5636,10 +5432,9 @@ public class PveClient extends PveClientBase {
                  * List USB Hardware Mappings
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/cluster/mapping/usb", null);
                 }
 
@@ -5650,10 +5445,9 @@ public class PveClient extends PveClientBase {
                  * @param map         A list of maps for the cluster nodes.
                  * @param description Description of the logical USB device.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result create(String id, List<Object> map, String description) throws JSONException {
+                public Result create(String id, List<Object> map, String description) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("id", id);
                     parameters.put("map", map);
@@ -5667,10 +5461,9 @@ public class PveClient extends PveClientBase {
                  * @param id  The ID of the logical USB mapping.
                  * @param map A list of maps for the cluster nodes.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result create(String id, List<Object> map) throws JSONException {
+                public Result create(String id, List<Object> map) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("id", id);
                     parameters.put("map", map);
@@ -5683,11 +5476,244 @@ public class PveClient extends PveClientBase {
              * List resource types.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/cluster/mapping", null);
+            }
+
+        }
+
+        public class PVEBulkAction {
+            private final PveClient client;
+
+            protected PVEBulkAction(PveClient client) {
+                this.client = client;
+
+            }
+
+            private PVEGuest guest;
+
+            public PVEGuest getGuest() {
+                return guest == null ? (guest = new PVEGuest(client)) : guest;
+            }
+
+            public class PVEGuest {
+                private final PveClient client;
+
+                protected PVEGuest(PveClient client) {
+                    this.client = client;
+
+                }
+
+                private PVEStart start;
+
+                public PVEStart getStart() {
+                    return start == null ? (start = new PVEStart(client)) : start;
+                }
+
+                private PVEShutdown shutdown;
+
+                public PVEShutdown getShutdown() {
+                    return shutdown == null ? (shutdown = new PVEShutdown(client)) : shutdown;
+                }
+
+                private PVESuspend suspend;
+
+                public PVESuspend getSuspend() {
+                    return suspend == null ? (suspend = new PVESuspend(client)) : suspend;
+                }
+
+                private PVEMigrate migrate;
+
+                public PVEMigrate getMigrate() {
+                    return migrate == null ? (migrate = new PVEMigrate(client)) : migrate;
+                }
+
+                public class PVEStart {
+                    private final PveClient client;
+
+                    protected PVEStart(PveClient client) {
+                        this.client = client;
+
+                    }
+
+                    /**
+                     * Bulk start or resume all guests on the cluster.
+                     * 
+                     * @param maxworkers How many parallel tasks at maximum should be started.
+                     * @param timeout    Default start timeout in seconds. Only valid for VMs.
+                     *                   (default depends on the guest configuration).
+                     * @param vms        Only consider guests from this list of VMIDs.
+                     * @return Result
+                     */
+
+                    public Result start(Integer maxworkers, Integer timeout, List<Object> vms) {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("maxworkers", maxworkers);
+                        parameters.put("timeout", timeout);
+                        parameters.put("vms", vms);
+                        return client.create("/cluster/bulk-action/guest/start", parameters);
+                    }
+
+                    /**
+                     * Bulk start or resume all guests on the cluster.
+                     * 
+                     * @return Result
+                     */
+
+                    public Result start() {
+                        return client.create("/cluster/bulk-action/guest/start", null);
+                    }
+
+                }
+
+                public class PVEShutdown {
+                    private final PveClient client;
+
+                    protected PVEShutdown(PveClient client) {
+                        this.client = client;
+
+                    }
+
+                    /**
+                     * Bulk shutdown all guests on the cluster.
+                     * 
+                     * @param force_stop Makes sure the Guest stops after the timeout.
+                     * @param maxworkers How many parallel tasks at maximum should be started.
+                     * @param timeout    Default shutdown timeout in seconds if none is configured
+                     *                   for the guest.
+                     * @param vms        Only consider guests from this list of VMIDs.
+                     * @return Result
+                     */
+
+                    public Result shutdown(Boolean force_stop, Integer maxworkers, Integer timeout, List<Object> vms) {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("force-stop", force_stop);
+                        parameters.put("maxworkers", maxworkers);
+                        parameters.put("timeout", timeout);
+                        parameters.put("vms", vms);
+                        return client.create("/cluster/bulk-action/guest/shutdown", parameters);
+                    }
+
+                    /**
+                     * Bulk shutdown all guests on the cluster.
+                     * 
+                     * @return Result
+                     */
+
+                    public Result shutdown() {
+                        return client.create("/cluster/bulk-action/guest/shutdown", null);
+                    }
+
+                }
+
+                public class PVESuspend {
+                    private final PveClient client;
+
+                    protected PVESuspend(PveClient client) {
+                        this.client = client;
+
+                    }
+
+                    /**
+                     * Bulk suspend all guests on the cluster.
+                     * 
+                     * @param maxworkers   How many parallel tasks at maximum should be started.
+                     * @param statestorage The storage for the VM state.
+                     * @param to_disk      If set, suspends the guests to disk. Will be resumed on
+                     *                     next start.
+                     * @param vms          Only consider guests from this list of VMIDs.
+                     * @return Result
+                     */
+
+                    public Result suspend(Integer maxworkers, String statestorage, Boolean to_disk, List<Object> vms) {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("maxworkers", maxworkers);
+                        parameters.put("statestorage", statestorage);
+                        parameters.put("to-disk", to_disk);
+                        parameters.put("vms", vms);
+                        return client.create("/cluster/bulk-action/guest/suspend", parameters);
+                    }
+
+                    /**
+                     * Bulk suspend all guests on the cluster.
+                     * 
+                     * @return Result
+                     */
+
+                    public Result suspend() {
+                        return client.create("/cluster/bulk-action/guest/suspend", null);
+                    }
+
+                }
+
+                public class PVEMigrate {
+                    private final PveClient client;
+
+                    protected PVEMigrate(PveClient client) {
+                        this.client = client;
+
+                    }
+
+                    /**
+                     * Bulk migrate all guests on the cluster.
+                     * 
+                     * @param target           Target node.
+                     * @param maxworkers       How many parallel tasks at maximum should be started.
+                     * @param online           Enable live migration for VMs and restart migration
+                     *                         for CTs.
+                     * @param vms              Only consider guests from this list of VMIDs.
+                     * @param with_local_disks Enable live storage migration for local disk
+                     * @return Result
+                     */
+
+                    public Result migrate(String target, Integer maxworkers, Boolean online, List<Object> vms,
+                            Boolean with_local_disks) {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("target", target);
+                        parameters.put("maxworkers", maxworkers);
+                        parameters.put("online", online);
+                        parameters.put("vms", vms);
+                        parameters.put("with-local-disks", with_local_disks);
+                        return client.create("/cluster/bulk-action/guest/migrate", parameters);
+                    }
+
+                    /**
+                     * Bulk migrate all guests on the cluster.
+                     * 
+                     * @param target Target node.
+                     * @return Result
+                     */
+
+                    public Result migrate(String target) {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("target", target);
+                        return client.create("/cluster/bulk-action/guest/migrate", parameters);
+                    }
+
+                }
+
+                /**
+                 * Bulk action index.
+                 * 
+                 * @return Result
+                 */
+
+                public Result index() {
+                    return client.get("/cluster/bulk-action/guest", null);
+                }
+
+            }
+
+            /**
+             * List resource types.
+             * 
+             * @return Result
+             */
+
+            public Result index() {
+                return client.get("/cluster/bulk-action", null);
             }
 
         }
@@ -5838,10 +5864,9 @@ public class PveClient extends PveClientBase {
                                  * @param digest Prevent changes if current configuration file has a different
                                  *               digest. This can be used to prevent concurrent modifications.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result deleteRule(String digest) throws JSONException {
+                                public Result deleteRule(String digest) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("digest", digest);
                                     return client.delete(
@@ -5853,10 +5878,9 @@ public class PveClient extends PveClientBase {
                                  * Delete rule.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result deleteRule() throws JSONException {
+                                public Result deleteRule() {
                                     return client.delete(
                                             "/cluster/sdn/vnets/" + this.vnet + "/firewall/rules/" + this.pos + "",
                                             null);
@@ -5866,10 +5890,9 @@ public class PveClient extends PveClientBase {
                                  * Get single rule data.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result getRule() throws JSONException {
+                                public Result getRule() {
                                     return client.get(
                                             "/cluster/sdn/vnets/" + this.vnet + "/firewall/rules/" + this.pos + "",
                                             null);
@@ -5923,13 +5946,12 @@ public class PveClient extends PveClientBase {
                                  * @param type      Rule type.
                                  *                  Enum: in,out,forward,group
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
                                 public Result updateRule(String action, String comment, String delete, String dest,
                                         String digest, String dport, Integer enable, String icmp_type, String iface,
                                         String log, String macro, Integer moveto, String proto, String source,
-                                        String sport, String type) throws JSONException {
+                                        String sport, String type) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("action", action);
                                     parameters.put("comment", comment);
@@ -5956,10 +5978,9 @@ public class PveClient extends PveClientBase {
                                  * Modify rule data.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result updateRule() throws JSONException {
+                                public Result updateRule() {
                                     return client.set(
                                             "/cluster/sdn/vnets/" + this.vnet + "/firewall/rules/" + this.pos + "",
                                             null);
@@ -5971,10 +5992,9 @@ public class PveClient extends PveClientBase {
                              * List rules.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getRules() throws JSONException {
+                            public Result getRules() {
                                 return client.get("/cluster/sdn/vnets/" + this.vnet + "/firewall/rules", null);
                             }
 
@@ -6024,13 +6044,11 @@ public class PveClient extends PveClientBase {
                              *                  '80:85', and you can use comma separated list to match
                              *                  several ports or ranges.
                              * @return Result
-                             * @throws JSONException
                              */
 
                             public Result createRule(String action, String type, String comment, String dest,
                                     String digest, String dport, Integer enable, String icmp_type, String iface,
-                                    String log, String macro, Integer pos, String proto, String source, String sport)
-                                    throws JSONException {
+                                    String log, String macro, Integer pos, String proto, String source, String sport) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
@@ -6058,10 +6076,9 @@ public class PveClient extends PveClientBase {
                              * @param type   Rule type.
                              *               Enum: in,out,forward,group
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result createRule(String action, String type) throws JSONException {
+                            public Result createRule(String action, String type) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
@@ -6083,10 +6100,9 @@ public class PveClient extends PveClientBase {
                              * Get vnet firewall options.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getOptions() throws JSONException {
+                            public Result getOptions() {
                                 return client.get("/cluster/sdn/vnets/" + this.vnet + "/firewall/options", null);
                             }
 
@@ -6104,11 +6120,10 @@ public class PveClient extends PveClientBase {
                              * @param policy_forward    Forward policy.
                              *                          Enum: ACCEPT,DROP
                              * @return Result
-                             * @throws JSONException
                              */
 
                             public Result setOptions(String delete, String digest, Boolean enable,
-                                    String log_level_forward, String policy_forward) throws JSONException {
+                                    String log_level_forward, String policy_forward) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("delete", delete);
                                 parameters.put("digest", digest);
@@ -6122,10 +6137,9 @@ public class PveClient extends PveClientBase {
                              * Set Firewall options.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result setOptions() throws JSONException {
+                            public Result setOptions() {
                                 return client.set("/cluster/sdn/vnets/" + this.vnet + "/firewall/options", null);
                             }
 
@@ -6135,10 +6149,9 @@ public class PveClient extends PveClientBase {
                          * Directory index.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result index() throws JSONException {
+                        public Result index() {
                             return client.get("/cluster/sdn/vnets/" + this.vnet + "/firewall", null);
                         }
 
@@ -6173,10 +6186,9 @@ public class PveClient extends PveClientBase {
                              * 
                              * @param lock_token the token for unlocking the global SDN configuration
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result delete(String lock_token) throws JSONException {
+                            public Result delete(String lock_token) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("lock-token", lock_token);
                                 return client.delete("/cluster/sdn/vnets/" + this.vnet + "/subnets/" + this.subnet + "",
@@ -6187,10 +6199,9 @@ public class PveClient extends PveClientBase {
                              * Delete sdn subnet object configuration.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result delete() throws JSONException {
+                            public Result delete() {
                                 return client.delete("/cluster/sdn/vnets/" + this.vnet + "/subnets/" + this.subnet + "",
                                         null);
                             }
@@ -6201,10 +6212,9 @@ public class PveClient extends PveClientBase {
                              * @param pending Display pending config.
                              * @param running Display running config.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result read(Boolean pending, Boolean running) throws JSONException {
+                            public Result read(Boolean pending, Boolean running) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("pending", pending);
                                 parameters.put("running", running);
@@ -6216,10 +6226,9 @@ public class PveClient extends PveClientBase {
                              * Read sdn subnet configuration.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result read() throws JSONException {
+                            public Result read() {
                                 return client.get("/cluster/sdn/vnets/" + this.vnet + "/subnets/" + this.subnet + "",
                                         null);
                             }
@@ -6240,12 +6249,11 @@ public class PveClient extends PveClientBase {
                              * @param lock_token      the token for unlocking the global SDN configuration
                              * @param snat            enable masquerade for this subnet if pve-firewall
                              * @return Result
-                             * @throws JSONException
                              */
 
                             public Result update(String delete, String dhcp_dns_server, List<Object> dhcp_range,
                                     String digest, String dnszoneprefix, String gateway, String lock_token,
-                                    Boolean snat) throws JSONException {
+                                    Boolean snat) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("delete", delete);
                                 parameters.put("dhcp-dns-server", dhcp_dns_server);
@@ -6263,10 +6271,9 @@ public class PveClient extends PveClientBase {
                              * Update sdn subnet object configuration.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result update() throws JSONException {
+                            public Result update() {
                                 return client.set("/cluster/sdn/vnets/" + this.vnet + "/subnets/" + this.subnet + "",
                                         null);
                             }
@@ -6279,10 +6286,9 @@ public class PveClient extends PveClientBase {
                          * @param pending Display pending config.
                          * @param running Display running config.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result index(Boolean pending, Boolean running) throws JSONException {
+                        public Result index(Boolean pending, Boolean running) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("pending", pending);
                             parameters.put("running", running);
@@ -6293,10 +6299,9 @@ public class PveClient extends PveClientBase {
                          * SDN subnets index.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result index() throws JSONException {
+                        public Result index() {
                             return client.get("/cluster/sdn/vnets/" + this.vnet + "/subnets", null);
                         }
 
@@ -6315,12 +6320,11 @@ public class PveClient extends PveClientBase {
                          * @param lock_token      the token for unlocking the global SDN configuration
                          * @param snat            enable masquerade for this subnet if pve-firewall
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result create(String subnet, String type, String dhcp_dns_server,
                                 List<Object> dhcp_range, String dnszoneprefix, String gateway, String lock_token,
-                                Boolean snat) throws JSONException {
+                                Boolean snat) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("subnet", subnet);
                             parameters.put("type", type);
@@ -6340,10 +6344,9 @@ public class PveClient extends PveClientBase {
                          * @param type
                          *               Enum: subnet
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result create(String subnet, String type) throws JSONException {
+                        public Result create(String subnet, String type) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("subnet", subnet);
                             parameters.put("type", type);
@@ -6368,10 +6371,9 @@ public class PveClient extends PveClientBase {
                          * @param zone The SDN zone object identifier.
                          * @param mac  Unicast MAC address.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result ipdelete(String ip, String zone, String mac) throws JSONException {
+                        public Result ipdelete(String ip, String zone, String mac) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ip", ip);
                             parameters.put("zone", zone);
@@ -6385,10 +6387,9 @@ public class PveClient extends PveClientBase {
                          * @param ip   The IP address to delete
                          * @param zone The SDN zone object identifier.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result ipdelete(String ip, String zone) throws JSONException {
+                        public Result ipdelete(String ip, String zone) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ip", ip);
                             parameters.put("zone", zone);
@@ -6402,10 +6403,9 @@ public class PveClient extends PveClientBase {
                          * @param zone The SDN zone object identifier.
                          * @param mac  Unicast MAC address.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result ipcreate(String ip, String zone, String mac) throws JSONException {
+                        public Result ipcreate(String ip, String zone, String mac) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ip", ip);
                             parameters.put("zone", zone);
@@ -6419,10 +6419,9 @@ public class PveClient extends PveClientBase {
                          * @param ip   The IP address to associate with the given MAC address
                          * @param zone The SDN zone object identifier.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result ipcreate(String ip, String zone) throws JSONException {
+                        public Result ipcreate(String ip, String zone) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ip", ip);
                             parameters.put("zone", zone);
@@ -6437,10 +6436,9 @@ public class PveClient extends PveClientBase {
                          * @param mac  Unicast MAC address.
                          * @param vmid The (unique) ID of the VM.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result ipupdate(String ip, String zone, String mac, Integer vmid) throws JSONException {
+                        public Result ipupdate(String ip, String zone, String mac, Integer vmid) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ip", ip);
                             parameters.put("zone", zone);
@@ -6455,10 +6453,9 @@ public class PveClient extends PveClientBase {
                          * @param ip   The IP address to associate with the given MAC address
                          * @param zone The SDN zone object identifier.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result ipupdate(String ip, String zone) throws JSONException {
+                        public Result ipupdate(String ip, String zone) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ip", ip);
                             parameters.put("zone", zone);
@@ -6472,10 +6469,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param lock_token the token for unlocking the global SDN configuration
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete(String lock_token) throws JSONException {
+                    public Result delete(String lock_token) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("lock-token", lock_token);
                         return client.delete("/cluster/sdn/vnets/" + this.vnet + "", parameters);
@@ -6485,10 +6481,9 @@ public class PveClient extends PveClientBase {
                      * Delete sdn vnet object configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete() throws JSONException {
+                    public Result delete() {
                         return client.delete("/cluster/sdn/vnets/" + this.vnet + "", null);
                     }
 
@@ -6498,10 +6493,9 @@ public class PveClient extends PveClientBase {
                      * @param pending Display pending config.
                      * @param running Display running config.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result read(Boolean pending, Boolean running) throws JSONException {
+                    public Result read(Boolean pending, Boolean running) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("pending", pending);
                         parameters.put("running", running);
@@ -6512,33 +6506,32 @@ public class PveClient extends PveClientBase {
                      * Read sdn vnet configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result read() throws JSONException {
+                    public Result read() {
                         return client.get("/cluster/sdn/vnets/" + this.vnet + "", null);
                     }
 
                     /**
                      * Update sdn vnet object configuration.
                      * 
-                     * @param alias         alias name of the vnet
+                     * @param alias         Alias name of the VNet.
                      * @param delete        A list of settings you want to delete.
                      * @param digest        Prevent changes if current configuration file has a
                      *                      different digest. This can be used to prevent concurrent
                      *                      modifications.
-                     * @param isolate_ports If true, sets the isolated property for all members of
-                     *                      this VNet
+                     * @param isolate_ports If true, sets the isolated property for all interfaces
+                     *                      on the bridge of this VNet.
                      * @param lock_token    the token for unlocking the global SDN configuration
-                     * @param tag           vlan or vxlan id
-                     * @param vlanaware     Allow vm VLANs to pass through this vnet.
-                     * @param zone          zone id
+                     * @param tag           VLAN Tag (for VLAN or QinQ zones) or VXLAN VNI (for
+                     *                      VXLAN or EVPN zones).
+                     * @param vlanaware     Allow VLANs to pass through this vnet.
+                     * @param zone          Name of the zone this VNet belongs to.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result update(String alias, String delete, String digest, Boolean isolate_ports,
-                            String lock_token, Integer tag, Boolean vlanaware, String zone) throws JSONException {
+                            String lock_token, Integer tag, Boolean vlanaware, String zone) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("alias", alias);
                         parameters.put("delete", delete);
@@ -6555,10 +6548,9 @@ public class PveClient extends PveClientBase {
                      * Update sdn vnet object configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result update() throws JSONException {
+                    public Result update() {
                         return client.set("/cluster/sdn/vnets/" + this.vnet + "", null);
                     }
 
@@ -6570,10 +6562,9 @@ public class PveClient extends PveClientBase {
                  * @param pending Display pending config.
                  * @param running Display running config.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index(Boolean pending, Boolean running) throws JSONException {
+                public Result index(Boolean pending, Boolean running) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("pending", pending);
                     parameters.put("running", running);
@@ -6584,10 +6575,9 @@ public class PveClient extends PveClientBase {
                  * SDN vnets index.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/cluster/sdn/vnets", null);
                 }
 
@@ -6595,21 +6585,21 @@ public class PveClient extends PveClientBase {
                  * Create a new sdn vnet object.
                  * 
                  * @param vnet          The SDN vnet object identifier.
-                 * @param zone          zone id
-                 * @param alias         alias name of the vnet
-                 * @param isolate_ports If true, sets the isolated property for all members of
-                 *                      this VNet
+                 * @param zone          Name of the zone this VNet belongs to.
+                 * @param alias         Alias name of the VNet.
+                 * @param isolate_ports If true, sets the isolated property for all interfaces
+                 *                      on the bridge of this VNet.
                  * @param lock_token    the token for unlocking the global SDN configuration
-                 * @param tag           vlan or vxlan id
-                 * @param type          Type
+                 * @param tag           VLAN Tag (for VLAN or QinQ zones) or VXLAN VNI (for
+                 *                      VXLAN or EVPN zones).
+                 * @param type          Type of the VNet.
                  *                      Enum: vnet
-                 * @param vlanaware     Allow vm VLANs to pass through this vnet.
+                 * @param vlanaware     Allow VLANs to pass through this vnet.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result create(String vnet, String zone, String alias, Boolean isolate_ports, String lock_token,
-                        Integer tag, String type, Boolean vlanaware) throws JSONException {
+                        Integer tag, String type, Boolean vlanaware) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vnet", vnet);
                     parameters.put("zone", zone);
@@ -6626,12 +6616,11 @@ public class PveClient extends PveClientBase {
                  * Create a new sdn vnet object.
                  * 
                  * @param vnet The SDN vnet object identifier.
-                 * @param zone zone id
+                 * @param zone Name of the zone this VNet belongs to.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result create(String vnet, String zone) throws JSONException {
+                public Result create(String vnet, String zone) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vnet", vnet);
                     parameters.put("zone", zone);
@@ -6666,10 +6655,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param lock_token the token for unlocking the global SDN configuration
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete(String lock_token) throws JSONException {
+                    public Result delete(String lock_token) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("lock-token", lock_token);
                         return client.delete("/cluster/sdn/zones/" + this.zone + "", parameters);
@@ -6679,10 +6667,9 @@ public class PveClient extends PveClientBase {
                      * Delete sdn zone object configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete() throws JSONException {
+                    public Result delete() {
                         return client.delete("/cluster/sdn/zones/" + this.zone + "", null);
                     }
 
@@ -6692,10 +6679,9 @@ public class PveClient extends PveClientBase {
                      * @param pending Display pending config.
                      * @param running Display running config.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result read(Boolean pending, Boolean running) throws JSONException {
+                    public Result read(Boolean pending, Boolean running) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("pending", pending);
                         parameters.put("running", running);
@@ -6706,53 +6692,58 @@ public class PveClient extends PveClientBase {
                      * Read sdn zone configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result read() throws JSONException {
+                    public Result read() {
                         return client.get("/cluster/sdn/zones/" + this.zone + "", null);
                     }
 
                     /**
                      * Update sdn zone object configuration.
                      * 
-                     * @param advertise_subnets           Advertise evpn subnets if you have silent
-                     *                                    hosts
-                     * @param bridge
+                     * @param advertise_subnets           Advertise IP prefixes (Type-5 routes)
+                     *                                    instead of MAC/IP pairs (Type-2 routes).
+                     * @param bridge                      The bridge for which VLANs should be
+                     *                                    managed.
                      * @param bridge_disable_mac_learning Disable auto mac learning.
-                     * @param controller                  Frr router name
+                     * @param controller                  Controller for this zone.
                      * @param delete                      A list of settings you want to delete.
                      * @param dhcp                        Type of the DHCP backend for this zone
                      *                                    Enum: dnsmasq
                      * @param digest                      Prevent changes if current configuration
                      *                                    file has a different digest. This can be
                      *                                    used to prevent concurrent modifications.
-                     * @param disable_arp_nd_suppression  Disable ipv4 arp &amp;&amp; ipv6 neighbour
-                     *                                    discovery suppression
+                     * @param disable_arp_nd_suppression  Suppress IPv4 ARP &amp;&amp; IPv6
+                     *                                    Neighbour Discovery messages.
                      * @param dns                         dns api server
                      * @param dnszone                     dns domain zone ex: mydomain.com
                      * @param dp_id                       Faucet dataplane id
                      * @param exitnodes                   List of cluster node names.
-                     * @param exitnodes_local_routing     Allow exitnodes to connect to evpn guests
-                     * @param exitnodes_primary           Force traffic to this exitnode first.
+                     * @param exitnodes_local_routing     Allow exitnodes to connect to EVPN guests.
+                     * @param exitnodes_primary           Force traffic through this exitnode first.
                      * @param fabric                      SDN fabric to use as underlay for this
                      *                                    VXLAN zone.
                      * @param ipam                        use a specific ipam
                      * @param lock_token                  the token for unlocking the global SDN
                      *                                    configuration
-                     * @param mac                         Anycast logical router mac address
-                     * @param mtu                         MTU
+                     * @param mac                         Anycast logical router mac address.
+                     * @param mtu                         MTU of the zone, will be used for the
+                     *                                    created VNet bridges.
                      * @param nodes                       List of cluster node names.
-                     * @param peers                       peers address list.
+                     * @param peers                       Comma-separated list of peers, that are
+                     *                                    part of the VXLAN zone. Usually the IPs of
+                     *                                    the nodes.
                      * @param reversedns                  reverse dns api server
-                     * @param rt_import                   Route-Target import
-                     * @param tag                         Service-VLAN Tag
-                     * @param vlan_protocol
+                     * @param rt_import                   List of Route Targets that should be
+                     *                                    imported into the VRF of the zone.
+                     * @param tag                         Service-VLAN Tag (outer VLAN)
+                     * @param vlan_protocol               Which VLAN protocol should be used for the
+                     *                                    creation of the QinQ zone.
                      *                                    Enum: 802.1q,802.1ad
-                     * @param vrf_vxlan                   l3vni.
-                     * @param vxlan_port                  Vxlan tunnel udp port (default 4789).
+                     * @param vrf_vxlan                   VNI for the zone VRF.
+                     * @param vxlan_port                  UDP port that should be used for the VXLAN
+                     *                                    tunnel (default 4789).
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result update(Boolean advertise_subnets, String bridge, Boolean bridge_disable_mac_learning,
@@ -6761,7 +6752,7 @@ public class PveClient extends PveClientBase {
                             String exitnodes, Boolean exitnodes_local_routing, String exitnodes_primary, String fabric,
                             String ipam, String lock_token, String mac, Integer mtu, String nodes, String peers,
                             String reversedns, String rt_import, Integer tag, String vlan_protocol, Integer vrf_vxlan,
-                            Integer vxlan_port) throws JSONException {
+                            Integer vxlan_port) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("advertise-subnets", advertise_subnets);
                         parameters.put("bridge", bridge);
@@ -6797,10 +6788,9 @@ public class PveClient extends PveClientBase {
                      * Update sdn zone object configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result update() throws JSONException {
+                    public Result update() {
                         return client.set("/cluster/sdn/zones/" + this.zone + "", null);
                     }
 
@@ -6814,10 +6804,9 @@ public class PveClient extends PveClientBase {
                  * @param type    Only list SDN zones of specific type
                  *                Enum: evpn,faucet,qinq,simple,vlan,vxlan
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index(Boolean pending, Boolean running, String type) throws JSONException {
+                public Result index(Boolean pending, Boolean running, String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("pending", pending);
                     parameters.put("running", running);
@@ -6829,10 +6818,9 @@ public class PveClient extends PveClientBase {
                  * SDN zones index.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/cluster/sdn/zones", null);
                 }
 
@@ -6842,39 +6830,45 @@ public class PveClient extends PveClientBase {
                  * @param type                        Plugin type.
                  *                                    Enum: evpn,faucet,qinq,simple,vlan,vxlan
                  * @param zone                        The SDN zone object identifier.
-                 * @param advertise_subnets           Advertise evpn subnets if you have silent
-                 *                                    hosts
-                 * @param bridge
+                 * @param advertise_subnets           Advertise IP prefixes (Type-5 routes)
+                 *                                    instead of MAC/IP pairs (Type-2 routes).
+                 * @param bridge                      The bridge for which VLANs should be
+                 *                                    managed.
                  * @param bridge_disable_mac_learning Disable auto mac learning.
-                 * @param controller                  Frr router name
+                 * @param controller                  Controller for this zone.
                  * @param dhcp                        Type of the DHCP backend for this zone
                  *                                    Enum: dnsmasq
-                 * @param disable_arp_nd_suppression  Disable ipv4 arp &amp;&amp; ipv6 neighbour
-                 *                                    discovery suppression
+                 * @param disable_arp_nd_suppression  Suppress IPv4 ARP &amp;&amp; IPv6
+                 *                                    Neighbour Discovery messages.
                  * @param dns                         dns api server
                  * @param dnszone                     dns domain zone ex: mydomain.com
                  * @param dp_id                       Faucet dataplane id
                  * @param exitnodes                   List of cluster node names.
-                 * @param exitnodes_local_routing     Allow exitnodes to connect to evpn guests
-                 * @param exitnodes_primary           Force traffic to this exitnode first.
+                 * @param exitnodes_local_routing     Allow exitnodes to connect to EVPN guests.
+                 * @param exitnodes_primary           Force traffic through this exitnode first.
                  * @param fabric                      SDN fabric to use as underlay for this
                  *                                    VXLAN zone.
                  * @param ipam                        use a specific ipam
                  * @param lock_token                  the token for unlocking the global SDN
                  *                                    configuration
-                 * @param mac                         Anycast logical router mac address
-                 * @param mtu                         MTU
+                 * @param mac                         Anycast logical router mac address.
+                 * @param mtu                         MTU of the zone, will be used for the
+                 *                                    created VNet bridges.
                  * @param nodes                       List of cluster node names.
-                 * @param peers                       peers address list.
+                 * @param peers                       Comma-separated list of peers, that are
+                 *                                    part of the VXLAN zone. Usually the IPs of
+                 *                                    the nodes.
                  * @param reversedns                  reverse dns api server
-                 * @param rt_import                   Route-Target import
-                 * @param tag                         Service-VLAN Tag
-                 * @param vlan_protocol
+                 * @param rt_import                   List of Route Targets that should be
+                 *                                    imported into the VRF of the zone.
+                 * @param tag                         Service-VLAN Tag (outer VLAN)
+                 * @param vlan_protocol               Which VLAN protocol should be used for the
+                 *                                    creation of the QinQ zone.
                  *                                    Enum: 802.1q,802.1ad
-                 * @param vrf_vxlan                   l3vni.
-                 * @param vxlan_port                  Vxlan tunnel udp port (default 4789).
+                 * @param vrf_vxlan                   VNI for the zone VRF.
+                 * @param vxlan_port                  UDP port that should be used for the VXLAN
+                 *                                    tunnel (default 4789).
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result create(String type, String zone, Boolean advertise_subnets, String bridge,
@@ -6882,8 +6876,7 @@ public class PveClient extends PveClientBase {
                         Boolean disable_arp_nd_suppression, String dns, String dnszone, Integer dp_id, String exitnodes,
                         Boolean exitnodes_local_routing, String exitnodes_primary, String fabric, String ipam,
                         String lock_token, String mac, Integer mtu, String nodes, String peers, String reversedns,
-                        String rt_import, Integer tag, String vlan_protocol, Integer vrf_vxlan, Integer vxlan_port)
-                        throws JSONException {
+                        String rt_import, Integer tag, String vlan_protocol, Integer vrf_vxlan, Integer vxlan_port) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     parameters.put("zone", zone);
@@ -6922,10 +6915,9 @@ public class PveClient extends PveClientBase {
                  *             Enum: evpn,faucet,qinq,simple,vlan,vxlan
                  * @param zone The SDN zone object identifier.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result create(String type, String zone) throws JSONException {
+                public Result create(String type, String zone) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     parameters.put("zone", zone);
@@ -6960,10 +6952,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param lock_token the token for unlocking the global SDN configuration
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete(String lock_token) throws JSONException {
+                    public Result delete(String lock_token) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("lock-token", lock_token);
                         return client.delete("/cluster/sdn/controllers/" + this.controller + "", parameters);
@@ -6973,10 +6964,9 @@ public class PveClient extends PveClientBase {
                      * Delete sdn controller object configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete() throws JSONException {
+                    public Result delete() {
                         return client.delete("/cluster/sdn/controllers/" + this.controller + "", null);
                     }
 
@@ -6986,10 +6976,9 @@ public class PveClient extends PveClientBase {
                      * @param pending Display pending config.
                      * @param running Display running config.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result read(Boolean pending, Boolean running) throws JSONException {
+                    public Result read(Boolean pending, Boolean running) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("pending", pending);
                         parameters.put("running", running);
@@ -7000,10 +6989,9 @@ public class PveClient extends PveClientBase {
                      * Read sdn controller configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result read() throws JSONException {
+                    public Result read() {
                         return client.get("/cluster/sdn/controllers/" + this.controller + "", null);
                     }
 
@@ -7011,31 +6999,33 @@ public class PveClient extends PveClientBase {
                      * Update sdn controller object configuration.
                      * 
                      * @param asn                         autonomous system number
-                     * @param bgp_multipath_as_path_relax
+                     * @param bgp_multipath_as_path_relax Consider different AS paths of equal
+                     *                                    length for multipath computation.
                      * @param delete                      A list of settings you want to delete.
                      * @param digest                      Prevent changes if current configuration
                      *                                    file has a different digest. This can be
                      *                                    used to prevent concurrent modifications.
-                     * @param ebgp                        Enable ebgp. (remote-as external)
-                     * @param ebgp_multihop
+                     * @param ebgp                        Enable eBGP (remote-as external).
+                     * @param ebgp_multihop               Set maximum amount of hops for eBGP peers.
                      * @param fabric                      SDN fabric to use as underlay for this
                      *                                    EVPN controller.
-                     * @param isis_domain                 ISIS domain.
-                     * @param isis_ifaces                 ISIS interface.
-                     * @param isis_net                    ISIS network entity title.
+                     * @param isis_domain                 Name of the IS-IS domain.
+                     * @param isis_ifaces                 Comma-separated list of interfaces where
+                     *                                    IS-IS should be active.
+                     * @param isis_net                    Network Entity title for this node in the
+                     *                                    IS-IS network.
                      * @param lock_token                  the token for unlocking the global SDN
                      *                                    configuration
-                     * @param loopback                    source loopback interface.
+                     * @param loopback                    Name of the loopback/dummy interface that
+                     *                                    provides the Router-IP.
                      * @param node                        The cluster node name.
                      * @param peers                       peers address list.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result update(Integer asn, Boolean bgp_multipath_as_path_relax, String delete, String digest,
                             Boolean ebgp, Integer ebgp_multihop, String fabric, String isis_domain, String isis_ifaces,
-                            String isis_net, String lock_token, String loopback, String node, String peers)
-                            throws JSONException {
+                            String isis_net, String lock_token, String loopback, String node, String peers) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("asn", asn);
                         parameters.put("bgp-multipath-as-path-relax", bgp_multipath_as_path_relax);
@@ -7058,10 +7048,9 @@ public class PveClient extends PveClientBase {
                      * Update sdn controller object configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result update() throws JSONException {
+                    public Result update() {
                         return client.set("/cluster/sdn/controllers/" + this.controller + "", null);
                     }
 
@@ -7075,10 +7064,9 @@ public class PveClient extends PveClientBase {
                  * @param type    Only list sdn controllers of specific type
                  *                Enum: bgp,evpn,faucet,isis
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index(Boolean pending, Boolean running, String type) throws JSONException {
+                public Result index(Boolean pending, Boolean running, String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("pending", pending);
                     parameters.put("running", running);
@@ -7090,10 +7078,9 @@ public class PveClient extends PveClientBase {
                  * SDN controllers index.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/cluster/sdn/controllers", null);
                 }
 
@@ -7104,27 +7091,29 @@ public class PveClient extends PveClientBase {
                  * @param type                        Plugin type.
                  *                                    Enum: bgp,evpn,faucet,isis
                  * @param asn                         autonomous system number
-                 * @param bgp_multipath_as_path_relax
-                 * @param ebgp                        Enable ebgp. (remote-as external)
-                 * @param ebgp_multihop
+                 * @param bgp_multipath_as_path_relax Consider different AS paths of equal
+                 *                                    length for multipath computation.
+                 * @param ebgp                        Enable eBGP (remote-as external).
+                 * @param ebgp_multihop               Set maximum amount of hops for eBGP peers.
                  * @param fabric                      SDN fabric to use as underlay for this
                  *                                    EVPN controller.
-                 * @param isis_domain                 ISIS domain.
-                 * @param isis_ifaces                 ISIS interface.
-                 * @param isis_net                    ISIS network entity title.
+                 * @param isis_domain                 Name of the IS-IS domain.
+                 * @param isis_ifaces                 Comma-separated list of interfaces where
+                 *                                    IS-IS should be active.
+                 * @param isis_net                    Network Entity title for this node in the
+                 *                                    IS-IS network.
                  * @param lock_token                  the token for unlocking the global SDN
                  *                                    configuration
-                 * @param loopback                    source loopback interface.
+                 * @param loopback                    Name of the loopback/dummy interface that
+                 *                                    provides the Router-IP.
                  * @param node                        The cluster node name.
                  * @param peers                       peers address list.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result create(String controller, String type, Integer asn, Boolean bgp_multipath_as_path_relax,
                         Boolean ebgp, Integer ebgp_multihop, String fabric, String isis_domain, String isis_ifaces,
-                        String isis_net, String lock_token, String loopback, String node, String peers)
-                        throws JSONException {
+                        String isis_net, String lock_token, String loopback, String node, String peers) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("controller", controller);
                     parameters.put("type", type);
@@ -7150,10 +7139,9 @@ public class PveClient extends PveClientBase {
                  * @param type       Plugin type.
                  *                   Enum: bgp,evpn,faucet,isis
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result create(String controller, String type) throws JSONException {
+                public Result create(String controller, String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("controller", controller);
                     parameters.put("type", type);
@@ -7202,10 +7190,9 @@ public class PveClient extends PveClientBase {
                          * List PVE IPAM Entries
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result ipamindex() throws JSONException {
+                        public Result ipamindex() {
                             return client.get("/cluster/sdn/ipams/" + this.ipam + "/status", null);
                         }
 
@@ -7216,10 +7203,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param lock_token the token for unlocking the global SDN configuration
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete(String lock_token) throws JSONException {
+                    public Result delete(String lock_token) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("lock-token", lock_token);
                         return client.delete("/cluster/sdn/ipams/" + this.ipam + "", parameters);
@@ -7229,10 +7215,9 @@ public class PveClient extends PveClientBase {
                      * Delete sdn ipam object configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete() throws JSONException {
+                    public Result delete() {
                         return client.delete("/cluster/sdn/ipams/" + this.ipam + "", null);
                     }
 
@@ -7240,10 +7225,9 @@ public class PveClient extends PveClientBase {
                      * Read sdn ipam configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result read() throws JSONException {
+                    public Result read() {
                         return client.get("/cluster/sdn/ipams/" + this.ipam + "", null);
                     }
 
@@ -7260,11 +7244,10 @@ public class PveClient extends PveClientBase {
                      * @param token
                      * @param url
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result update(String delete, String digest, String fingerprint, String lock_token,
-                            Integer section, String token, String url) throws JSONException {
+                            Integer section, String token, String url) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("delete", delete);
                         parameters.put("digest", digest);
@@ -7280,10 +7263,9 @@ public class PveClient extends PveClientBase {
                      * Update sdn ipam object configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result update() throws JSONException {
+                    public Result update() {
                         return client.set("/cluster/sdn/ipams/" + this.ipam + "", null);
                     }
 
@@ -7295,10 +7277,9 @@ public class PveClient extends PveClientBase {
                  * @param type Only list sdn ipams of specific type
                  *             Enum: netbox,phpipam,pve
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index(String type) throws JSONException {
+                public Result index(String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     return client.get("/cluster/sdn/ipams", parameters);
@@ -7308,10 +7289,9 @@ public class PveClient extends PveClientBase {
                  * SDN ipams index.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/cluster/sdn/ipams", null);
                 }
 
@@ -7327,11 +7307,10 @@ public class PveClient extends PveClientBase {
                  * @param token
                  * @param url
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result create(String ipam, String type, String fingerprint, String lock_token, Integer section,
-                        String token, String url) throws JSONException {
+                        String token, String url) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ipam", ipam);
                     parameters.put("type", type);
@@ -7350,10 +7329,9 @@ public class PveClient extends PveClientBase {
                  * @param type Plugin type.
                  *             Enum: netbox,phpipam,pve
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result create(String ipam, String type) throws JSONException {
+                public Result create(String ipam, String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ipam", ipam);
                     parameters.put("type", type);
@@ -7388,10 +7366,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param lock_token the token for unlocking the global SDN configuration
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete(String lock_token) throws JSONException {
+                    public Result delete(String lock_token) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("lock-token", lock_token);
                         return client.delete("/cluster/sdn/dns/" + this.dns + "", parameters);
@@ -7401,10 +7378,9 @@ public class PveClient extends PveClientBase {
                      * Delete sdn dns object configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result delete() throws JSONException {
+                    public Result delete() {
                         return client.delete("/cluster/sdn/dns/" + this.dns + "", null);
                     }
 
@@ -7412,10 +7388,9 @@ public class PveClient extends PveClientBase {
                      * Read sdn dns configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result read() throws JSONException {
+                    public Result read() {
                         return client.get("/cluster/sdn/dns/" + this.dns + "", null);
                     }
 
@@ -7433,11 +7408,10 @@ public class PveClient extends PveClientBase {
                      * @param ttl
                      * @param url
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result update(String delete, String digest, String fingerprint, String key,
-                            String lock_token, Integer reversemaskv6, Integer ttl, String url) throws JSONException {
+                            String lock_token, Integer reversemaskv6, Integer ttl, String url) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("delete", delete);
                         parameters.put("digest", digest);
@@ -7454,10 +7428,9 @@ public class PveClient extends PveClientBase {
                      * Update sdn dns object configuration.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result update() throws JSONException {
+                    public Result update() {
                         return client.set("/cluster/sdn/dns/" + this.dns + "", null);
                     }
 
@@ -7469,10 +7442,9 @@ public class PveClient extends PveClientBase {
                  * @param type Only list sdn dns of specific type
                  *             Enum: powerdns
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index(String type) throws JSONException {
+                public Result index(String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     return client.get("/cluster/sdn/dns", parameters);
@@ -7482,10 +7454,9 @@ public class PveClient extends PveClientBase {
                  * SDN dns index.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/cluster/sdn/dns", null);
                 }
 
@@ -7503,12 +7474,10 @@ public class PveClient extends PveClientBase {
                  * @param reversev6mask
                  * @param ttl
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result create(String dns, String key, String type, String url, String fingerprint,
-                        String lock_token, Integer reversemaskv6, Integer reversev6mask, Integer ttl)
-                        throws JSONException {
+                        String lock_token, Integer reversemaskv6, Integer reversev6mask, Integer ttl) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("dns", dns);
                     parameters.put("key", key);
@@ -7531,10 +7500,9 @@ public class PveClient extends PveClientBase {
                  *             Enum: powerdns
                  * @param url
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result create(String dns, String key, String type, String url) throws JSONException {
+                public Result create(String dns, String key, String type, String url) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("dns", dns);
                     parameters.put("key", key);
@@ -7596,10 +7564,9 @@ public class PveClient extends PveClientBase {
                          * Add a fabric
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result deleteFabric() throws JSONException {
+                        public Result deleteFabric() {
                             return client.delete("/cluster/sdn/fabrics/fabric/" + this.id + "", null);
                         }
 
@@ -7607,10 +7574,9 @@ public class PveClient extends PveClientBase {
                          * Update a fabric
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result getFabric() throws JSONException {
+                        public Result getFabric() {
                             return client.get("/cluster/sdn/fabrics/fabric/" + this.id + "", null);
                         }
 
@@ -7632,12 +7598,11 @@ public class PveClient extends PveClientBase {
                          * @param ip_prefix      The IP prefix for Node IPs
                          * @param lock_token     the token for unlocking the global SDN configuration
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result updateFabric(List<Object> delete, String protocol, String area,
                                 Float csnp_interval, String digest, Float hello_interval, String ip6_prefix,
-                                String ip_prefix, String lock_token) throws JSONException {
+                                String ip_prefix, String lock_token) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("delete", delete);
                             parameters.put("protocol", protocol);
@@ -7658,10 +7623,9 @@ public class PveClient extends PveClientBase {
                          * @param protocol Type of configuration entry in an SDN Fabric section config
                          *                 Enum: openfabric,ospf
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateFabric(List<Object> delete, String protocol) throws JSONException {
+                        public Result updateFabric(List<Object> delete, String protocol) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("delete", delete);
                             parameters.put("protocol", protocol);
@@ -7676,10 +7640,9 @@ public class PveClient extends PveClientBase {
                      * @param pending Display pending config.
                      * @param running Display running config.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result index(Boolean pending, Boolean running) throws JSONException {
+                    public Result index(Boolean pending, Boolean running) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("pending", pending);
                         parameters.put("running", running);
@@ -7690,10 +7653,9 @@ public class PveClient extends PveClientBase {
                      * SDN Fabrics Index
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result index() throws JSONException {
+                    public Result index() {
                         return client.get("/cluster/sdn/fabrics/fabric", null);
                     }
 
@@ -7715,12 +7677,10 @@ public class PveClient extends PveClientBase {
                      * @param ip_prefix      The IP prefix for Node IPs
                      * @param lock_token     the token for unlocking the global SDN configuration
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result addFabric(String id, String protocol, String area, Float csnp_interval, String digest,
-                            Float hello_interval, String ip6_prefix, String ip_prefix, String lock_token)
-                            throws JSONException {
+                            Float hello_interval, String ip6_prefix, String ip_prefix, String lock_token) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("id", id);
                         parameters.put("protocol", protocol);
@@ -7741,10 +7701,9 @@ public class PveClient extends PveClientBase {
                      * @param protocol Type of configuration entry in an SDN Fabric section config
                      *                 Enum: openfabric,ospf
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result addFabric(String id, String protocol) throws JSONException {
+                    public Result addFabric(String id, String protocol) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("id", id);
                         parameters.put("protocol", protocol);
@@ -7793,10 +7752,9 @@ public class PveClient extends PveClientBase {
                              * Add a node
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result deleteNode() throws JSONException {
+                            public Result deleteNode() {
                                 return client.delete(
                                         "/cluster/sdn/fabrics/node/" + this.fabric_id + "/" + this.node_id + "", null);
                             }
@@ -7805,10 +7763,9 @@ public class PveClient extends PveClientBase {
                              * Get a node
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getNode() throws JSONException {
+                            public Result getNode() {
                                 return client.get(
                                         "/cluster/sdn/fabrics/node/" + this.fabric_id + "/" + this.node_id + "", null);
                             }
@@ -7827,11 +7784,10 @@ public class PveClient extends PveClientBase {
                              * @param ip6        IPv6 address for this node
                              * @param lock_token the token for unlocking the global SDN configuration
                              * @return Result
-                             * @throws JSONException
                              */
 
                             public Result updateNode(List<Object> interfaces, String protocol, List<Object> delete,
-                                    String digest, String ip, String ip6, String lock_token) throws JSONException {
+                                    String digest, String ip, String ip6, String lock_token) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("interfaces", interfaces);
                                 parameters.put("protocol", protocol);
@@ -7852,10 +7808,9 @@ public class PveClient extends PveClientBase {
                              * @param protocol   Type of configuration entry in an SDN Fabric section config
                              *                   Enum: openfabric,ospf
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result updateNode(List<Object> interfaces, String protocol) throws JSONException {
+                            public Result updateNode(List<Object> interfaces, String protocol) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("interfaces", interfaces);
                                 parameters.put("protocol", protocol);
@@ -7872,10 +7827,9 @@ public class PveClient extends PveClientBase {
                          * @param pending Display pending config.
                          * @param running Display running config.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result listNodesFabric(Boolean pending, Boolean running) throws JSONException {
+                        public Result listNodesFabric(Boolean pending, Boolean running) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("pending", pending);
                             parameters.put("running", running);
@@ -7886,10 +7840,9 @@ public class PveClient extends PveClientBase {
                          * SDN Fabrics Index
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result listNodesFabric() throws JSONException {
+                        public Result listNodesFabric() {
                             return client.get("/cluster/sdn/fabrics/node/" + this.fabric_id + "", null);
                         }
 
@@ -7907,11 +7860,10 @@ public class PveClient extends PveClientBase {
                          * @param ip6        IPv6 address for this node
                          * @param lock_token the token for unlocking the global SDN configuration
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result addNode(List<Object> interfaces, String node_id, String protocol, String digest,
-                                String ip, String ip6, String lock_token) throws JSONException {
+                                String ip, String ip6, String lock_token) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("interfaces", interfaces);
                             parameters.put("node_id", node_id);
@@ -7931,11 +7883,9 @@ public class PveClient extends PveClientBase {
                          * @param protocol   Type of configuration entry in an SDN Fabric section config
                          *                   Enum: openfabric,ospf
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result addNode(List<Object> interfaces, String node_id, String protocol)
-                                throws JSONException {
+                        public Result addNode(List<Object> interfaces, String node_id, String protocol) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("interfaces", interfaces);
                             parameters.put("node_id", node_id);
@@ -7951,10 +7901,9 @@ public class PveClient extends PveClientBase {
                      * @param pending Display pending config.
                      * @param running Display running config.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result listNodes(Boolean pending, Boolean running) throws JSONException {
+                    public Result listNodes(Boolean pending, Boolean running) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("pending", pending);
                         parameters.put("running", running);
@@ -7965,10 +7914,9 @@ public class PveClient extends PveClientBase {
                      * SDN Fabrics Index
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result listNodes() throws JSONException {
+                    public Result listNodes() {
                         return client.get("/cluster/sdn/fabrics/node", null);
                     }
 
@@ -7988,10 +7936,9 @@ public class PveClient extends PveClientBase {
                      * @param pending Display pending config.
                      * @param running Display running config.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result listAll(Boolean pending, Boolean running) throws JSONException {
+                    public Result listAll(Boolean pending, Boolean running) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("pending", pending);
                         parameters.put("running", running);
@@ -8002,10 +7949,9 @@ public class PveClient extends PveClientBase {
                      * SDN Fabrics Index
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result listAll() throws JSONException {
+                    public Result listAll() {
                         return client.get("/cluster/sdn/fabrics/all", null);
                     }
 
@@ -8015,10 +7961,9 @@ public class PveClient extends PveClientBase {
                  * SDN Fabrics Index
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/cluster/sdn/fabrics", null);
                 }
 
@@ -8038,10 +7983,9 @@ public class PveClient extends PveClientBase {
                  * @param force      if true, allow releasing lock without providing the token
                  * @param lock_token the token for unlocking the global SDN configuration
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result releaseLock(Boolean force, String lock_token) throws JSONException {
+                public Result releaseLock(Boolean force, String lock_token) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("force", force);
                     parameters.put("lock-token", lock_token);
@@ -8052,10 +7996,9 @@ public class PveClient extends PveClientBase {
                  * Release global lock for SDN configuration
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result releaseLock() throws JSONException {
+                public Result releaseLock() {
                     return client.delete("/cluster/sdn/lock", null);
                 }
 
@@ -8065,10 +8008,9 @@ public class PveClient extends PveClientBase {
                  * @param allow_pending if true, allow acquiring lock even though there are
                  *                      pending changes
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result lock(Boolean allow_pending) throws JSONException {
+                public Result lock(Boolean allow_pending) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("allow-pending", allow_pending);
                     return client.create("/cluster/sdn/lock", parameters);
@@ -8078,10 +8020,9 @@ public class PveClient extends PveClientBase {
                  * Acquire global lock for SDN configuration
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result lock() throws JSONException {
+                public Result lock() {
                     return client.create("/cluster/sdn/lock", null);
                 }
 
@@ -8103,10 +8044,9 @@ public class PveClient extends PveClientBase {
                  *                     successfully rollbacked, release the lock automatically
                  *                     afterwards
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result rollback(String lock_token, Boolean release_lock) throws JSONException {
+                public Result rollback(String lock_token, Boolean release_lock) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("lock-token", lock_token);
                     parameters.put("release-lock", release_lock);
@@ -8117,10 +8057,9 @@ public class PveClient extends PveClientBase {
                  * Rollback pending changes to SDN configuration
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result rollback() throws JSONException {
+                public Result rollback() {
                     return client.create("/cluster/sdn/rollback", null);
                 }
 
@@ -8130,10 +8069,9 @@ public class PveClient extends PveClientBase {
              * Directory index.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/cluster/sdn", null);
             }
 
@@ -8145,10 +8083,9 @@ public class PveClient extends PveClientBase {
              *                     successfully commited, release the lock automatically
              *                     afterwards
              * @return Result
-             * @throws JSONException
              */
 
-            public Result reload(String lock_token, Boolean release_lock) throws JSONException {
+            public Result reload(String lock_token, Boolean release_lock) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("lock-token", lock_token);
                 parameters.put("release-lock", release_lock);
@@ -8159,10 +8096,9 @@ public class PveClient extends PveClientBase {
              * Apply sdn controller changes &amp;&amp; reload.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result reload() throws JSONException {
+            public Result reload() {
                 return client.set("/cluster/sdn", null);
             }
 
@@ -8181,10 +8117,9 @@ public class PveClient extends PveClientBase {
              * 
              * @param max Maximum number of entries.
              * @return Result
-             * @throws JSONException
              */
 
-            public Result log(Integer max) throws JSONException {
+            public Result log(Integer max) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("max", max);
                 return client.get("/cluster/log", parameters);
@@ -8194,10 +8129,9 @@ public class PveClient extends PveClientBase {
              * Read cluster log
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result log() throws JSONException {
+            public Result log() {
                 return client.get("/cluster/log", null);
             }
 
@@ -8217,10 +8151,9 @@ public class PveClient extends PveClientBase {
              * @param type Resource type.
              *             Enum: vm,storage,node,sdn
              * @return Result
-             * @throws JSONException
              */
 
-            public Result resources(String type) throws JSONException {
+            public Result resources(String type) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("type", type);
                 return client.get("/cluster/resources", parameters);
@@ -8230,10 +8163,9 @@ public class PveClient extends PveClientBase {
              * Resources index (cluster wide).
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result resources() throws JSONException {
+            public Result resources() {
                 return client.get("/cluster/resources", null);
             }
 
@@ -8251,10 +8183,9 @@ public class PveClient extends PveClientBase {
              * List recent tasks (cluster wide).
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result tasks() throws JSONException {
+            public Result tasks() {
                 return client.get("/cluster/tasks", null);
             }
 
@@ -8273,10 +8204,9 @@ public class PveClient extends PveClientBase {
              * returned.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result getOptions() throws JSONException {
+            public Result getOptions() {
                 return client.get("/cluster/options", null);
             }
 
@@ -8345,15 +8275,13 @@ public class PveClient extends PveClientBase {
              * @param user_tag_access    Privilege options for user-settable tags
              * @param webauthn           webauthn configuration
              * @return Result
-             * @throws JSONException
              */
 
             public Result setOptions(String bwlimit, String consent_text, String console, String crs, String delete,
                     String description, String email_from, String fencing, String ha, String http_proxy,
                     String keyboard, String language, String mac_prefix, Integer max_workers, String migration,
                     Boolean migration_unsecure, String next_id, String notify, String registered_tags,
-                    String replication, String tag_style, String u2f, String user_tag_access, String webauthn)
-                    throws JSONException {
+                    String replication, String tag_style, String u2f, String user_tag_access, String webauthn) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("bwlimit", bwlimit);
                 parameters.put("consent-text", consent_text);
@@ -8386,10 +8314,9 @@ public class PveClient extends PveClientBase {
              * Set datacenter options.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result setOptions() throws JSONException {
+            public Result setOptions() {
                 return client.set("/cluster/options", null);
             }
 
@@ -8407,10 +8334,9 @@ public class PveClient extends PveClientBase {
              * Get cluster status information.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result getStatus() throws JSONException {
+            public Result getStatus() {
                 return client.get("/cluster/status", null);
             }
 
@@ -8429,10 +8355,9 @@ public class PveClient extends PveClientBase {
              * 
              * @param vmid The (unique) ID of the VM.
              * @return Result
-             * @throws JSONException
              */
 
-            public Result nextid(Integer vmid) throws JSONException {
+            public Result nextid(Integer vmid) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("vmid", vmid);
                 return client.get("/cluster/nextid", parameters);
@@ -8442,10 +8367,9 @@ public class PveClient extends PveClientBase {
              * Get next free VMID. Pass a VMID to assert that its free (at time of check).
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result nextid() throws JSONException {
+            public Result nextid() {
                 return client.get("/cluster/nextid", null);
             }
 
@@ -8455,10 +8379,9 @@ public class PveClient extends PveClientBase {
          * Cluster index.
          * 
          * @return Result
-         * @throws JSONException
          */
 
-        public Result index() throws JSONException {
+        public Result index() {
             return client.get("/cluster", null);
         }
 
@@ -8693,6 +8616,13 @@ public class PveClient extends PveClientBase {
 
             public PVEAplinfo getAplinfo() {
                 return aplinfo == null ? (aplinfo = new PVEAplinfo(client, this.node)) : aplinfo;
+            }
+
+            private PVEQueryOciRepoTags queryOciRepoTags;
+
+            public PVEQueryOciRepoTags getQueryOciRepoTags() {
+                return queryOciRepoTags == null ? (queryOciRepoTags = new PVEQueryOciRepoTags(client, this.node))
+                        : queryOciRepoTags;
             }
 
             private PVEQueryUrlMetadata queryUrlMetadata;
@@ -9008,10 +8938,9 @@ public class PveClient extends PveClientBase {
                                  * @param digest Prevent changes if current configuration file has a different
                                  *               digest. This can be used to prevent concurrent modifications.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result deleteRule(String digest) throws JSONException {
+                                public Result deleteRule(String digest) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("digest", digest);
                                     return client.delete("/nodes/" + this.node + "/qemu/" + this.vmid
@@ -9022,10 +8951,9 @@ public class PveClient extends PveClientBase {
                                  * Delete rule.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result deleteRule() throws JSONException {
+                                public Result deleteRule() {
                                     return client.delete("/nodes/" + this.node + "/qemu/" + this.vmid
                                             + "/firewall/rules/" + this.pos + "", null);
                                 }
@@ -9034,10 +8962,9 @@ public class PveClient extends PveClientBase {
                                  * Get single rule data.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result getRule() throws JSONException {
+                                public Result getRule() {
                                     return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/firewall/rules/"
                                             + this.pos + "", null);
                                 }
@@ -9090,13 +9017,12 @@ public class PveClient extends PveClientBase {
                                  * @param type      Rule type.
                                  *                  Enum: in,out,forward,group
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
                                 public Result updateRule(String action, String comment, String delete, String dest,
                                         String digest, String dport, Integer enable, String icmp_type, String iface,
                                         String log, String macro, Integer moveto, String proto, String source,
-                                        String sport, String type) throws JSONException {
+                                        String sport, String type) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("action", action);
                                     parameters.put("comment", comment);
@@ -9122,10 +9048,9 @@ public class PveClient extends PveClientBase {
                                  * Modify rule data.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result updateRule() throws JSONException {
+                                public Result updateRule() {
                                     return client.set("/nodes/" + this.node + "/qemu/" + this.vmid + "/firewall/rules/"
                                             + this.pos + "", null);
                                 }
@@ -9136,10 +9061,9 @@ public class PveClient extends PveClientBase {
                              * List rules.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getRules() throws JSONException {
+                            public Result getRules() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/firewall/rules",
                                         null);
                             }
@@ -9190,13 +9114,11 @@ public class PveClient extends PveClientBase {
                              *                  '80:85', and you can use comma separated list to match
                              *                  several ports or ranges.
                              * @return Result
-                             * @throws JSONException
                              */
 
                             public Result createRule(String action, String type, String comment, String dest,
                                     String digest, String dport, Integer enable, String icmp_type, String iface,
-                                    String log, String macro, Integer pos, String proto, String source, String sport)
-                                    throws JSONException {
+                                    String log, String macro, Integer pos, String proto, String source, String sport) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
@@ -9225,10 +9147,9 @@ public class PveClient extends PveClientBase {
                              * @param type   Rule type.
                              *               Enum: in,out,forward,group
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result createRule(String action, String type) throws JSONException {
+                            public Result createRule(String action, String type) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
@@ -9272,10 +9193,9 @@ public class PveClient extends PveClientBase {
                                  * @param digest Prevent changes if current configuration file has a different
                                  *               digest. This can be used to prevent concurrent modifications.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result removeAlias(String digest) throws JSONException {
+                                public Result removeAlias(String digest) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("digest", digest);
                                     return client.delete("/nodes/" + this.node + "/qemu/" + this.vmid
@@ -9286,10 +9206,9 @@ public class PveClient extends PveClientBase {
                                  * Remove IP or Network alias.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result removeAlias() throws JSONException {
+                                public Result removeAlias() {
                                     return client.delete("/nodes/" + this.node + "/qemu/" + this.vmid
                                             + "/firewall/aliases/" + this.name + "", null);
                                 }
@@ -9298,10 +9217,9 @@ public class PveClient extends PveClientBase {
                                  * Read alias.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result readAlias() throws JSONException {
+                                public Result readAlias() {
                                     return client.get("/nodes/" + this.node + "/qemu/" + this.vmid
                                             + "/firewall/aliases/" + this.name + "", null);
                                 }
@@ -9315,11 +9233,9 @@ public class PveClient extends PveClientBase {
                                  *                digest. This can be used to prevent concurrent modifications.
                                  * @param rename  Rename an existing alias.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result updateAlias(String cidr, String comment, String digest, String rename)
-                                        throws JSONException {
+                                public Result updateAlias(String cidr, String comment, String digest, String rename) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
                                     parameters.put("comment", comment);
@@ -9334,10 +9250,9 @@ public class PveClient extends PveClientBase {
                                  * 
                                  * @param cidr Network/IP specification in CIDR format.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result updateAlias(String cidr) throws JSONException {
+                                public Result updateAlias(String cidr) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
                                     return client.set("/nodes/" + this.node + "/qemu/" + this.vmid
@@ -9350,10 +9265,9 @@ public class PveClient extends PveClientBase {
                              * List aliases
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getAliases() throws JSONException {
+                            public Result getAliases() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/firewall/aliases",
                                         null);
                             }
@@ -9365,10 +9279,9 @@ public class PveClient extends PveClientBase {
                              * @param name    Alias name.
                              * @param comment
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result createAlias(String cidr, String name, String comment) throws JSONException {
+                            public Result createAlias(String cidr, String name, String comment) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
                                 parameters.put("name", name);
@@ -9383,10 +9296,9 @@ public class PveClient extends PveClientBase {
                              * @param cidr Network/IP specification in CIDR format.
                              * @param name Alias name.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result createAlias(String cidr, String name) throws JSONException {
+                            public Result createAlias(String cidr, String name) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
                                 parameters.put("name", name);
@@ -9450,10 +9362,9 @@ public class PveClient extends PveClientBase {
                                      * @param digest Prevent changes if current configuration file has a different
                                      *               digest. This can be used to prevent concurrent modifications.
                                      * @return Result
-                                     * @throws JSONException
                                      */
 
-                                    public Result removeIp(String digest) throws JSONException {
+                                    public Result removeIp(String digest) {
                                         Map<String, Object> parameters = new HashMap<>();
                                         parameters.put("digest", digest);
                                         return client.delete("/nodes/" + this.node + "/qemu/" + this.vmid
@@ -9464,10 +9375,9 @@ public class PveClient extends PveClientBase {
                                      * Remove IP or Network from IPSet.
                                      * 
                                      * @return Result
-                                     * @throws JSONException
                                      */
 
-                                    public Result removeIp() throws JSONException {
+                                    public Result removeIp() {
                                         return client.delete("/nodes/" + this.node + "/qemu/" + this.vmid
                                                 + "/firewall/ipset/" + this.name + "/" + this.cidr + "", null);
                                     }
@@ -9476,10 +9386,9 @@ public class PveClient extends PveClientBase {
                                      * Read IP or Network settings from IPSet.
                                      * 
                                      * @return Result
-                                     * @throws JSONException
                                      */
 
-                                    public Result readIp() throws JSONException {
+                                    public Result readIp() {
                                         return client.get("/nodes/" + this.node + "/qemu/" + this.vmid
                                                 + "/firewall/ipset/" + this.name + "/" + this.cidr + "", null);
                                     }
@@ -9492,11 +9401,9 @@ public class PveClient extends PveClientBase {
                                      *                digest. This can be used to prevent concurrent modifications.
                                      * @param nomatch
                                      * @return Result
-                                     * @throws JSONException
                                      */
 
-                                    public Result updateIp(String comment, String digest, Boolean nomatch)
-                                            throws JSONException {
+                                    public Result updateIp(String comment, String digest, Boolean nomatch) {
                                         Map<String, Object> parameters = new HashMap<>();
                                         parameters.put("comment", comment);
                                         parameters.put("digest", digest);
@@ -9509,10 +9416,9 @@ public class PveClient extends PveClientBase {
                                      * Update IP or Network settings
                                      * 
                                      * @return Result
-                                     * @throws JSONException
                                      */
 
-                                    public Result updateIp() throws JSONException {
+                                    public Result updateIp() {
                                         return client.set("/nodes/" + this.node + "/qemu/" + this.vmid
                                                 + "/firewall/ipset/" + this.name + "/" + this.cidr + "", null);
                                     }
@@ -9524,10 +9430,9 @@ public class PveClient extends PveClientBase {
                                  * 
                                  * @param force Delete all members of the IPSet, if there are any.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result deleteIpset(Boolean force) throws JSONException {
+                                public Result deleteIpset(Boolean force) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("force", force);
                                     return client.delete("/nodes/" + this.node + "/qemu/" + this.vmid
@@ -9538,10 +9443,9 @@ public class PveClient extends PveClientBase {
                                  * Delete IPSet
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result deleteIpset() throws JSONException {
+                                public Result deleteIpset() {
                                     return client.delete("/nodes/" + this.node + "/qemu/" + this.vmid
                                             + "/firewall/ipset/" + this.name + "", null);
                                 }
@@ -9550,10 +9454,9 @@ public class PveClient extends PveClientBase {
                                  * List IPSet content
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result getIpset() throws JSONException {
+                                public Result getIpset() {
                                     return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/firewall/ipset/"
                                             + this.name + "", null);
                                 }
@@ -9565,11 +9468,9 @@ public class PveClient extends PveClientBase {
                                  * @param comment
                                  * @param nomatch
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result createIp(String cidr, String comment, Boolean nomatch)
-                                        throws JSONException {
+                                public Result createIp(String cidr, String comment, Boolean nomatch) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
                                     parameters.put("comment", comment);
@@ -9583,10 +9484,9 @@ public class PveClient extends PveClientBase {
                                  * 
                                  * @param cidr Network/IP specification in CIDR format.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result createIp(String cidr) throws JSONException {
+                                public Result createIp(String cidr) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
                                     return client.create("/nodes/" + this.node + "/qemu/" + this.vmid
@@ -9599,10 +9499,9 @@ public class PveClient extends PveClientBase {
                              * List IPSets
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result ipsetIndex() throws JSONException {
+                            public Result ipsetIndex() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/firewall/ipset",
                                         null);
                             }
@@ -9617,11 +9516,9 @@ public class PveClient extends PveClientBase {
                              * @param rename  Rename an existing IPSet. You can set 'rename' to the same
                              *                value as 'name' to update the 'comment' of an existing IPSet.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result createIpset(String name, String comment, String digest, String rename)
-                                    throws JSONException {
+                            public Result createIpset(String name, String comment, String digest, String rename) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
                                 parameters.put("comment", comment);
@@ -9636,10 +9533,9 @@ public class PveClient extends PveClientBase {
                              * 
                              * @param name IP set name.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result createIpset(String name) throws JSONException {
+                            public Result createIpset(String name) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/firewall/ipset",
@@ -9663,10 +9559,9 @@ public class PveClient extends PveClientBase {
                              * Get VM firewall options.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getOptions() throws JSONException {
+                            public Result getOptions() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/firewall/options",
                                         null);
                             }
@@ -9701,13 +9596,11 @@ public class PveClient extends PveClientBase {
                              *                      Enum: ACCEPT,REJECT,DROP
                              * @param radv          Allow sending Router Advertisement.
                              * @return Result
-                             * @throws JSONException
                              */
 
                             public Result setOptions(String delete, Boolean dhcp, String digest, Boolean enable,
                                     Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter,
-                                    Boolean ndp, String policy_in, String policy_out, Boolean radv)
-                                    throws JSONException {
+                                    Boolean ndp, String policy_in, String policy_out, Boolean radv) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("delete", delete);
                                 parameters.put("dhcp", dhcp);
@@ -9729,10 +9622,9 @@ public class PveClient extends PveClientBase {
                              * Set Firewall options.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result setOptions() throws JSONException {
+                            public Result setOptions() {
                                 return client.set("/nodes/" + this.node + "/qemu/" + this.vmid + "/firewall/options",
                                         null);
                             }
@@ -9758,11 +9650,9 @@ public class PveClient extends PveClientBase {
                              * @param start
                              * @param until Display log until this UNIX epoch.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result log(Integer limit, Integer since, Integer start, Integer until)
-                                    throws JSONException {
+                            public Result log(Integer limit, Integer since, Integer start, Integer until) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("limit", limit);
                                 parameters.put("since", since);
@@ -9776,10 +9666,9 @@ public class PveClient extends PveClientBase {
                              * Read firewall log
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result log() throws JSONException {
+                            public Result log() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/firewall/log", null);
                             }
 
@@ -9803,10 +9692,9 @@ public class PveClient extends PveClientBase {
                              * @param type Only list references of specified type.
                              *             Enum: alias,ipset
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result refs(String type) throws JSONException {
+                            public Result refs(String type) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("type", type);
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/firewall/refs",
@@ -9818,10 +9706,9 @@ public class PveClient extends PveClientBase {
                              * properties.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result refs() throws JSONException {
+                            public Result refs() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/firewall/refs",
                                         null);
                             }
@@ -9832,10 +9719,9 @@ public class PveClient extends PveClientBase {
                          * Directory index.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result index() throws JSONException {
+                        public Result index() {
                             return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/firewall", null);
                         }
 
@@ -10048,10 +9934,9 @@ public class PveClient extends PveClientBase {
                              * Execute fsfreeze-freeze.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result fsfreezeFreeze() throws JSONException {
+                            public Result fsfreezeFreeze() {
                                 return client.create(
                                         "/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/fsfreeze-freeze", null);
                             }
@@ -10073,10 +9958,9 @@ public class PveClient extends PveClientBase {
                              * Execute fsfreeze-status.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result fsfreezeStatus() throws JSONException {
+                            public Result fsfreezeStatus() {
                                 return client.create(
                                         "/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/fsfreeze-status", null);
                             }
@@ -10098,10 +9982,9 @@ public class PveClient extends PveClientBase {
                              * Execute fsfreeze-thaw.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result fsfreezeThaw() throws JSONException {
+                            public Result fsfreezeThaw() {
                                 return client.create(
                                         "/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/fsfreeze-thaw", null);
                             }
@@ -10123,10 +10006,9 @@ public class PveClient extends PveClientBase {
                              * Execute fstrim.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result fstrim() throws JSONException {
+                            public Result fstrim() {
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/fstrim",
                                         null);
                             }
@@ -10148,10 +10030,9 @@ public class PveClient extends PveClientBase {
                              * Execute get-fsinfo.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getFsinfo() throws JSONException {
+                            public Result getFsinfo() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/get-fsinfo",
                                         null);
                             }
@@ -10173,10 +10054,9 @@ public class PveClient extends PveClientBase {
                              * Execute get-host-name.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getHostName() throws JSONException {
+                            public Result getHostName() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/get-host-name",
                                         null);
                             }
@@ -10198,10 +10078,9 @@ public class PveClient extends PveClientBase {
                              * Execute get-memory-block-info.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getMemoryBlockInfo() throws JSONException {
+                            public Result getMemoryBlockInfo() {
                                 return client.get(
                                         "/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/get-memory-block-info",
                                         null);
@@ -10224,10 +10103,9 @@ public class PveClient extends PveClientBase {
                              * Execute get-memory-blocks.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getMemoryBlocks() throws JSONException {
+                            public Result getMemoryBlocks() {
                                 return client.get(
                                         "/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/get-memory-blocks",
                                         null);
@@ -10250,10 +10128,9 @@ public class PveClient extends PveClientBase {
                              * Execute get-osinfo.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getOsinfo() throws JSONException {
+                            public Result getOsinfo() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/get-osinfo",
                                         null);
                             }
@@ -10275,10 +10152,9 @@ public class PveClient extends PveClientBase {
                              * Execute get-time.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getTime() throws JSONException {
+                            public Result getTime() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/get-time",
                                         null);
                             }
@@ -10300,10 +10176,9 @@ public class PveClient extends PveClientBase {
                              * Execute get-timezone.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getTimezone() throws JSONException {
+                            public Result getTimezone() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/get-timezone",
                                         null);
                             }
@@ -10325,10 +10200,9 @@ public class PveClient extends PveClientBase {
                              * Execute get-users.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getUsers() throws JSONException {
+                            public Result getUsers() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/get-users",
                                         null);
                             }
@@ -10350,10 +10224,9 @@ public class PveClient extends PveClientBase {
                              * Execute get-vcpus.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getVcpus() throws JSONException {
+                            public Result getVcpus() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/get-vcpus",
                                         null);
                             }
@@ -10375,10 +10248,9 @@ public class PveClient extends PveClientBase {
                              * Execute info.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result info() throws JSONException {
+                            public Result info() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/info", null);
                             }
 
@@ -10399,10 +10271,9 @@ public class PveClient extends PveClientBase {
                              * Execute network-get-interfaces.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result networkGetInterfaces() throws JSONException {
+                            public Result networkGetInterfaces() {
                                 return client.get(
                                         "/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/network-get-interfaces",
                                         null);
@@ -10425,10 +10296,9 @@ public class PveClient extends PveClientBase {
                              * Execute ping.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result ping() throws JSONException {
+                            public Result ping() {
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/ping",
                                         null);
                             }
@@ -10450,10 +10320,9 @@ public class PveClient extends PveClientBase {
                              * Execute shutdown.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result shutdown() throws JSONException {
+                            public Result shutdown() {
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/shutdown",
                                         null);
                             }
@@ -10475,10 +10344,9 @@ public class PveClient extends PveClientBase {
                              * Execute suspend-disk.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result suspendDisk() throws JSONException {
+                            public Result suspendDisk() {
                                 return client.create(
                                         "/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/suspend-disk", null);
                             }
@@ -10500,10 +10368,9 @@ public class PveClient extends PveClientBase {
                              * Execute suspend-hybrid.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result suspendHybrid() throws JSONException {
+                            public Result suspendHybrid() {
                                 return client.create(
                                         "/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/suspend-hybrid", null);
                             }
@@ -10525,10 +10392,9 @@ public class PveClient extends PveClientBase {
                              * Execute suspend-ram.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result suspendRam() throws JSONException {
+                            public Result suspendRam() {
                                 return client.create(
                                         "/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/suspend-ram", null);
                             }
@@ -10554,11 +10420,9 @@ public class PveClient extends PveClientBase {
                              * @param crypted  set to 1 if the password has already been passed through
                              *                 crypt()
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result setUserPassword(String password, String username, Boolean crypted)
-                                    throws JSONException {
+                            public Result setUserPassword(String password, String username, Boolean crypted) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("password", password);
                                 parameters.put("username", username);
@@ -10574,10 +10438,9 @@ public class PveClient extends PveClientBase {
                              * @param password The new password.
                              * @param username The user to set the password for.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result setUserPassword(String password, String username) throws JSONException {
+                            public Result setUserPassword(String password, String username) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("password", password);
                                 parameters.put("username", username);
@@ -10607,10 +10470,9 @@ public class PveClient extends PveClientBase {
                              * @param input_data Data to pass as 'input-data' to the guest. Usually treated
                              *                   as STDIN to 'command'.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result exec(List<Object> command, String input_data) throws JSONException {
+                            public Result exec(List<Object> command, String input_data) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("command", command);
                                 parameters.put("input-data", input_data);
@@ -10624,10 +10486,9 @@ public class PveClient extends PveClientBase {
                              * 
                              * @param command The command as a list of program + arguments.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result exec(List<Object> command) throws JSONException {
+                            public Result exec(List<Object> command) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("command", command);
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/exec",
@@ -10652,10 +10513,9 @@ public class PveClient extends PveClientBase {
                              * 
                              * @param pid The PID to query
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result execStatus(int pid) throws JSONException {
+                            public Result execStatus(int pid) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("pid", pid);
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/exec-status",
@@ -10680,10 +10540,9 @@ public class PveClient extends PveClientBase {
                              * 
                              * @param file The path to the file
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result fileRead(String file) throws JSONException {
+                            public Result fileRead(String file) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("file", file);
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/file-read",
@@ -10712,10 +10571,9 @@ public class PveClient extends PveClientBase {
                              *                QEMU).Otherwise the content needs to be encoded beforehand -
                              *                defaults to true.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result fileWrite(String content, String file, Boolean encode) throws JSONException {
+                            public Result fileWrite(String content, String file, Boolean encode) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("content", content);
                                 parameters.put("file", file);
@@ -10730,10 +10588,9 @@ public class PveClient extends PveClientBase {
                              * @param content The content to write into the file.
                              * @param file    The path to the file.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result fileWrite(String content, String file) throws JSONException {
+                            public Result fileWrite(String content, String file) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("content", content);
                                 parameters.put("file", file);
@@ -10747,10 +10604,9 @@ public class PveClient extends PveClientBase {
                          * QEMU Guest Agent command index.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result index() throws JSONException {
+                        public Result index() {
                             return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent", null);
                         }
 
@@ -10761,10 +10617,9 @@ public class PveClient extends PveClientBase {
                          *                Enum:
                          *                fsfreeze-freeze,fsfreeze-status,fsfreeze-thaw,fstrim,get-fsinfo,get-host-name,get-memory-block-info,get-memory-blocks,get-osinfo,get-time,get-timezone,get-users,get-vcpus,info,network-get-interfaces,ping,shutdown,suspend-disk,suspend-hybrid,suspend-ram
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result agent(String command) throws JSONException {
+                        public Result agent(String command) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("command", command);
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent", parameters);
@@ -10792,10 +10647,9 @@ public class PveClient extends PveClientBase {
                          * @param cf        The RRD consolidation function
                          *                  Enum: AVERAGE,MAX
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result rrd(String ds, String timeframe, String cf) throws JSONException {
+                        public Result rrd(String ds, String timeframe, String cf) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
@@ -10810,10 +10664,9 @@ public class PveClient extends PveClientBase {
                          * @param timeframe Specify the time frame you are interested in.
                          *                  Enum: hour,day,week,month,year
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result rrd(String ds, String timeframe) throws JSONException {
+                        public Result rrd(String ds, String timeframe) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
@@ -10841,10 +10694,9 @@ public class PveClient extends PveClientBase {
                          * @param cf        The RRD consolidation function
                          *                  Enum: AVERAGE,MAX
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result rrddata(String timeframe, String cf) throws JSONException {
+                        public Result rrddata(String timeframe, String cf) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
                             parameters.put("cf", cf);
@@ -10857,10 +10709,9 @@ public class PveClient extends PveClientBase {
                          * @param timeframe Specify the time frame you are interested in.
                          *                  Enum: hour,day,week,month,year
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result rrddata(String timeframe) throws JSONException {
+                        public Result rrddata(String timeframe) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
                             return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/rrddata", parameters);
@@ -10887,10 +10738,9 @@ public class PveClient extends PveClientBase {
                          * @param current  Get current values (instead of pending values).
                          * @param snapshot Fetch config values from given snapshot.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vmConfig(Boolean current, String snapshot) throws JSONException {
+                        public Result vmConfig(Boolean current, String snapshot) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("current", current);
                             parameters.put("snapshot", snapshot);
@@ -10903,10 +10753,9 @@ public class PveClient extends PveClientBase {
                          * instead.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vmConfig() throws JSONException {
+                        public Result vmConfig() {
                             return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/config", null);
                         }
 
@@ -10918,6 +10767,8 @@ public class PveClient extends PveClientBase {
                          *                               processes, for example: 0,5,8-11
                          * @param agent                  Enable/disable communication with the QEMU
                          *                               Guest Agent and its properties.
+                         * @param allow_ksm              Allow memory pages of this guest to be merged
+                         *                               via KSM (Kernel Samepage Merging).
                          * @param amd_sev                Secure Encrypted Virtualization (SEV) features
                          *                               by AMD CPUs
                          * @param arch                   Virtual processor architecture. Defaults to the
@@ -10996,7 +10847,10 @@ public class PveClient extends PveClientBase {
                          *                               is possible for guests with machine version
                          *                               &amp;gt;= 7.1 and ostype l26 or windows
                          *                               &amp;gt; 7.
-                         * @param hugepages              Enable/disable hugepages memory.
+                         * @param hugepages              Enables hugepages memory. Sets the size of
+                         *                               hugepages in MiB. If the value is set to 'any'
+                         *                               then 1 GiB hugepages will be used if possible,
+                         *                               otherwise the size will fall back to 2 MiB.
                          *                               Enum: any,2,1024
                          * @param ideN                   Use volume as IDE hard disk or CD-ROM (n is 0
                          *                               to 3). Use the special syntax
@@ -11007,6 +10861,8 @@ public class PveClient extends PveClientBase {
                          *                               enabled, which is used as an intermediary
                          *                               extraction storage during import. Defaults to
                          *                               the source storage.
+                         * @param intel_tdx              Trusted Domain Extension (TDX) features by
+                         *                               Intel CPUs
                          * @param ipconfigN              cloud-init: Specify IP addresses and gateways
                          *                               for the corresponding interface. IP addresses
                          *                               use CIDR notation, gateways are optional but
@@ -11146,34 +11002,35 @@ public class PveClient extends PveClientBase {
                          * @param vmstatestorage         Default storage for VM state volumes/files.
                          * @param watchdog               Create a virtual hardware watchdog device.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateVmAsync(Boolean acpi, String affinity, String agent, String amd_sev,
-                                String arch, String args, String audio0, Boolean autostart, Integer background_delay,
-                                Integer balloon, String bios, String boot, String bootdisk, String cdrom,
-                                String cicustom, String cipassword, String citype, Boolean ciupgrade, String ciuser,
-                                Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete,
-                                String description, String digest, String efidisk0, Boolean force, Boolean freeze,
-                                String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages,
-                                Map<Integer, String> ideN, String import_working_storage,
-                                Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard,
-                                Boolean kvm, Boolean localtime, String lock_, String machine, String memory,
-                                Float migrate_downtime, Integer migrate_speed, String name, String nameserver,
-                                Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot,
-                                String ostype, Map<Integer, String> parallelN, Boolean protection, Boolean reboot,
-                                String revert, String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN,
-                                String scsihw, String searchdomain, Map<Integer, String> serialN, Integer shares,
-                                Boolean skiplock, String smbios1, Integer smp, Integer sockets,
-                                String spice_enhancements, String sshkeys, String startdate, String startup,
-                                Boolean tablet, String tags, Boolean tdf, Boolean template, String tpmstate0,
-                                Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga,
-                                Map<Integer, String> virtioN, Map<Integer, String> virtiofsN, String vmgenid,
-                                String vmstatestorage, String watchdog) throws JSONException {
+                        public Result updateVmAsync(Boolean acpi, String affinity, String agent, Boolean allow_ksm,
+                                String amd_sev, String arch, String args, String audio0, Boolean autostart,
+                                Integer background_delay, Integer balloon, String bios, String boot, String bootdisk,
+                                String cdrom, String cicustom, String cipassword, String citype, Boolean ciupgrade,
+                                String ciuser, Integer cores, String cpu, Float cpulimit, Integer cpuunits,
+                                String delete, String description, String digest, String efidisk0, Boolean force,
+                                Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug,
+                                String hugepages, Map<Integer, String> ideN, String import_working_storage,
+                                String intel_tdx, Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages,
+                                String keyboard, Boolean kvm, Boolean localtime, String lock_, String machine,
+                                String memory, Float migrate_downtime, Integer migrate_speed, String name,
+                                String nameserver, Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN,
+                                Boolean onboot, String ostype, Map<Integer, String> parallelN, Boolean protection,
+                                Boolean reboot, String revert, String rng0, Map<Integer, String> sataN,
+                                Map<Integer, String> scsiN, String scsihw, String searchdomain,
+                                Map<Integer, String> serialN, Integer shares, Boolean skiplock, String smbios1,
+                                Integer smp, Integer sockets, String spice_enhancements, String sshkeys,
+                                String startdate, String startup, Boolean tablet, String tags, Boolean tdf,
+                                Boolean template, String tpmstate0, Map<Integer, String> unusedN,
+                                Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN,
+                                Map<Integer, String> virtiofsN, String vmgenid, String vmstatestorage,
+                                String watchdog) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
                             parameters.put("affinity", affinity);
                             parameters.put("agent", agent);
+                            parameters.put("allow-ksm", allow_ksm);
                             parameters.put("amd-sev", amd_sev);
                             parameters.put("arch", arch);
                             parameters.put("args", args);
@@ -11204,6 +11061,7 @@ public class PveClient extends PveClientBase {
                             parameters.put("hotplug", hotplug);
                             parameters.put("hugepages", hugepages);
                             parameters.put("import-working-storage", import_working_storage);
+                            parameters.put("intel-tdx", intel_tdx);
                             parameters.put("ivshmem", ivshmem);
                             parameters.put("keephugepages", keephugepages);
                             parameters.put("keyboard", keyboard);
@@ -11264,10 +11122,9 @@ public class PveClient extends PveClientBase {
                          * Set virtual machine options (asynchronous API).
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateVmAsync() throws JSONException {
+                        public Result updateVmAsync() {
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/config", null);
                         }
 
@@ -11280,6 +11137,8 @@ public class PveClient extends PveClientBase {
                          *                           for example: 0,5,8-11
                          * @param agent              Enable/disable communication with the QEMU Guest
                          *                           Agent and its properties.
+                         * @param allow_ksm          Allow memory pages of this guest to be merged via
+                         *                           KSM (Kernel Samepage Merging).
                          * @param amd_sev            Secure Encrypted Virtualization (SEV) features by
                          *                           AMD CPUs
                          * @param arch               Virtual processor architecture. Defaults to the
@@ -11352,13 +11211,18 @@ public class PveClient extends PveClientBase {
                          *                           `network,disk,usb`. USB hotplugging is possible for
                          *                           guests with machine version &amp;gt;= 7.1 and
                          *                           ostype l26 or windows &amp;gt; 7.
-                         * @param hugepages          Enable/disable hugepages memory.
+                         * @param hugepages          Enables hugepages memory. Sets the size of
+                         *                           hugepages in MiB. If the value is set to 'any' then
+                         *                           1 GiB hugepages will be used if possible, otherwise
+                         *                           the size will fall back to 2 MiB.
                          *                           Enum: any,2,1024
                          * @param ideN               Use volume as IDE hard disk or CD-ROM (n is 0 to
                          *                           3). Use the special syntax STORAGE_ID:SIZE_IN_GiB
                          *                           to allocate a new volume. Use STORAGE_ID:0 and the
                          *                           'import-from' parameter to import from an existing
                          *                           volume.
+                         * @param intel_tdx          Trusted Domain Extension (TDX) features by Intel
+                         *                           CPUs
                          * @param ipconfigN          cloud-init: Specify IP addresses and gateways for
                          *                           the corresponding interface. IP addresses use CIDR
                          *                           notation, gateways are optional but need an IP of
@@ -11488,21 +11352,20 @@ public class PveClient extends PveClientBase {
                          * @param vmstatestorage     Default storage for VM state volumes/files.
                          * @param watchdog           Create a virtual hardware watchdog device.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateVm(Boolean acpi, String affinity, String agent, String amd_sev, String arch,
-                                String args, String audio0, Boolean autostart, Integer balloon, String bios,
-                                String boot, String bootdisk, String cdrom, String cicustom, String cipassword,
-                                String citype, Boolean ciupgrade, String ciuser, Integer cores, String cpu,
-                                Float cpulimit, Integer cpuunits, String delete, String description, String digest,
-                                String efidisk0, Boolean force, Boolean freeze, String hookscript,
-                                Map<Integer, String> hostpciN, String hotplug, String hugepages,
-                                Map<Integer, String> ideN, Map<Integer, String> ipconfigN, String ivshmem,
-                                Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime, String lock_,
-                                String machine, String memory, Float migrate_downtime, Integer migrate_speed,
-                                String name, String nameserver, Map<Integer, String> netN, Boolean numa,
-                                Map<Integer, String> numaN, Boolean onboot, String ostype,
+                        public Result updateVm(Boolean acpi, String affinity, String agent, Boolean allow_ksm,
+                                String amd_sev, String arch, String args, String audio0, Boolean autostart,
+                                Integer balloon, String bios, String boot, String bootdisk, String cdrom,
+                                String cicustom, String cipassword, String citype, Boolean ciupgrade, String ciuser,
+                                Integer cores, String cpu, Float cpulimit, Integer cpuunits, String delete,
+                                String description, String digest, String efidisk0, Boolean force, Boolean freeze,
+                                String hookscript, Map<Integer, String> hostpciN, String hotplug, String hugepages,
+                                Map<Integer, String> ideN, String intel_tdx, Map<Integer, String> ipconfigN,
+                                String ivshmem, Boolean keephugepages, String keyboard, Boolean kvm, Boolean localtime,
+                                String lock_, String machine, String memory, Float migrate_downtime,
+                                Integer migrate_speed, String name, String nameserver, Map<Integer, String> netN,
+                                Boolean numa, Map<Integer, String> numaN, Boolean onboot, String ostype,
                                 Map<Integer, String> parallelN, Boolean protection, Boolean reboot, String revert,
                                 String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw,
                                 String searchdomain, Map<Integer, String> serialN, Integer shares, Boolean skiplock,
@@ -11510,12 +11373,13 @@ public class PveClient extends PveClientBase {
                                 String startdate, String startup, Boolean tablet, String tags, Boolean tdf,
                                 Boolean template, String tpmstate0, Map<Integer, String> unusedN,
                                 Map<Integer, String> usbN, Integer vcpus, String vga, Map<Integer, String> virtioN,
-                                Map<Integer, String> virtiofsN, String vmgenid, String vmstatestorage, String watchdog)
-                                throws JSONException {
+                                Map<Integer, String> virtiofsN, String vmgenid, String vmstatestorage,
+                                String watchdog) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("acpi", acpi);
                             parameters.put("affinity", affinity);
                             parameters.put("agent", agent);
+                            parameters.put("allow-ksm", allow_ksm);
                             parameters.put("amd-sev", amd_sev);
                             parameters.put("arch", arch);
                             parameters.put("args", args);
@@ -11544,6 +11408,7 @@ public class PveClient extends PveClientBase {
                             parameters.put("hookscript", hookscript);
                             parameters.put("hotplug", hotplug);
                             parameters.put("hugepages", hugepages);
+                            parameters.put("intel-tdx", intel_tdx);
                             parameters.put("ivshmem", ivshmem);
                             parameters.put("keephugepages", keephugepages);
                             parameters.put("keyboard", keyboard);
@@ -11605,10 +11470,9 @@ public class PveClient extends PveClientBase {
                          * POST method instead for any actions involving hotplug or storage allocation.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateVm() throws JSONException {
+                        public Result updateVm() {
                             return client.set("/nodes/" + this.node + "/qemu/" + this.vmid + "/config", null);
                         }
 
@@ -11629,10 +11493,9 @@ public class PveClient extends PveClientBase {
                          * Get the virtual machine configuration with both current and pending values.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vmPending() throws JSONException {
+                        public Result vmPending() {
                             return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/pending", null);
                         }
 
@@ -11672,10 +11535,9 @@ public class PveClient extends PveClientBase {
                              * @param type Config type.
                              *             Enum: user,network,meta
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result cloudinitGeneratedConfigDump(String type) throws JSONException {
+                            public Result cloudinitGeneratedConfigDump(String type) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("type", type);
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/cloudinit/dump",
@@ -11688,10 +11550,9 @@ public class PveClient extends PveClientBase {
                          * Get the cloudinit configuration with both current and pending values.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result cloudinitPending() throws JSONException {
+                        public Result cloudinitPending() {
                             return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/cloudinit", null);
                         }
 
@@ -11699,10 +11560,9 @@ public class PveClient extends PveClientBase {
                          * Regenerate and change cloudinit config drive.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result cloudinitUpdate() throws JSONException {
+                        public Result cloudinitUpdate() {
                             return client.set("/nodes/" + this.node + "/qemu/" + this.vmid + "/cloudinit", null);
                         }
 
@@ -11728,10 +11588,9 @@ public class PveClient extends PveClientBase {
                          *               entry called 'unused[n]', which contains the volume ID. Unlink
                          *               of unused[n] always cause physical removal.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result unlink(String idlist, Boolean force) throws JSONException {
+                        public Result unlink(String idlist, Boolean force) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("idlist", idlist);
                             parameters.put("force", force);
@@ -11743,10 +11602,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param idlist A list of disk IDs you want to delete.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result unlink(String idlist) throws JSONException {
+                        public Result unlink(String idlist) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("idlist", idlist);
                             return client.set("/nodes/" + this.node + "/qemu/" + this.vmid + "/unlink", parameters);
@@ -11774,10 +11632,9 @@ public class PveClient extends PveClientBase {
                          *                          using serial terminal, otherwise upgrade is always
                          *                          possible).
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vncproxy(Boolean generate_password, Boolean websocket) throws JSONException {
+                        public Result vncproxy(Boolean generate_password, Boolean websocket) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("generate-password", generate_password);
                             parameters.put("websocket", websocket);
@@ -11789,10 +11646,9 @@ public class PveClient extends PveClientBase {
                          * Creates a TCP VNC proxy connections.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vncproxy() throws JSONException {
+                        public Result vncproxy() {
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/vncproxy", null);
                         }
 
@@ -11815,10 +11671,9 @@ public class PveClient extends PveClientBase {
                          * @param serial opens a serial terminal (defaults to display)
                          *               Enum: serial0,serial1,serial2,serial3
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result termproxy(String serial) throws JSONException {
+                        public Result termproxy(String serial) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("serial", serial);
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/termproxy",
@@ -11829,10 +11684,9 @@ public class PveClient extends PveClientBase {
                          * Creates a TCP proxy connections.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result termproxy() throws JSONException {
+                        public Result termproxy() {
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/termproxy", null);
                         }
 
@@ -11850,15 +11704,14 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Opens a weksocket for VNC traffic.
+                         * Opens a websocket for VNC traffic.
                          * 
                          * @param port      Port number returned by previous vncproxy call.
                          * @param vncticket Ticket from previous call to vncproxy.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vncwebsocket(int port, String vncticket) throws JSONException {
+                        public Result vncwebsocket(int port, String vncticket) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("port", port);
                             parameters.put("vncticket", vncticket);
@@ -11889,10 +11742,9 @@ public class PveClient extends PveClientBase {
                          *              to use same node you use to connect to the API (This is
                          *              window.location.hostname for the JS GUI).
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result spiceproxy(String proxy) throws JSONException {
+                        public Result spiceproxy(String proxy) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("proxy", proxy);
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/spiceproxy",
@@ -11903,10 +11755,9 @@ public class PveClient extends PveClientBase {
                          * Returns a SPICE configuration to connect to the VM.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result spiceproxy() throws JSONException {
+                        public Result spiceproxy() {
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/spiceproxy", null);
                         }
 
@@ -11987,10 +11838,9 @@ public class PveClient extends PveClientBase {
                              * Get virtual machine status.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmStatus() throws JSONException {
+                            public Result vmStatus() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/status/current",
                                         null);
                             }
@@ -12022,6 +11872,12 @@ public class PveClient extends PveClientBase {
                              *                             networks this can be disabled to increase
                              *                             performance.
                              *                             Enum: secure,insecure
+                             * @param nets_host_mtu        Used for migration compat. List of VirtIO network
+                             *                             devices and their effective host_mtu setting
+                             *                             according to the QEMU object model on the source
+                             *                             side of the migration. A value of 0 means that
+                             *                             the host_mtu parameter is to be avoided for the
+                             *                             corresponding device.
                              * @param skiplock             Ignore locks - only root is allowed to use this
                              *                             option.
                              * @param stateuri             Some command save/restore state from this
@@ -12034,19 +11890,19 @@ public class PveClient extends PveClientBase {
                              * @param with_conntrack_state Whether to migrate conntrack entries for running
                              *                             VMs.
                              * @return Result
-                             * @throws JSONException
                              */
 
                             public Result vmStart(String force_cpu, String machine, String migratedfrom,
-                                    String migration_network, String migration_type, Boolean skiplock, String stateuri,
-                                    String targetstorage, Integer timeout, Boolean with_conntrack_state)
-                                    throws JSONException {
+                                    String migration_network, String migration_type, String nets_host_mtu,
+                                    Boolean skiplock, String stateuri, String targetstorage, Integer timeout,
+                                    Boolean with_conntrack_state) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("force-cpu", force_cpu);
                                 parameters.put("machine", machine);
                                 parameters.put("migratedfrom", migratedfrom);
                                 parameters.put("migration_network", migration_network);
                                 parameters.put("migration_type", migration_type);
+                                parameters.put("nets-host-mtu", nets_host_mtu);
                                 parameters.put("skiplock", skiplock);
                                 parameters.put("stateuri", stateuri);
                                 parameters.put("targetstorage", targetstorage);
@@ -12060,10 +11916,9 @@ public class PveClient extends PveClientBase {
                              * Start virtual machine.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmStart() throws JSONException {
+                            public Result vmStart() {
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/status/start",
                                         null);
                             }
@@ -12093,11 +11948,10 @@ public class PveClient extends PveClientBase {
                              *                          option.
                              * @param timeout           Wait maximal timeout seconds.
                              * @return Result
-                             * @throws JSONException
                              */
 
                             public Result vmStop(Boolean keepActive, String migratedfrom, Boolean overrule_shutdown,
-                                    Boolean skiplock, Integer timeout) throws JSONException {
+                                    Boolean skiplock, Integer timeout) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("keepActive", keepActive);
                                 parameters.put("migratedfrom", migratedfrom);
@@ -12113,10 +11967,9 @@ public class PveClient extends PveClientBase {
                              * pulling the power plug of a running computer and may damage the VM data.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmStop() throws JSONException {
+                            public Result vmStop() {
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/status/stop",
                                         null);
                             }
@@ -12139,10 +11992,9 @@ public class PveClient extends PveClientBase {
                              * 
                              * @param skiplock Ignore locks - only root is allowed to use this option.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmReset(Boolean skiplock) throws JSONException {
+                            public Result vmReset(Boolean skiplock) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("skiplock", skiplock);
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/status/reset",
@@ -12153,10 +12005,9 @@ public class PveClient extends PveClientBase {
                              * Reset virtual machine.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmReset() throws JSONException {
+                            public Result vmReset() {
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/status/reset",
                                         null);
                             }
@@ -12184,11 +12035,10 @@ public class PveClient extends PveClientBase {
                              * @param skiplock   Ignore locks - only root is allowed to use this option.
                              * @param timeout    Wait maximal timeout seconds.
                              * @return Result
-                             * @throws JSONException
                              */
 
                             public Result vmShutdown(Boolean forceStop, Boolean keepActive, Boolean skiplock,
-                                    Integer timeout) throws JSONException {
+                                    Integer timeout) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("forceStop", forceStop);
                                 parameters.put("keepActive", keepActive);
@@ -12204,10 +12054,9 @@ public class PveClient extends PveClientBase {
                              * then proceed to a clean shutdown.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmShutdown() throws JSONException {
+                            public Result vmShutdown() {
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/status/shutdown",
                                         null);
                             }
@@ -12231,10 +12080,9 @@ public class PveClient extends PveClientBase {
                              * 
                              * @param timeout Wait maximal timeout seconds for the shutdown.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmReboot(Integer timeout) throws JSONException {
+                            public Result vmReboot(Integer timeout) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("timeout", timeout);
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/status/reboot",
@@ -12246,10 +12094,9 @@ public class PveClient extends PveClientBase {
                              * changes.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmReboot() throws JSONException {
+                            public Result vmReboot() {
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/status/reboot",
                                         null);
                             }
@@ -12275,11 +12122,9 @@ public class PveClient extends PveClientBase {
                              * @param todisk       If set, suspends the VM to disk. Will be resumed on next
                              *                     VM start.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmSuspend(Boolean skiplock, String statestorage, Boolean todisk)
-                                    throws JSONException {
+                            public Result vmSuspend(Boolean skiplock, String statestorage, Boolean todisk) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("skiplock", skiplock);
                                 parameters.put("statestorage", statestorage);
@@ -12292,10 +12137,9 @@ public class PveClient extends PveClientBase {
                              * Suspend virtual machine.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmSuspend() throws JSONException {
+                            public Result vmSuspend() {
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/status/suspend",
                                         null);
                             }
@@ -12319,10 +12163,9 @@ public class PveClient extends PveClientBase {
                              * @param nocheck
                              * @param skiplock Ignore locks - only root is allowed to use this option.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmResume(Boolean nocheck, Boolean skiplock) throws JSONException {
+                            public Result vmResume(Boolean nocheck, Boolean skiplock) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("nocheck", nocheck);
                                 parameters.put("skiplock", skiplock);
@@ -12334,10 +12177,9 @@ public class PveClient extends PveClientBase {
                              * Resume virtual machine.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmResume() throws JSONException {
+                            public Result vmResume() {
                                 return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/status/resume",
                                         null);
                             }
@@ -12348,10 +12190,9 @@ public class PveClient extends PveClientBase {
                          * Directory index
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vmcmdidx() throws JSONException {
+                        public Result vmcmdidx() {
                             return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/status", null);
                         }
 
@@ -12374,10 +12215,9 @@ public class PveClient extends PveClientBase {
                          * @param key      The key (qemu monitor encoding).
                          * @param skiplock Ignore locks - only root is allowed to use this option.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vmSendkey(String key, Boolean skiplock) throws JSONException {
+                        public Result vmSendkey(String key, Boolean skiplock) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("key", key);
                             parameters.put("skiplock", skiplock);
@@ -12389,10 +12229,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param key The key (qemu monitor encoding).
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vmSendkey(String key) throws JSONException {
+                        public Result vmSendkey(String key) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("key", key);
                             return client.set("/nodes/" + this.node + "/qemu/" + this.vmid + "/sendkey", parameters);
@@ -12418,10 +12257,9 @@ public class PveClient extends PveClientBase {
                          *                 Enum: snapshot,clone,copy
                          * @param snapname The name of the snapshot.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vmFeature(String feature, String snapname) throws JSONException {
+                        public Result vmFeature(String feature, String snapname) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("feature", feature);
                             parameters.put("snapname", snapname);
@@ -12434,10 +12272,9 @@ public class PveClient extends PveClientBase {
                          * @param feature Feature to check.
                          *                Enum: snapshot,clone,copy
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vmFeature(String feature) throws JSONException {
+                        public Result vmFeature(String feature) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("feature", feature);
                             return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/feature", parameters);
@@ -12474,12 +12311,11 @@ public class PveClient extends PveClientBase {
                          * @param target      Target node. Only allowed if the original VM is on shared
                          *                    storage.
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result cloneVm(int newid, Integer bwlimit, String description, String format,
-                                Boolean full, String name, String pool, String snapname, String storage, String target)
-                                throws JSONException {
+                                Boolean full, String name, String pool, String snapname, String storage,
+                                String target) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("newid", newid);
                             parameters.put("bwlimit", bwlimit);
@@ -12499,10 +12335,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param newid VMID for the clone.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result cloneVm(int newid) throws JSONException {
+                        public Result cloneVm(int newid) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("newid", newid);
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/clone", parameters);
@@ -12531,13 +12366,13 @@ public class PveClient extends PveClientBase {
                          * @param delete        Delete the original disk after successful copy. By
                          *                      default the original disk is kept as unused disk.
                          * @param digest        Prevent changes if current configuration file has
-                         *                      different SHA1" ." digest. This can be used to prevent
+                         *                      different SHA1 digest. This can be used to prevent
                          *                      concurrent modifications.
                          * @param format        Target Format.
                          *                      Enum: raw,qcow2,vmdk
                          * @param storage       Target storage.
                          * @param target_digest Prevent changes if the current config file of the target
-                         *                      VM has a" ." different SHA1 digest. This can be used to
+                         *                      VM has a different SHA1 digest. This can be used to
                          *                      detect concurrent modifications.
                          * @param target_disk   The config key the disk will be moved to on the target
                          *                      VM (for example, ide0 or scsi1). Default is the source
@@ -12546,12 +12381,11 @@ public class PveClient extends PveClientBase {
                          *                      ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
                          * @param target_vmid   The (unique) ID of the VM.
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result moveVmDisk(String disk, Integer bwlimit, Boolean delete, String digest,
                                 String format, String storage, String target_digest, String target_disk,
-                                Integer target_vmid) throws JSONException {
+                                Integer target_vmid) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
                             parameters.put("bwlimit", bwlimit);
@@ -12573,10 +12407,9 @@ public class PveClient extends PveClientBase {
                          *             Enum:
                          *             ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result moveVmDisk(String disk) throws JSONException {
+                        public Result moveVmDisk(String disk) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/move_disk",
@@ -12601,10 +12434,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param target Target node.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result migrateVmPrecondition(String target) throws JSONException {
+                        public Result migrateVmPrecondition(String target) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
                             return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/migrate", parameters);
@@ -12614,10 +12446,9 @@ public class PveClient extends PveClientBase {
                          * Get preconditions for migration.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result migrateVmPrecondition() throws JSONException {
+                        public Result migrateVmPrecondition() {
                             return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/migrate", null);
                         }
 
@@ -12645,12 +12476,11 @@ public class PveClient extends PveClientBase {
                          *                             VMs.
                          * @param with_local_disks     Enable live storage migration for local disk
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result migrateVm(String target, Integer bwlimit, Boolean force, String migration_network,
                                 String migration_type, Boolean online, String targetstorage,
-                                Boolean with_conntrack_state, Boolean with_local_disks) throws JSONException {
+                                Boolean with_conntrack_state, Boolean with_local_disks) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
                             parameters.put("bwlimit", bwlimit);
@@ -12669,10 +12499,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param target Target node.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result migrateVm(String target) throws JSONException {
+                        public Result migrateVm(String target) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/migrate", parameters);
@@ -12712,12 +12541,11 @@ public class PveClient extends PveClientBase {
                          *                        VM is stopped.
                          * @param target_vmid     The (unique) ID of the VM.
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result remoteMigrateVm(String target_bridge, String target_endpoint,
                                 String target_storage, Integer bwlimit, Boolean delete, Boolean online,
-                                Integer target_vmid) throws JSONException {
+                                Integer target_vmid) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target-bridge", target_bridge);
                             parameters.put("target-endpoint", target_endpoint);
@@ -12744,11 +12572,10 @@ public class PveClient extends PveClientBase {
                          *                        storage. Providing the special value '1' will map each
                          *                        source storage to itself.
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result remoteMigrateVm(String target_bridge, String target_endpoint,
-                                String target_storage) throws JSONException {
+                                String target_storage) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target-bridge", target_bridge);
                             parameters.put("target-endpoint", target_endpoint);
@@ -12775,10 +12602,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param command The monitor command.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result monitor(String command) throws JSONException {
+                        public Result monitor(String command) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("command", command);
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/monitor", parameters);
@@ -12811,11 +12637,9 @@ public class PveClient extends PveClientBase {
                          *                 modifications.
                          * @param skiplock Ignore locks - only root is allowed to use this option.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result resizeVm(String disk, String size, String digest, Boolean skiplock)
-                                throws JSONException {
+                        public Result resizeVm(String disk, String size, String digest, Boolean skiplock) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
                             parameters.put("size", size);
@@ -12834,10 +12658,9 @@ public class PveClient extends PveClientBase {
                          *             size of the volume and without it, the value is taken as an
                          *             absolute one. Shrinking disk size is not supported.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result resizeVm(String disk, String size) throws JSONException {
+                        public Result resizeVm(String disk, String size) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
                             parameters.put("size", size);
@@ -12907,10 +12730,9 @@ public class PveClient extends PveClientBase {
                                  * Get snapshot configuration
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result getSnapshotConfig() throws JSONException {
+                                public Result getSnapshotConfig() {
                                     return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/snapshot/"
                                             + this.snapname + "/config", null);
                                 }
@@ -12920,10 +12742,9 @@ public class PveClient extends PveClientBase {
                                  * 
                                  * @param description A textual description or comment.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result updateSnapshotConfig(String description) throws JSONException {
+                                public Result updateSnapshotConfig(String description) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("description", description);
                                     return client.set("/nodes/" + this.node + "/qemu/" + this.vmid + "/snapshot/"
@@ -12934,10 +12755,9 @@ public class PveClient extends PveClientBase {
                                  * Update snapshot metadata.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result updateSnapshotConfig() throws JSONException {
+                                public Result updateSnapshotConfig() {
                                     return client.set("/nodes/" + this.node + "/qemu/" + this.vmid + "/snapshot/"
                                             + this.snapname + "/config", null);
                                 }
@@ -12964,10 +12784,9 @@ public class PveClient extends PveClientBase {
                                  *              successfully. (Note: VMs will be automatically started if the
                                  *              snapshot includes RAM.)
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result rollback(Boolean start) throws JSONException {
+                                public Result rollback(Boolean start) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("start", start);
                                     return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/snapshot/"
@@ -12978,10 +12797,9 @@ public class PveClient extends PveClientBase {
                                  * Rollback VM state to specified snapshot.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result rollback() throws JSONException {
+                                public Result rollback() {
                                     return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/snapshot/"
                                             + this.snapname + "/rollback", null);
                                 }
@@ -12994,10 +12812,9 @@ public class PveClient extends PveClientBase {
                              * @param force For removal from config file, even if removing disk snapshots
                              *              fails.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result delsnapshot(Boolean force) throws JSONException {
+                            public Result delsnapshot(Boolean force) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("force", force);
                                 return client.delete("/nodes/" + this.node + "/qemu/" + this.vmid + "/snapshot/"
@@ -13008,10 +12825,9 @@ public class PveClient extends PveClientBase {
                              * Delete a VM snapshot.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result delsnapshot() throws JSONException {
+                            public Result delsnapshot() {
                                 return client.delete("/nodes/" + this.node + "/qemu/" + this.vmid + "/snapshot/"
                                         + this.snapname + "", null);
                             }
@@ -13019,10 +12835,9 @@ public class PveClient extends PveClientBase {
                             /**
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result snapshotCmdIdx() throws JSONException {
+                            public Result snapshotCmdIdx() {
                                 return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/snapshot/"
                                         + this.snapname + "", null);
                             }
@@ -13033,10 +12848,9 @@ public class PveClient extends PveClientBase {
                          * List all snapshots.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result snapshotList() throws JSONException {
+                        public Result snapshotList() {
                             return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/snapshot", null);
                         }
 
@@ -13047,11 +12861,9 @@ public class PveClient extends PveClientBase {
                          * @param description A textual description or comment.
                          * @param vmstate     Save the vmstate
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result snapshot(String snapname, String description, Boolean vmstate)
-                                throws JSONException {
+                        public Result snapshot(String snapname, String description, Boolean vmstate) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
                             parameters.put("description", description);
@@ -13065,10 +12877,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param snapname The name of the snapshot.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result snapshot(String snapname) throws JSONException {
+                        public Result snapshot(String snapname) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/snapshot",
@@ -13095,10 +12906,9 @@ public class PveClient extends PveClientBase {
                          *             Enum:
                          *             ide0,ide1,ide2,ide3,scsi0,scsi1,scsi2,scsi3,scsi4,scsi5,scsi6,scsi7,scsi8,scsi9,scsi10,scsi11,scsi12,scsi13,scsi14,scsi15,scsi16,scsi17,scsi18,scsi19,scsi20,scsi21,scsi22,scsi23,scsi24,scsi25,scsi26,scsi27,scsi28,scsi29,scsi30,virtio0,virtio1,virtio2,virtio3,virtio4,virtio5,virtio6,virtio7,virtio8,virtio9,virtio10,virtio11,virtio12,virtio13,virtio14,virtio15,sata0,sata1,sata2,sata3,sata4,sata5,efidisk0,tpmstate0
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result template(String disk) throws JSONException {
+                        public Result template(String disk) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/template",
@@ -13109,10 +12919,9 @@ public class PveClient extends PveClientBase {
                          * Create a Template.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result template() throws JSONException {
+                        public Result template() {
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/template", null);
                         }
 
@@ -13138,10 +12947,9 @@ public class PveClient extends PveClientBase {
                          *                 be checked again for all actually used storages during
                          *                 migration.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result mtunnel(String bridges, String storages) throws JSONException {
+                        public Result mtunnel(String bridges, String storages) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("bridges", bridges);
                             parameters.put("storages", storages);
@@ -13152,10 +12960,9 @@ public class PveClient extends PveClientBase {
                          * Migration tunnel endpoint - only for internal use by VM migration.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result mtunnel() throws JSONException {
+                        public Result mtunnel() {
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/mtunnel", null);
                         }
 
@@ -13180,10 +12987,9 @@ public class PveClient extends PveClientBase {
                          * @param ticket ticket return by initial 'mtunnel' API call, or retrieved via
                          *               'ticket' tunnel command
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result mtunnelwebsocket(String socket, String ticket) throws JSONException {
+                        public Result mtunnelwebsocket(String socket, String ticket) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("socket", socket);
                             parameters.put("ticket", ticket);
@@ -13205,15 +13011,14 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Stop the dbus-vmstate helper for the given VM if running.
+                         * Control the dbus-vmstate helper for a given running VM.
                          * 
                          * @param action Action to perform on the DBus VMState helper.
                          *               Enum: start,stop
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result dbusVmstate(String action) throws JSONException {
+                        public Result dbusVmstate(String action) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("action", action);
                             return client.create("/nodes/" + this.node + "/qemu/" + this.vmid + "/dbus-vmstate",
@@ -13234,11 +13039,9 @@ public class PveClient extends PveClientBase {
                      * @param skiplock                   Ignore locks - only root is allowed to use
                      *                                   this option.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result destroyVm(Boolean destroy_unreferenced_disks, Boolean purge, Boolean skiplock)
-                            throws JSONException {
+                    public Result destroyVm(Boolean destroy_unreferenced_disks, Boolean purge, Boolean skiplock) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("destroy-unreferenced-disks", destroy_unreferenced_disks);
                         parameters.put("purge", purge);
@@ -13251,10 +13054,9 @@ public class PveClient extends PveClientBase {
                      * permissions and firewall rules
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result destroyVm() throws JSONException {
+                    public Result destroyVm() {
                         return client.delete("/nodes/" + this.node + "/qemu/" + this.vmid + "", null);
                     }
 
@@ -13262,10 +13064,9 @@ public class PveClient extends PveClientBase {
                      * Directory index
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result vmdiridx() throws JSONException {
+                    public Result vmdiridx() {
                         return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "", null);
                     }
 
@@ -13276,10 +13077,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param full Determine the full status of active VMs.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result vmlist(Boolean full) throws JSONException {
+                public Result vmlist(Boolean full) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("full", full);
                     return client.get("/nodes/" + this.node + "/qemu", parameters);
@@ -13289,10 +13089,9 @@ public class PveClient extends PveClientBase {
                  * Virtual machine index (per node).
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result vmlist() throws JSONException {
+                public Result vmlist() {
                     return client.get("/nodes/" + this.node + "/qemu", null);
                 }
 
@@ -13305,6 +13104,8 @@ public class PveClient extends PveClientBase {
                  *                               processes, for example: 0,5,8-11
                  * @param agent                  Enable/disable communication with the QEMU
                  *                               Guest Agent and its properties.
+                 * @param allow_ksm              Allow memory pages of this guest to be merged
+                 *                               via KSM (Kernel Samepage Merging).
                  * @param amd_sev                Secure Encrypted Virtualization (SEV) features
                  *                               by AMD CPUs
                  * @param arch                   Virtual processor architecture. Defaults to the
@@ -13365,6 +13166,8 @@ public class PveClient extends PveClientBase {
                  * @param force                  Allow to overwrite existing VM.
                  * @param freeze                 Freeze CPU at startup (use 'c' monitor command
                  *                               to start execution).
+                 * @param ha_managed             Add the VM as a HA resource after it was
+                 *                               created.
                  * @param hookscript             Script that will be executed during various
                  *                               steps in the vms lifetime.
                  * @param hostpciN               Map host PCI devices into guest.
@@ -13377,7 +13180,10 @@ public class PveClient extends PveClientBase {
                  *                               is possible for guests with machine version
                  *                               &amp;gt;= 7.1 and ostype l26 or windows
                  *                               &amp;gt; 7.
-                 * @param hugepages              Enable/disable hugepages memory.
+                 * @param hugepages              Enables hugepages memory. Sets the size of
+                 *                               hugepages in MiB. If the value is set to 'any'
+                 *                               then 1 GiB hugepages will be used if possible,
+                 *                               otherwise the size will fall back to 2 MiB.
                  *                               Enum: any,2,1024
                  * @param ideN                   Use volume as IDE hard disk or CD-ROM (n is 0
                  *                               to 3). Use the special syntax
@@ -13388,6 +13194,8 @@ public class PveClient extends PveClientBase {
                  *                               enabled, which is used as an intermediary
                  *                               extraction storage during import. Defaults to
                  *                               the source storage.
+                 * @param intel_tdx              Trusted Domain Extension (TDX) features by
+                 *                               Intel CPUs
                  * @param ipconfigN              cloud-init: Specify IP addresses and gateways
                  *                               for the corresponding interface. IP addresses
                  *                               use CIDR notation, gateways are optional but
@@ -13530,33 +13338,34 @@ public class PveClient extends PveClientBase {
                  * @param vmstatestorage         Default storage for VM state volumes/files.
                  * @param watchdog               Create a virtual hardware watchdog device.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result createVm(int vmid, Boolean acpi, String affinity, String agent, String amd_sev,
-                        String arch, String archive, String args, String audio0, Boolean autostart, Integer balloon,
-                        String bios, String boot, String bootdisk, Integer bwlimit, String cdrom, String cicustom,
-                        String cipassword, String citype, Boolean ciupgrade, String ciuser, Integer cores, String cpu,
-                        Float cpulimit, Integer cpuunits, String description, String efidisk0, Boolean force,
-                        Boolean freeze, String hookscript, Map<Integer, String> hostpciN, String hotplug,
-                        String hugepages, Map<Integer, String> ideN, String import_working_storage,
-                        Map<Integer, String> ipconfigN, String ivshmem, Boolean keephugepages, String keyboard,
-                        Boolean kvm, Boolean live_restore, Boolean localtime, String lock_, String machine,
-                        String memory, Float migrate_downtime, Integer migrate_speed, String name, String nameserver,
-                        Map<Integer, String> netN, Boolean numa, Map<Integer, String> numaN, Boolean onboot,
-                        String ostype, Map<Integer, String> parallelN, String pool, Boolean protection, Boolean reboot,
-                        String rng0, Map<Integer, String> sataN, Map<Integer, String> scsiN, String scsihw,
-                        String searchdomain, Map<Integer, String> serialN, Integer shares, String smbios1, Integer smp,
-                        Integer sockets, String spice_enhancements, String sshkeys, Boolean start, String startdate,
-                        String startup, String storage, Boolean tablet, String tags, Boolean tdf, Boolean template,
-                        String tpmstate0, Boolean unique, Map<Integer, String> unusedN, Map<Integer, String> usbN,
-                        Integer vcpus, String vga, Map<Integer, String> virtioN, Map<Integer, String> virtiofsN,
-                        String vmgenid, String vmstatestorage, String watchdog) throws JSONException {
+                public Result createVm(int vmid, Boolean acpi, String affinity, String agent, Boolean allow_ksm,
+                        String amd_sev, String arch, String archive, String args, String audio0, Boolean autostart,
+                        Integer balloon, String bios, String boot, String bootdisk, Integer bwlimit, String cdrom,
+                        String cicustom, String cipassword, String citype, Boolean ciupgrade, String ciuser,
+                        Integer cores, String cpu, Float cpulimit, Integer cpuunits, String description,
+                        String efidisk0, Boolean force, Boolean freeze, Boolean ha_managed, String hookscript,
+                        Map<Integer, String> hostpciN, String hotplug, String hugepages, Map<Integer, String> ideN,
+                        String import_working_storage, String intel_tdx, Map<Integer, String> ipconfigN, String ivshmem,
+                        Boolean keephugepages, String keyboard, Boolean kvm, Boolean live_restore, Boolean localtime,
+                        String lock_, String machine, String memory, Float migrate_downtime, Integer migrate_speed,
+                        String name, String nameserver, Map<Integer, String> netN, Boolean numa,
+                        Map<Integer, String> numaN, Boolean onboot, String ostype, Map<Integer, String> parallelN,
+                        String pool, Boolean protection, Boolean reboot, String rng0, Map<Integer, String> sataN,
+                        Map<Integer, String> scsiN, String scsihw, String searchdomain, Map<Integer, String> serialN,
+                        Integer shares, String smbios1, Integer smp, Integer sockets, String spice_enhancements,
+                        String sshkeys, Boolean start, String startdate, String startup, String storage, Boolean tablet,
+                        String tags, Boolean tdf, Boolean template, String tpmstate0, Boolean unique,
+                        Map<Integer, String> unusedN, Map<Integer, String> usbN, Integer vcpus, String vga,
+                        Map<Integer, String> virtioN, Map<Integer, String> virtiofsN, String vmgenid,
+                        String vmstatestorage, String watchdog) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vmid", vmid);
                     parameters.put("acpi", acpi);
                     parameters.put("affinity", affinity);
                     parameters.put("agent", agent);
+                    parameters.put("allow-ksm", allow_ksm);
                     parameters.put("amd-sev", amd_sev);
                     parameters.put("arch", arch);
                     parameters.put("archive", archive);
@@ -13582,10 +13391,12 @@ public class PveClient extends PveClientBase {
                     parameters.put("efidisk0", efidisk0);
                     parameters.put("force", force);
                     parameters.put("freeze", freeze);
+                    parameters.put("ha-managed", ha_managed);
                     parameters.put("hookscript", hookscript);
                     parameters.put("hotplug", hotplug);
                     parameters.put("hugepages", hugepages);
                     parameters.put("import-working-storage", import_working_storage);
+                    parameters.put("intel-tdx", intel_tdx);
                     parameters.put("ivshmem", ivshmem);
                     parameters.put("keephugepages", keephugepages);
                     parameters.put("keyboard", keyboard);
@@ -13650,10 +13461,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param vmid The (unique) ID of the VM.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result createVm(int vmid) throws JSONException {
+                public Result createVm(int vmid) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vmid", vmid);
                     return client.create("/nodes/" + this.node + "/qemu", parameters);
@@ -13837,10 +13647,9 @@ public class PveClient extends PveClientBase {
                          * @param current  Get current values (instead of pending values).
                          * @param snapshot Fetch config values from given snapshot.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vmConfig(Boolean current, String snapshot) throws JSONException {
+                        public Result vmConfig(Boolean current, String snapshot) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("current", current);
                             parameters.put("snapshot", snapshot);
@@ -13851,10 +13660,9 @@ public class PveClient extends PveClientBase {
                          * Get container configuration.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vmConfig() throws JSONException {
+                        public Result vmConfig() {
                             return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/config", null);
                         }
 
@@ -13887,6 +13695,12 @@ public class PveClient extends PveClientBase {
                          * @param digest       Prevent changes if current configuration file has
                          *                     different SHA1 digest. This can be used to prevent
                          *                     concurrent modifications.
+                         * @param entrypoint   Command to run as init, optionally with arguments; may
+                         *                     start with an absolute path, relative path, or a binary
+                         *                     in $PATH.
+                         * @param env          The container runtime environment as NUL-separated list.
+                         *                     Replaces any lxc.environment.runtime entries in the
+                         *                     config.
                          * @param features     Allow containers access to advanced features.
                          * @param hookscript   Script that will be executed during various steps in the
                          *                     containers lifetime.
@@ -13930,22 +13744,23 @@ public class PveClient extends PveClientBase {
                          *                     the host time zone, or an arbitrary time zone option from
                          *                     /usr/share/zoneinfo/zone.tab
                          * @param tty          Specify the number of tty available to the container
-                         * @param unprivileged Makes the container run as unprivileged user. (Should not
-                         *                     be modified manually.)
+                         * @param unprivileged Makes the container run as unprivileged user. For
+                         *                     creation, the default is 1. For restore, the default is
+                         *                     the value from the backup. (Should not be modified
+                         *                     manually.)
                          * @param unusedN      Reference to unused volumes. This is used internally, and
                          *                     should not be modified manually.
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result updateVm(String arch, String cmode, Boolean console, Integer cores,
                                 Float cpulimit, Integer cpuunits, Boolean debug, String delete, String description,
-                                Map<Integer, String> devN, String digest, String features, String hookscript,
-                                String hostname, String lock_, Integer memory, Map<Integer, String> mpN,
-                                String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype,
-                                Boolean protection, String revert, String rootfs, String searchdomain, String startup,
-                                Integer swap, String tags, Boolean template, String timezone, Integer tty,
-                                Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                                Map<Integer, String> devN, String digest, String entrypoint, String env,
+                                String features, String hookscript, String hostname, String lock_, Integer memory,
+                                Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot,
+                                String ostype, Boolean protection, String revert, String rootfs, String searchdomain,
+                                String startup, Integer swap, String tags, Boolean template, String timezone,
+                                Integer tty, Boolean unprivileged, Map<Integer, String> unusedN) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("arch", arch);
                             parameters.put("cmode", cmode);
@@ -13957,6 +13772,8 @@ public class PveClient extends PveClientBase {
                             parameters.put("delete", delete);
                             parameters.put("description", description);
                             parameters.put("digest", digest);
+                            parameters.put("entrypoint", entrypoint);
+                            parameters.put("env", env);
                             parameters.put("features", features);
                             parameters.put("hookscript", hookscript);
                             parameters.put("hostname", hostname);
@@ -13987,10 +13804,9 @@ public class PveClient extends PveClientBase {
                          * Set container options.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateVm() throws JSONException {
+                        public Result updateVm() {
                             return client.set("/nodes/" + this.node + "/lxc/" + this.vmid + "/config", null);
                         }
 
@@ -14065,10 +13881,9 @@ public class PveClient extends PveClientBase {
                              * Get virtual machine status.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmStatus() throws JSONException {
+                            public Result vmStatus() {
                                 return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/status/current",
                                         null);
                             }
@@ -14092,10 +13907,9 @@ public class PveClient extends PveClientBase {
                              * @param debug    If set, enables very verbose debug log-level on start.
                              * @param skiplock Ignore locks - only root is allowed to use this option.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmStart(Boolean debug, Boolean skiplock) throws JSONException {
+                            public Result vmStart(Boolean debug, Boolean skiplock) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("debug", debug);
                                 parameters.put("skiplock", skiplock);
@@ -14107,10 +13921,9 @@ public class PveClient extends PveClientBase {
                              * Start the container.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmStart() throws JSONException {
+                            public Result vmStart() {
                                 return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/status/start",
                                         null);
                             }
@@ -14137,10 +13950,9 @@ public class PveClient extends PveClientBase {
                              * @param skiplock          Ignore locks - only root is allowed to use this
                              *                          option.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmStop(Boolean overrule_shutdown, Boolean skiplock) throws JSONException {
+                            public Result vmStop(Boolean overrule_shutdown, Boolean skiplock) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("overrule-shutdown", overrule_shutdown);
                                 parameters.put("skiplock", skiplock);
@@ -14153,10 +13965,9 @@ public class PveClient extends PveClientBase {
                              * container.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmStop() throws JSONException {
+                            public Result vmStop() {
                                 return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/status/stop",
                                         null);
                             }
@@ -14181,10 +13992,9 @@ public class PveClient extends PveClientBase {
                              * @param forceStop Make sure the Container stops.
                              * @param timeout   Wait maximal timeout seconds.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmShutdown(Boolean forceStop, Integer timeout) throws JSONException {
+                            public Result vmShutdown(Boolean forceStop, Integer timeout) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("forceStop", forceStop);
                                 parameters.put("timeout", timeout);
@@ -14197,10 +14007,9 @@ public class PveClient extends PveClientBase {
                              * see lxc-stop(1) for details.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmShutdown() throws JSONException {
+                            public Result vmShutdown() {
                                 return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/status/shutdown",
                                         null);
                             }
@@ -14222,10 +14031,9 @@ public class PveClient extends PveClientBase {
                              * Suspend the container. This is experimental.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmSuspend() throws JSONException {
+                            public Result vmSuspend() {
                                 return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/status/suspend",
                                         null);
                             }
@@ -14247,10 +14055,9 @@ public class PveClient extends PveClientBase {
                              * Resume the container.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmResume() throws JSONException {
+                            public Result vmResume() {
                                 return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/status/resume",
                                         null);
                             }
@@ -14274,10 +14081,9 @@ public class PveClient extends PveClientBase {
                              * 
                              * @param timeout Wait maximal timeout seconds for the shutdown.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmReboot(Integer timeout) throws JSONException {
+                            public Result vmReboot(Integer timeout) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("timeout", timeout);
                                 return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/status/reboot",
@@ -14289,10 +14095,9 @@ public class PveClient extends PveClientBase {
                              * pending changes.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result vmReboot() throws JSONException {
+                            public Result vmReboot() {
                                 return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/status/reboot",
                                         null);
                             }
@@ -14303,10 +14108,9 @@ public class PveClient extends PveClientBase {
                          * Directory index
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vmcmdidx() throws JSONException {
+                        public Result vmcmdidx() {
                             return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/status", null);
                         }
 
@@ -14375,10 +14179,9 @@ public class PveClient extends PveClientBase {
                                  * @param start Whether the container should get started after rolling back
                                  *              successfully
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result rollback(Boolean start) throws JSONException {
+                                public Result rollback(Boolean start) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("start", start);
                                     return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/snapshot/"
@@ -14389,10 +14192,9 @@ public class PveClient extends PveClientBase {
                                  * Rollback LXC state to specified snapshot.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result rollback() throws JSONException {
+                                public Result rollback() {
                                     return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/snapshot/"
                                             + this.snapname + "/rollback", null);
                                 }
@@ -14416,10 +14218,9 @@ public class PveClient extends PveClientBase {
                                  * Get snapshot configuration
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result getSnapshotConfig() throws JSONException {
+                                public Result getSnapshotConfig() {
                                     return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/snapshot/"
                                             + this.snapname + "/config", null);
                                 }
@@ -14429,10 +14230,9 @@ public class PveClient extends PveClientBase {
                                  * 
                                  * @param description A textual description or comment.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result updateSnapshotConfig(String description) throws JSONException {
+                                public Result updateSnapshotConfig(String description) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("description", description);
                                     return client.set("/nodes/" + this.node + "/lxc/" + this.vmid + "/snapshot/"
@@ -14443,10 +14243,9 @@ public class PveClient extends PveClientBase {
                                  * Update snapshot metadata.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result updateSnapshotConfig() throws JSONException {
+                                public Result updateSnapshotConfig() {
                                     return client.set("/nodes/" + this.node + "/lxc/" + this.vmid + "/snapshot/"
                                             + this.snapname + "/config", null);
                                 }
@@ -14459,10 +14258,9 @@ public class PveClient extends PveClientBase {
                              * @param force For removal from config file, even if removing disk snapshots
                              *              fails.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result delsnapshot(Boolean force) throws JSONException {
+                            public Result delsnapshot(Boolean force) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("force", force);
                                 return client.delete(
@@ -14474,10 +14272,9 @@ public class PveClient extends PveClientBase {
                              * Delete a LXC snapshot.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result delsnapshot() throws JSONException {
+                            public Result delsnapshot() {
                                 return client.delete(
                                         "/nodes/" + this.node + "/lxc/" + this.vmid + "/snapshot/" + this.snapname + "",
                                         null);
@@ -14486,10 +14283,9 @@ public class PveClient extends PveClientBase {
                             /**
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result snapshotCmdIdx() throws JSONException {
+                            public Result snapshotCmdIdx() {
                                 return client.get(
                                         "/nodes/" + this.node + "/lxc/" + this.vmid + "/snapshot/" + this.snapname + "",
                                         null);
@@ -14501,10 +14297,9 @@ public class PveClient extends PveClientBase {
                          * List all snapshots.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result list() throws JSONException {
+                        public Result list() {
                             return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/snapshot", null);
                         }
 
@@ -14514,10 +14309,9 @@ public class PveClient extends PveClientBase {
                          * @param snapname    The name of the snapshot.
                          * @param description A textual description or comment.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result snapshot(String snapname, String description) throws JSONException {
+                        public Result snapshot(String snapname, String description) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
                             parameters.put("description", description);
@@ -14529,10 +14323,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param snapname The name of the snapshot.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result snapshot(String snapname) throws JSONException {
+                        public Result snapshot(String snapname) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("snapname", snapname);
                             return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/snapshot", parameters);
@@ -14621,10 +14414,9 @@ public class PveClient extends PveClientBase {
                                  * @param digest Prevent changes if current configuration file has a different
                                  *               digest. This can be used to prevent concurrent modifications.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result deleteRule(String digest) throws JSONException {
+                                public Result deleteRule(String digest) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("digest", digest);
                                     return client.delete("/nodes/" + this.node + "/lxc/" + this.vmid
@@ -14635,10 +14427,9 @@ public class PveClient extends PveClientBase {
                                  * Delete rule.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result deleteRule() throws JSONException {
+                                public Result deleteRule() {
                                     return client.delete("/nodes/" + this.node + "/lxc/" + this.vmid
                                             + "/firewall/rules/" + this.pos + "", null);
                                 }
@@ -14647,10 +14438,9 @@ public class PveClient extends PveClientBase {
                                  * Get single rule data.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result getRule() throws JSONException {
+                                public Result getRule() {
                                     return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall/rules/"
                                             + this.pos + "", null);
                                 }
@@ -14703,13 +14493,12 @@ public class PveClient extends PveClientBase {
                                  * @param type      Rule type.
                                  *                  Enum: in,out,forward,group
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
                                 public Result updateRule(String action, String comment, String delete, String dest,
                                         String digest, String dport, Integer enable, String icmp_type, String iface,
                                         String log, String macro, Integer moveto, String proto, String source,
-                                        String sport, String type) throws JSONException {
+                                        String sport, String type) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("action", action);
                                     parameters.put("comment", comment);
@@ -14735,10 +14524,9 @@ public class PveClient extends PveClientBase {
                                  * Modify rule data.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result updateRule() throws JSONException {
+                                public Result updateRule() {
                                     return client.set("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall/rules/"
                                             + this.pos + "", null);
                                 }
@@ -14749,10 +14537,9 @@ public class PveClient extends PveClientBase {
                              * List rules.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getRules() throws JSONException {
+                            public Result getRules() {
                                 return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall/rules",
                                         null);
                             }
@@ -14803,13 +14590,11 @@ public class PveClient extends PveClientBase {
                              *                  '80:85', and you can use comma separated list to match
                              *                  several ports or ranges.
                              * @return Result
-                             * @throws JSONException
                              */
 
                             public Result createRule(String action, String type, String comment, String dest,
                                     String digest, String dport, Integer enable, String icmp_type, String iface,
-                                    String log, String macro, Integer pos, String proto, String source, String sport)
-                                    throws JSONException {
+                                    String log, String macro, Integer pos, String proto, String source, String sport) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
@@ -14838,10 +14623,9 @@ public class PveClient extends PveClientBase {
                              * @param type   Rule type.
                              *               Enum: in,out,forward,group
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result createRule(String action, String type) throws JSONException {
+                            public Result createRule(String action, String type) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("action", action);
                                 parameters.put("type", type);
@@ -14885,10 +14669,9 @@ public class PveClient extends PveClientBase {
                                  * @param digest Prevent changes if current configuration file has a different
                                  *               digest. This can be used to prevent concurrent modifications.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result removeAlias(String digest) throws JSONException {
+                                public Result removeAlias(String digest) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("digest", digest);
                                     return client.delete("/nodes/" + this.node + "/lxc/" + this.vmid
@@ -14899,10 +14682,9 @@ public class PveClient extends PveClientBase {
                                  * Remove IP or Network alias.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result removeAlias() throws JSONException {
+                                public Result removeAlias() {
                                     return client.delete("/nodes/" + this.node + "/lxc/" + this.vmid
                                             + "/firewall/aliases/" + this.name + "", null);
                                 }
@@ -14911,10 +14693,9 @@ public class PveClient extends PveClientBase {
                                  * Read alias.
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result readAlias() throws JSONException {
+                                public Result readAlias() {
                                     return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall/aliases/"
                                             + this.name + "", null);
                                 }
@@ -14928,11 +14709,9 @@ public class PveClient extends PveClientBase {
                                  *                digest. This can be used to prevent concurrent modifications.
                                  * @param rename  Rename an existing alias.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result updateAlias(String cidr, String comment, String digest, String rename)
-                                        throws JSONException {
+                                public Result updateAlias(String cidr, String comment, String digest, String rename) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
                                     parameters.put("comment", comment);
@@ -14947,10 +14726,9 @@ public class PveClient extends PveClientBase {
                                  * 
                                  * @param cidr Network/IP specification in CIDR format.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result updateAlias(String cidr) throws JSONException {
+                                public Result updateAlias(String cidr) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
                                     return client.set("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall/aliases/"
@@ -14963,10 +14741,9 @@ public class PveClient extends PveClientBase {
                              * List aliases
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getAliases() throws JSONException {
+                            public Result getAliases() {
                                 return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall/aliases",
                                         null);
                             }
@@ -14978,10 +14755,9 @@ public class PveClient extends PveClientBase {
                              * @param name    Alias name.
                              * @param comment
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result createAlias(String cidr, String name, String comment) throws JSONException {
+                            public Result createAlias(String cidr, String name, String comment) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
                                 parameters.put("name", name);
@@ -14996,10 +14772,9 @@ public class PveClient extends PveClientBase {
                              * @param cidr Network/IP specification in CIDR format.
                              * @param name Alias name.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result createAlias(String cidr, String name) throws JSONException {
+                            public Result createAlias(String cidr, String name) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("cidr", cidr);
                                 parameters.put("name", name);
@@ -15063,10 +14838,9 @@ public class PveClient extends PveClientBase {
                                      * @param digest Prevent changes if current configuration file has a different
                                      *               digest. This can be used to prevent concurrent modifications.
                                      * @return Result
-                                     * @throws JSONException
                                      */
 
-                                    public Result removeIp(String digest) throws JSONException {
+                                    public Result removeIp(String digest) {
                                         Map<String, Object> parameters = new HashMap<>();
                                         parameters.put("digest", digest);
                                         return client.delete("/nodes/" + this.node + "/lxc/" + this.vmid
@@ -15077,10 +14851,9 @@ public class PveClient extends PveClientBase {
                                      * Remove IP or Network from IPSet.
                                      * 
                                      * @return Result
-                                     * @throws JSONException
                                      */
 
-                                    public Result removeIp() throws JSONException {
+                                    public Result removeIp() {
                                         return client.delete("/nodes/" + this.node + "/lxc/" + this.vmid
                                                 + "/firewall/ipset/" + this.name + "/" + this.cidr + "", null);
                                     }
@@ -15089,10 +14862,9 @@ public class PveClient extends PveClientBase {
                                      * Read IP or Network settings from IPSet.
                                      * 
                                      * @return Result
-                                     * @throws JSONException
                                      */
 
-                                    public Result readIp() throws JSONException {
+                                    public Result readIp() {
                                         return client.get("/nodes/" + this.node + "/lxc/" + this.vmid
                                                 + "/firewall/ipset/" + this.name + "/" + this.cidr + "", null);
                                     }
@@ -15105,11 +14877,9 @@ public class PveClient extends PveClientBase {
                                      *                digest. This can be used to prevent concurrent modifications.
                                      * @param nomatch
                                      * @return Result
-                                     * @throws JSONException
                                      */
 
-                                    public Result updateIp(String comment, String digest, Boolean nomatch)
-                                            throws JSONException {
+                                    public Result updateIp(String comment, String digest, Boolean nomatch) {
                                         Map<String, Object> parameters = new HashMap<>();
                                         parameters.put("comment", comment);
                                         parameters.put("digest", digest);
@@ -15122,10 +14892,9 @@ public class PveClient extends PveClientBase {
                                      * Update IP or Network settings
                                      * 
                                      * @return Result
-                                     * @throws JSONException
                                      */
 
-                                    public Result updateIp() throws JSONException {
+                                    public Result updateIp() {
                                         return client.set("/nodes/" + this.node + "/lxc/" + this.vmid
                                                 + "/firewall/ipset/" + this.name + "/" + this.cidr + "", null);
                                     }
@@ -15137,10 +14906,9 @@ public class PveClient extends PveClientBase {
                                  * 
                                  * @param force Delete all members of the IPSet, if there are any.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result deleteIpset(Boolean force) throws JSONException {
+                                public Result deleteIpset(Boolean force) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("force", force);
                                     return client.delete("/nodes/" + this.node + "/lxc/" + this.vmid
@@ -15151,10 +14919,9 @@ public class PveClient extends PveClientBase {
                                  * Delete IPSet
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result deleteIpset() throws JSONException {
+                                public Result deleteIpset() {
                                     return client.delete("/nodes/" + this.node + "/lxc/" + this.vmid
                                             + "/firewall/ipset/" + this.name + "", null);
                                 }
@@ -15163,10 +14930,9 @@ public class PveClient extends PveClientBase {
                                  * List IPSet content
                                  * 
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result getIpset() throws JSONException {
+                                public Result getIpset() {
                                     return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall/ipset/"
                                             + this.name + "", null);
                                 }
@@ -15178,11 +14944,9 @@ public class PveClient extends PveClientBase {
                                  * @param comment
                                  * @param nomatch
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result createIp(String cidr, String comment, Boolean nomatch)
-                                        throws JSONException {
+                                public Result createIp(String cidr, String comment, Boolean nomatch) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
                                     parameters.put("comment", comment);
@@ -15196,10 +14960,9 @@ public class PveClient extends PveClientBase {
                                  * 
                                  * @param cidr Network/IP specification in CIDR format.
                                  * @return Result
-                                 * @throws JSONException
                                  */
 
-                                public Result createIp(String cidr) throws JSONException {
+                                public Result createIp(String cidr) {
                                     Map<String, Object> parameters = new HashMap<>();
                                     parameters.put("cidr", cidr);
                                     return client.create("/nodes/" + this.node + "/lxc/" + this.vmid
@@ -15212,10 +14975,9 @@ public class PveClient extends PveClientBase {
                              * List IPSets
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result ipsetIndex() throws JSONException {
+                            public Result ipsetIndex() {
                                 return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall/ipset",
                                         null);
                             }
@@ -15230,11 +14992,9 @@ public class PveClient extends PveClientBase {
                              * @param rename  Rename an existing IPSet. You can set 'rename' to the same
                              *                value as 'name' to update the 'comment' of an existing IPSet.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result createIpset(String name, String comment, String digest, String rename)
-                                    throws JSONException {
+                            public Result createIpset(String name, String comment, String digest, String rename) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
                                 parameters.put("comment", comment);
@@ -15249,10 +15009,9 @@ public class PveClient extends PveClientBase {
                              * 
                              * @param name IP set name.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result createIpset(String name) throws JSONException {
+                            public Result createIpset(String name) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("name", name);
                                 return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall/ipset",
@@ -15276,10 +15035,9 @@ public class PveClient extends PveClientBase {
                              * Get VM firewall options.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getOptions() throws JSONException {
+                            public Result getOptions() {
                                 return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall/options",
                                         null);
                             }
@@ -15314,13 +15072,11 @@ public class PveClient extends PveClientBase {
                              *                      Enum: ACCEPT,REJECT,DROP
                              * @param radv          Allow sending Router Advertisement.
                              * @return Result
-                             * @throws JSONException
                              */
 
                             public Result setOptions(String delete, Boolean dhcp, String digest, Boolean enable,
                                     Boolean ipfilter, String log_level_in, String log_level_out, Boolean macfilter,
-                                    Boolean ndp, String policy_in, String policy_out, Boolean radv)
-                                    throws JSONException {
+                                    Boolean ndp, String policy_in, String policy_out, Boolean radv) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("delete", delete);
                                 parameters.put("dhcp", dhcp);
@@ -15342,10 +15098,9 @@ public class PveClient extends PveClientBase {
                              * Set Firewall options.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result setOptions() throws JSONException {
+                            public Result setOptions() {
                                 return client.set("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall/options",
                                         null);
                             }
@@ -15371,11 +15126,9 @@ public class PveClient extends PveClientBase {
                              * @param start
                              * @param until Display log until this UNIX epoch.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result log(Integer limit, Integer since, Integer start, Integer until)
-                                    throws JSONException {
+                            public Result log(Integer limit, Integer since, Integer start, Integer until) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("limit", limit);
                                 parameters.put("since", since);
@@ -15389,10 +15142,9 @@ public class PveClient extends PveClientBase {
                              * Read firewall log
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result log() throws JSONException {
+                            public Result log() {
                                 return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall/log", null);
                             }
 
@@ -15416,10 +15168,9 @@ public class PveClient extends PveClientBase {
                              * @param type Only list references of specified type.
                              *             Enum: alias,ipset
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result refs(String type) throws JSONException {
+                            public Result refs(String type) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("type", type);
                                 return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall/refs",
@@ -15431,10 +15182,9 @@ public class PveClient extends PveClientBase {
                              * properties.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result refs() throws JSONException {
+                            public Result refs() {
                                 return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall/refs", null);
                             }
 
@@ -15444,10 +15194,9 @@ public class PveClient extends PveClientBase {
                          * Directory index.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result index() throws JSONException {
+                        public Result index() {
                             return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/firewall", null);
                         }
 
@@ -15473,10 +15222,9 @@ public class PveClient extends PveClientBase {
                          * @param cf        The RRD consolidation function
                          *                  Enum: AVERAGE,MAX
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result rrd(String ds, String timeframe, String cf) throws JSONException {
+                        public Result rrd(String ds, String timeframe, String cf) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
@@ -15491,10 +15239,9 @@ public class PveClient extends PveClientBase {
                          * @param timeframe Specify the time frame you are interested in.
                          *                  Enum: hour,day,week,month,year
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result rrd(String ds, String timeframe) throws JSONException {
+                        public Result rrd(String ds, String timeframe) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
@@ -15522,10 +15269,9 @@ public class PveClient extends PveClientBase {
                          * @param cf        The RRD consolidation function
                          *                  Enum: AVERAGE,MAX
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result rrddata(String timeframe, String cf) throws JSONException {
+                        public Result rrddata(String timeframe, String cf) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
                             parameters.put("cf", cf);
@@ -15538,10 +15284,9 @@ public class PveClient extends PveClientBase {
                          * @param timeframe Specify the time frame you are interested in.
                          *                  Enum: hour,day,week,month,year
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result rrddata(String timeframe) throws JSONException {
+                        public Result rrddata(String timeframe) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
                             return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/rrddata", parameters);
@@ -15567,10 +15312,9 @@ public class PveClient extends PveClientBase {
                          * @param websocket use websocket instead of standard VNC.
                          * @param width     sets the width of the console in pixels.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vncproxy(Integer height, Boolean websocket, Integer width) throws JSONException {
+                        public Result vncproxy(Integer height, Boolean websocket, Integer width) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("height", height);
                             parameters.put("websocket", websocket);
@@ -15582,10 +15326,9 @@ public class PveClient extends PveClientBase {
                          * Creates a TCP VNC proxy connections.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vncproxy() throws JSONException {
+                        public Result vncproxy() {
                             return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/vncproxy", null);
                         }
 
@@ -15606,10 +15349,9 @@ public class PveClient extends PveClientBase {
                          * Creates a TCP proxy connection.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result termproxy() throws JSONException {
+                        public Result termproxy() {
                             return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/termproxy", null);
                         }
 
@@ -15627,15 +15369,14 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Opens a weksocket for VNC traffic.
+                         * Opens a websocket for VNC traffic.
                          * 
                          * @param port      Port number returned by previous vncproxy call.
                          * @param vncticket Ticket from previous call to vncproxy.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vncwebsocket(int port, String vncticket) throws JSONException {
+                        public Result vncwebsocket(int port, String vncticket) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("port", port);
                             parameters.put("vncticket", vncticket);
@@ -15666,10 +15407,9 @@ public class PveClient extends PveClientBase {
                          *              to use same node you use to connect to the API (This is
                          *              window.location.hostname for the JS GUI).
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result spiceproxy(String proxy) throws JSONException {
+                        public Result spiceproxy(String proxy) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("proxy", proxy);
                             return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/spiceproxy",
@@ -15680,10 +15420,9 @@ public class PveClient extends PveClientBase {
                          * Returns a SPICE configuration to connect to the CT.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result spiceproxy() throws JSONException {
+                        public Result spiceproxy() {
                             return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/spiceproxy", null);
                         }
 
@@ -15722,12 +15461,11 @@ public class PveClient extends PveClientBase {
                          * @param target_vmid     The (unique) ID of the VM.
                          * @param timeout         Timeout in seconds for shutdown for restart migration
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result remoteMigrateVm(String target_bridge, String target_endpoint,
                                 String target_storage, Float bwlimit, Boolean delete, Boolean online, Boolean restart,
-                                Integer target_vmid, Integer timeout) throws JSONException {
+                                Integer target_vmid, Integer timeout) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target-bridge", target_bridge);
                             parameters.put("target-endpoint", target_endpoint);
@@ -15756,11 +15494,10 @@ public class PveClient extends PveClientBase {
                          *                        storage. Providing the special value '1' will map each
                          *                        source storage to itself.
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result remoteMigrateVm(String target_bridge, String target_endpoint,
-                                String target_storage) throws JSONException {
+                                String target_storage) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target-bridge", target_bridge);
                             parameters.put("target-endpoint", target_endpoint);
@@ -15787,10 +15524,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param target Target node.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result migrateVmPrecondition(String target) throws JSONException {
+                        public Result migrateVmPrecondition(String target) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
                             return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/migrate", parameters);
@@ -15800,10 +15536,9 @@ public class PveClient extends PveClientBase {
                          * Get preconditions for migration.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result migrateVmPrecondition() throws JSONException {
+                        public Result migrateVmPrecondition() {
                             return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/migrate", null);
                         }
 
@@ -15820,11 +15555,10 @@ public class PveClient extends PveClientBase {
                          *                       source storage to itself.
                          * @param timeout        Timeout in seconds for shutdown for restart migration
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result migrateVm(String target, Float bwlimit, Boolean online, Boolean restart,
-                                String target_storage, Integer timeout) throws JSONException {
+                                String target_storage, Integer timeout) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
                             parameters.put("bwlimit", bwlimit);
@@ -15840,10 +15574,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param target Target node.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result migrateVm(String target) throws JSONException {
+                        public Result migrateVm(String target) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("target", target);
                             return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/migrate", parameters);
@@ -15869,10 +15602,9 @@ public class PveClient extends PveClientBase {
                          *                 Enum: snapshot,clone,copy
                          * @param snapname The name of the snapshot.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vmFeature(String feature, String snapname) throws JSONException {
+                        public Result vmFeature(String feature, String snapname) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("feature", feature);
                             parameters.put("snapname", snapname);
@@ -15885,10 +15617,9 @@ public class PveClient extends PveClientBase {
                          * @param feature Feature to check.
                          *                Enum: snapshot,clone,copy
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vmFeature(String feature) throws JSONException {
+                        public Result vmFeature(String feature) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("feature", feature);
                             return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/feature", parameters);
@@ -15911,10 +15642,9 @@ public class PveClient extends PveClientBase {
                          * Create a Template.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result template() throws JSONException {
+                        public Result template() {
                             return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/template", null);
                         }
 
@@ -15947,12 +15677,10 @@ public class PveClient extends PveClientBase {
                          * @param target      Target node. Only allowed if the original VM is on shared
                          *                    storage.
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result cloneVm(int newid, Float bwlimit, String description, Boolean full,
-                                String hostname, String pool, String snapname, String storage, String target)
-                                throws JSONException {
+                                String hostname, String pool, String snapname, String storage, String target) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("newid", newid);
                             parameters.put("bwlimit", bwlimit);
@@ -15971,10 +15699,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param newid VMID for the clone.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result cloneVm(int newid) throws JSONException {
+                        public Result cloneVm(int newid) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("newid", newid);
                             return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/clone", parameters);
@@ -16006,10 +15733,9 @@ public class PveClient extends PveClientBase {
                          *               SHA1 digest. This can be used to prevent concurrent
                          *               modifications.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result resizeVm(String disk, String size, String digest) throws JSONException {
+                        public Result resizeVm(String disk, String size, String digest) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
                             parameters.put("size", size);
@@ -16027,10 +15753,9 @@ public class PveClient extends PveClientBase {
                          *             size of the volume and without it, the value is taken as an
                          *             absolute one. Shrinking disk size is not supported.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result resizeVm(String disk, String size) throws JSONException {
+                        public Result resizeVm(String disk, String size) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("disk", disk);
                             parameters.put("size", size);
@@ -16072,12 +15797,10 @@ public class PveClient extends PveClientBase {
                          *                      Enum:
                          *                      rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9,mp10,mp11,mp12,mp13,mp14,mp15,mp16,mp17,mp18,mp19,mp20,mp21,mp22,mp23,mp24,mp25,mp26,mp27,mp28,mp29,mp30,mp31,mp32,mp33,mp34,mp35,mp36,mp37,mp38,mp39,mp40,mp41,mp42,mp43,mp44,mp45,mp46,mp47,mp48,mp49,mp50,mp51,mp52,mp53,mp54,mp55,mp56,mp57,mp58,mp59,mp60,mp61,mp62,mp63,mp64,mp65,mp66,mp67,mp68,mp69,mp70,mp71,mp72,mp73,mp74,mp75,mp76,mp77,mp78,mp79,mp80,mp81,mp82,mp83,mp84,mp85,mp86,mp87,mp88,mp89,mp90,mp91,mp92,mp93,mp94,mp95,mp96,mp97,mp98,mp99,mp100,mp101,mp102,mp103,mp104,mp105,mp106,mp107,mp108,mp109,mp110,mp111,mp112,mp113,mp114,mp115,mp116,mp117,mp118,mp119,mp120,mp121,mp122,mp123,mp124,mp125,mp126,mp127,mp128,mp129,mp130,mp131,mp132,mp133,mp134,mp135,mp136,mp137,mp138,mp139,mp140,mp141,mp142,mp143,mp144,mp145,mp146,mp147,mp148,mp149,mp150,mp151,mp152,mp153,mp154,mp155,mp156,mp157,mp158,mp159,mp160,mp161,mp162,mp163,mp164,mp165,mp166,mp167,mp168,mp169,mp170,mp171,mp172,mp173,mp174,mp175,mp176,mp177,mp178,mp179,mp180,mp181,mp182,mp183,mp184,mp185,mp186,mp187,mp188,mp189,mp190,mp191,mp192,mp193,mp194,mp195,mp196,mp197,mp198,mp199,mp200,mp201,mp202,mp203,mp204,mp205,mp206,mp207,mp208,mp209,mp210,mp211,mp212,mp213,mp214,mp215,mp216,mp217,mp218,mp219,mp220,mp221,mp222,mp223,mp224,mp225,mp226,mp227,mp228,mp229,mp230,mp231,mp232,mp233,mp234,mp235,mp236,mp237,mp238,mp239,mp240,mp241,mp242,mp243,mp244,mp245,mp246,mp247,mp248,mp249,mp250,mp251,mp252,mp253,mp254,mp255,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result moveVolume(String volume, Float bwlimit, Boolean delete, String digest,
-                                String storage, String target_digest, Integer target_vmid, String target_volume)
-                                throws JSONException {
+                                String storage, String target_digest, Integer target_vmid, String target_volume) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("volume", volume);
                             parameters.put("bwlimit", bwlimit);
@@ -16098,10 +15821,9 @@ public class PveClient extends PveClientBase {
                          *               Enum:
                          *               rootfs,mp0,mp1,mp2,mp3,mp4,mp5,mp6,mp7,mp8,mp9,mp10,mp11,mp12,mp13,mp14,mp15,mp16,mp17,mp18,mp19,mp20,mp21,mp22,mp23,mp24,mp25,mp26,mp27,mp28,mp29,mp30,mp31,mp32,mp33,mp34,mp35,mp36,mp37,mp38,mp39,mp40,mp41,mp42,mp43,mp44,mp45,mp46,mp47,mp48,mp49,mp50,mp51,mp52,mp53,mp54,mp55,mp56,mp57,mp58,mp59,mp60,mp61,mp62,mp63,mp64,mp65,mp66,mp67,mp68,mp69,mp70,mp71,mp72,mp73,mp74,mp75,mp76,mp77,mp78,mp79,mp80,mp81,mp82,mp83,mp84,mp85,mp86,mp87,mp88,mp89,mp90,mp91,mp92,mp93,mp94,mp95,mp96,mp97,mp98,mp99,mp100,mp101,mp102,mp103,mp104,mp105,mp106,mp107,mp108,mp109,mp110,mp111,mp112,mp113,mp114,mp115,mp116,mp117,mp118,mp119,mp120,mp121,mp122,mp123,mp124,mp125,mp126,mp127,mp128,mp129,mp130,mp131,mp132,mp133,mp134,mp135,mp136,mp137,mp138,mp139,mp140,mp141,mp142,mp143,mp144,mp145,mp146,mp147,mp148,mp149,mp150,mp151,mp152,mp153,mp154,mp155,mp156,mp157,mp158,mp159,mp160,mp161,mp162,mp163,mp164,mp165,mp166,mp167,mp168,mp169,mp170,mp171,mp172,mp173,mp174,mp175,mp176,mp177,mp178,mp179,mp180,mp181,mp182,mp183,mp184,mp185,mp186,mp187,mp188,mp189,mp190,mp191,mp192,mp193,mp194,mp195,mp196,mp197,mp198,mp199,mp200,mp201,mp202,mp203,mp204,mp205,mp206,mp207,mp208,mp209,mp210,mp211,mp212,mp213,mp214,mp215,mp216,mp217,mp218,mp219,mp220,mp221,mp222,mp223,mp224,mp225,mp226,mp227,mp228,mp229,mp230,mp231,mp232,mp233,mp234,mp235,mp236,mp237,mp238,mp239,mp240,mp241,mp242,mp243,mp244,mp245,mp246,mp247,mp248,mp249,mp250,mp251,mp252,mp253,mp254,mp255,unused0,unused1,unused2,unused3,unused4,unused5,unused6,unused7,unused8,unused9,unused10,unused11,unused12,unused13,unused14,unused15,unused16,unused17,unused18,unused19,unused20,unused21,unused22,unused23,unused24,unused25,unused26,unused27,unused28,unused29,unused30,unused31,unused32,unused33,unused34,unused35,unused36,unused37,unused38,unused39,unused40,unused41,unused42,unused43,unused44,unused45,unused46,unused47,unused48,unused49,unused50,unused51,unused52,unused53,unused54,unused55,unused56,unused57,unused58,unused59,unused60,unused61,unused62,unused63,unused64,unused65,unused66,unused67,unused68,unused69,unused70,unused71,unused72,unused73,unused74,unused75,unused76,unused77,unused78,unused79,unused80,unused81,unused82,unused83,unused84,unused85,unused86,unused87,unused88,unused89,unused90,unused91,unused92,unused93,unused94,unused95,unused96,unused97,unused98,unused99,unused100,unused101,unused102,unused103,unused104,unused105,unused106,unused107,unused108,unused109,unused110,unused111,unused112,unused113,unused114,unused115,unused116,unused117,unused118,unused119,unused120,unused121,unused122,unused123,unused124,unused125,unused126,unused127,unused128,unused129,unused130,unused131,unused132,unused133,unused134,unused135,unused136,unused137,unused138,unused139,unused140,unused141,unused142,unused143,unused144,unused145,unused146,unused147,unused148,unused149,unused150,unused151,unused152,unused153,unused154,unused155,unused156,unused157,unused158,unused159,unused160,unused161,unused162,unused163,unused164,unused165,unused166,unused167,unused168,unused169,unused170,unused171,unused172,unused173,unused174,unused175,unused176,unused177,unused178,unused179,unused180,unused181,unused182,unused183,unused184,unused185,unused186,unused187,unused188,unused189,unused190,unused191,unused192,unused193,unused194,unused195,unused196,unused197,unused198,unused199,unused200,unused201,unused202,unused203,unused204,unused205,unused206,unused207,unused208,unused209,unused210,unused211,unused212,unused213,unused214,unused215,unused216,unused217,unused218,unused219,unused220,unused221,unused222,unused223,unused224,unused225,unused226,unused227,unused228,unused229,unused230,unused231,unused232,unused233,unused234,unused235,unused236,unused237,unused238,unused239,unused240,unused241,unused242,unused243,unused244,unused245,unused246,unused247,unused248,unused249,unused250,unused251,unused252,unused253,unused254,unused255
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result moveVolume(String volume) throws JSONException {
+                        public Result moveVolume(String volume) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("volume", volume);
                             return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/move_volume",
@@ -16125,10 +15847,9 @@ public class PveClient extends PveClientBase {
                          * Get container configuration, including pending changes.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result vmPending() throws JSONException {
+                        public Result vmPending() {
                             return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/pending", null);
                         }
 
@@ -16149,10 +15870,9 @@ public class PveClient extends PveClientBase {
                          * Get IP addresses of the specified container interface.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result ip() throws JSONException {
+                        public Result ip() {
                             return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "/interfaces", null);
                         }
 
@@ -16178,10 +15898,9 @@ public class PveClient extends PveClientBase {
                          *                 be checked again for all actually used storages during
                          *                 migration.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result mtunnel(String bridges, String storages) throws JSONException {
+                        public Result mtunnel(String bridges, String storages) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("bridges", bridges);
                             parameters.put("storages", storages);
@@ -16192,10 +15911,9 @@ public class PveClient extends PveClientBase {
                          * Migration tunnel endpoint - only for internal use by CT migration.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result mtunnel() throws JSONException {
+                        public Result mtunnel() {
                             return client.create("/nodes/" + this.node + "/lxc/" + this.vmid + "/mtunnel", null);
                         }
 
@@ -16220,10 +15938,9 @@ public class PveClient extends PveClientBase {
                          * @param ticket ticket return by initial 'mtunnel' API call, or retrieved via
                          *               'ticket' tunnel command
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result mtunnelwebsocket(String socket, String ticket) throws JSONException {
+                        public Result mtunnelwebsocket(String socket, String ticket) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("socket", socket);
                             parameters.put("ticket", ticket);
@@ -16245,11 +15962,9 @@ public class PveClient extends PveClientBase {
                      *                                   replication jobs or HA. Related ACLs and
                      *                                   Firewall entries will *always* be removed.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result destroyVm(Boolean destroy_unreferenced_disks, Boolean force, Boolean purge)
-                            throws JSONException {
+                    public Result destroyVm(Boolean destroy_unreferenced_disks, Boolean force, Boolean purge) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("destroy-unreferenced-disks", destroy_unreferenced_disks);
                         parameters.put("force", force);
@@ -16261,10 +15976,9 @@ public class PveClient extends PveClientBase {
                      * Destroy the container (also delete all uses files).
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result destroyVm() throws JSONException {
+                    public Result destroyVm() {
                         return client.delete("/nodes/" + this.node + "/lxc/" + this.vmid + "", null);
                     }
 
@@ -16272,10 +15986,9 @@ public class PveClient extends PveClientBase {
                      * Directory index
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result vmdiridx() throws JSONException {
+                    public Result vmdiridx() {
                         return client.get("/nodes/" + this.node + "/lxc/" + this.vmid + "", null);
                     }
 
@@ -16285,10 +15998,9 @@ public class PveClient extends PveClientBase {
                  * LXC container index (per node).
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result vmlist() throws JSONException {
+                public Result vmlist() {
                     return client.get("/nodes/" + this.node + "/lxc", null);
                 }
 
@@ -16322,8 +16034,15 @@ public class PveClient extends PveClientBase {
                  *                             web-interface CT's summary. This is saved as
                  *                             comment inside the configuration file.
                  * @param devN                 Device to pass through to the container
+                 * @param entrypoint           Command to run as init, optionally with
+                 *                             arguments; may start with an absolute path,
+                 *                             relative path, or a binary in $PATH.
+                 * @param env                  The container runtime environment as
+                 *                             NUL-separated list. Replaces any
+                 *                             lxc.environment.runtime entries in the config.
                  * @param features             Allow containers access to advanced features.
                  * @param force                Allow to overwrite existing container.
+                 * @param ha_managed           Add the CT as a HA resource after it was created.
                  * @param hookscript           Script that will be executed during various steps
                  *                             in the containers lifetime.
                  * @param hostname             Set a host name for the container.
@@ -16383,23 +16102,25 @@ public class PveClient extends PveClientBase {
                  * @param tty                  Specify the number of tty available to the
                  *                             container
                  * @param unique               Assign a unique random ethernet address.
-                 * @param unprivileged         Makes the container run as unprivileged user.
-                 *                             (Should not be modified manually.)
+                 * @param unprivileged         Makes the container run as unprivileged user. For
+                 *                             creation, the default is 1. For restore, the
+                 *                             default is the value from the backup. (Should not
+                 *                             be modified manually.)
                  * @param unusedN              Reference to unused volumes. This is used
                  *                             internally, and should not be modified manually.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result createVm(String ostemplate, int vmid, String arch, Float bwlimit, String cmode,
                         Boolean console, Integer cores, Float cpulimit, Integer cpuunits, Boolean debug,
-                        String description, Map<Integer, String> devN, String features, Boolean force,
-                        String hookscript, String hostname, Boolean ignore_unpack_errors, String lock_, Integer memory,
-                        Map<Integer, String> mpN, String nameserver, Map<Integer, String> netN, Boolean onboot,
-                        String ostype, String password, String pool, Boolean protection, Boolean restore, String rootfs,
-                        String searchdomain, String ssh_public_keys, Boolean start, String startup, String storage,
-                        Integer swap, String tags, Boolean template, String timezone, Integer tty, Boolean unique,
-                        Boolean unprivileged, Map<Integer, String> unusedN) throws JSONException {
+                        String description, Map<Integer, String> devN, String entrypoint, String env, String features,
+                        Boolean force, Boolean ha_managed, String hookscript, String hostname,
+                        Boolean ignore_unpack_errors, String lock_, Integer memory, Map<Integer, String> mpN,
+                        String nameserver, Map<Integer, String> netN, Boolean onboot, String ostype, String password,
+                        String pool, Boolean protection, Boolean restore, String rootfs, String searchdomain,
+                        String ssh_public_keys, Boolean start, String startup, String storage, Integer swap,
+                        String tags, Boolean template, String timezone, Integer tty, Boolean unique,
+                        Boolean unprivileged, Map<Integer, String> unusedN) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ostemplate", ostemplate);
                     parameters.put("vmid", vmid);
@@ -16412,8 +16133,11 @@ public class PveClient extends PveClientBase {
                     parameters.put("cpuunits", cpuunits);
                     parameters.put("debug", debug);
                     parameters.put("description", description);
+                    parameters.put("entrypoint", entrypoint);
+                    parameters.put("env", env);
                     parameters.put("features", features);
                     parameters.put("force", force);
+                    parameters.put("ha-managed", ha_managed);
                     parameters.put("hookscript", hookscript);
                     parameters.put("hostname", hostname);
                     parameters.put("ignore-unpack-errors", ignore_unpack_errors);
@@ -16452,10 +16176,9 @@ public class PveClient extends PveClientBase {
                  * @param ostemplate The OS template or backup file.
                  * @param vmid       The (unique) ID of the VM.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result createVm(String ostemplate, int vmid) throws JSONException {
+                public Result createVm(String ostemplate, int vmid) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ostemplate", ostemplate);
                     parameters.put("vmid", vmid);
@@ -16609,10 +16332,9 @@ public class PveClient extends PveClientBase {
                          * Get the Ceph configuration file.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result raw() throws JSONException {
+                        public Result raw() {
                             return client.get("/nodes/" + this.node + "/ceph/cfg/raw", null);
                         }
 
@@ -16631,10 +16353,9 @@ public class PveClient extends PveClientBase {
                          * Get the Ceph configuration database.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result db() throws JSONException {
+                        public Result db() {
                             return client.get("/nodes/" + this.node + "/ceph/cfg/db", null);
                         }
 
@@ -16655,10 +16376,9 @@ public class PveClient extends PveClientBase {
                          * @param config_keys List of &amp;lt;section&amp;gt;:&amp;lt;config key&amp;gt;
                          *                    items.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result value(String config_keys) throws JSONException {
+                        public Result value(String config_keys) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("config-keys", config_keys);
                             return client.get("/nodes/" + this.node + "/ceph/cfg/value", parameters);
@@ -16670,10 +16390,9 @@ public class PveClient extends PveClientBase {
                      * Directory index.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result index() throws JSONException {
+                    public Result index() {
                         return client.get("/nodes/" + this.node + "/ceph/cfg", null);
                     }
 
@@ -16749,10 +16468,9 @@ public class PveClient extends PveClientBase {
                              * Get OSD details
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result osddetails() throws JSONException {
+                            public Result osddetails() {
                                 return client.get("/nodes/" + this.node + "/ceph/osd/" + this.osdid + "/metadata",
                                         null);
                             }
@@ -16776,10 +16494,9 @@ public class PveClient extends PveClientBase {
                              * @param type OSD device type
                              *             Enum: block,db,wal
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result osdvolume(String type) throws JSONException {
+                            public Result osdvolume(String type) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("type", type);
                                 return client.get("/nodes/" + this.node + "/ceph/osd/" + this.osdid + "/lv-info",
@@ -16790,10 +16507,9 @@ public class PveClient extends PveClientBase {
                              * Get OSD volume details
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result osdvolume() throws JSONException {
+                            public Result osdvolume() {
                                 return client.get("/nodes/" + this.node + "/ceph/osd/" + this.osdid + "/lv-info", null);
                             }
 
@@ -16814,10 +16530,9 @@ public class PveClient extends PveClientBase {
                              * ceph osd in
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result in() throws JSONException {
+                            public Result in() {
                                 return client.create("/nodes/" + this.node + "/ceph/osd/" + this.osdid + "/in", null);
                             }
 
@@ -16838,10 +16553,9 @@ public class PveClient extends PveClientBase {
                              * ceph osd out
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result out() throws JSONException {
+                            public Result out() {
                                 return client.create("/nodes/" + this.node + "/ceph/osd/" + this.osdid + "/out", null);
                             }
 
@@ -16863,10 +16577,9 @@ public class PveClient extends PveClientBase {
                              * 
                              * @param deep If set, instructs a deep scrub instead of a normal one.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result scrub(Boolean deep) throws JSONException {
+                            public Result scrub(Boolean deep) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("deep", deep);
                                 return client.create("/nodes/" + this.node + "/ceph/osd/" + this.osdid + "/scrub",
@@ -16877,10 +16590,9 @@ public class PveClient extends PveClientBase {
                              * Instruct the OSD to scrub.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result scrub() throws JSONException {
+                            public Result scrub() {
                                 return client.create("/nodes/" + this.node + "/ceph/osd/" + this.osdid + "/scrub",
                                         null);
                             }
@@ -16892,10 +16604,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param cleanup If set, we remove partition table entries.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result destroyosd(Boolean cleanup) throws JSONException {
+                        public Result destroyosd(Boolean cleanup) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("cleanup", cleanup);
                             return client.delete("/nodes/" + this.node + "/ceph/osd/" + this.osdid + "", parameters);
@@ -16905,10 +16616,9 @@ public class PveClient extends PveClientBase {
                          * Destroy OSD
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result destroyosd() throws JSONException {
+                        public Result destroyosd() {
                             return client.delete("/nodes/" + this.node + "/ceph/osd/" + this.osdid + "", null);
                         }
 
@@ -16916,10 +16626,9 @@ public class PveClient extends PveClientBase {
                          * OSD index.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result osdindex() throws JSONException {
+                        public Result osdindex() {
                             return client.get("/nodes/" + this.node + "/ceph/osd/" + this.osdid + "", null);
                         }
 
@@ -16929,10 +16638,9 @@ public class PveClient extends PveClientBase {
                      * Get Ceph osd list/tree.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result index() throws JSONException {
+                    public Result index() {
                         return client.get("/nodes/" + this.node + "/ceph/osd", null);
                     }
 
@@ -16950,12 +16658,10 @@ public class PveClient extends PveClientBase {
                      * @param wal_dev            Block device name for block.wal.
                      * @param wal_dev_size       Size in GiB for block.wal.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result createosd(String dev, String crush_device_class, String db_dev, Float db_dev_size,
-                            Boolean encrypted, Integer osds_per_device, String wal_dev, Float wal_dev_size)
-                            throws JSONException {
+                            Boolean encrypted, Integer osds_per_device, String wal_dev, Float wal_dev_size) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("dev", dev);
                         parameters.put("crush-device-class", crush_device_class);
@@ -16973,10 +16679,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param dev Block device name.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result createosd(String dev) throws JSONException {
+                    public Result createosd(String dev) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("dev", dev);
                         return client.create("/nodes/" + this.node + "/ceph/osd", parameters);
@@ -17012,10 +16717,9 @@ public class PveClient extends PveClientBase {
                          * Destroy Ceph Metadata Server
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result destroymds() throws JSONException {
+                        public Result destroymds() {
                             return client.delete("/nodes/" + this.node + "/ceph/mds/" + this.name + "", null);
                         }
 
@@ -17026,10 +16730,9 @@ public class PveClient extends PveClientBase {
                          *                   the log of an active MDS. Faster switch on MDS failure, but
                          *                   needs more idle resources.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result createmds(Boolean hotstandby) throws JSONException {
+                        public Result createmds(Boolean hotstandby) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("hotstandby", hotstandby);
                             return client.create("/nodes/" + this.node + "/ceph/mds/" + this.name + "", parameters);
@@ -17039,10 +16742,9 @@ public class PveClient extends PveClientBase {
                          * Create Ceph Metadata Server (MDS)
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result createmds() throws JSONException {
+                        public Result createmds() {
                             return client.create("/nodes/" + this.node + "/ceph/mds/" + this.name + "", null);
                         }
 
@@ -17052,10 +16754,9 @@ public class PveClient extends PveClientBase {
                      * MDS directory index.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result index() throws JSONException {
+                    public Result index() {
                         return client.get("/nodes/" + this.node + "/ceph/mds", null);
                     }
 
@@ -17089,10 +16790,9 @@ public class PveClient extends PveClientBase {
                          * Destroy Ceph Manager.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result destroymgr() throws JSONException {
+                        public Result destroymgr() {
                             return client.delete("/nodes/" + this.node + "/ceph/mgr/" + this.id + "", null);
                         }
 
@@ -17100,10 +16800,9 @@ public class PveClient extends PveClientBase {
                          * Create Ceph Manager
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result createmgr() throws JSONException {
+                        public Result createmgr() {
                             return client.create("/nodes/" + this.node + "/ceph/mgr/" + this.id + "", null);
                         }
 
@@ -17113,10 +16812,9 @@ public class PveClient extends PveClientBase {
                      * MGR directory index.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result index() throws JSONException {
+                    public Result index() {
                         return client.get("/nodes/" + this.node + "/ceph/mgr", null);
                     }
 
@@ -17150,10 +16848,9 @@ public class PveClient extends PveClientBase {
                          * Destroy Ceph Monitor and Manager.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result destroymon() throws JSONException {
+                        public Result destroymon() {
                             return client.delete("/nodes/" + this.node + "/ceph/mon/" + this.monid + "", null);
                         }
 
@@ -17163,10 +16860,9 @@ public class PveClient extends PveClientBase {
                          * @param mon_address Overwrites autodetected monitor IP address(es). Must be in
                          *                    the public network(s) of Ceph.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result createmon(String mon_address) throws JSONException {
+                        public Result createmon(String mon_address) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("mon-address", mon_address);
                             return client.create("/nodes/" + this.node + "/ceph/mon/" + this.monid + "", parameters);
@@ -17176,10 +16872,9 @@ public class PveClient extends PveClientBase {
                          * Create Ceph Monitor and Manager
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result createmon() throws JSONException {
+                        public Result createmon() {
                             return client.create("/nodes/" + this.node + "/ceph/mon/" + this.monid + "", null);
                         }
 
@@ -17189,10 +16884,9 @@ public class PveClient extends PveClientBase {
                      * Get Ceph monitor list.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result listmon() throws JSONException {
+                    public Result listmon() {
                         return client.get("/nodes/" + this.node + "/ceph/mon", null);
                     }
 
@@ -17229,10 +16923,9 @@ public class PveClient extends PveClientBase {
                          * @param pg_num      Number of placement groups for the backing data pool. The
                          *                    metadata pool will use a quarter of this.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result createfs(Boolean add_storage, Integer pg_num) throws JSONException {
+                        public Result createfs(Boolean add_storage, Integer pg_num) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("add-storage", add_storage);
                             parameters.put("pg_num", pg_num);
@@ -17243,10 +16936,9 @@ public class PveClient extends PveClientBase {
                          * Create a Ceph filesystem
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result createfs() throws JSONException {
+                        public Result createfs() {
                             return client.create("/nodes/" + this.node + "/ceph/fs/" + this.name + "", null);
                         }
 
@@ -17256,10 +16948,9 @@ public class PveClient extends PveClientBase {
                      * Directory index.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result index() throws JSONException {
+                    public Result index() {
                         return client.get("/nodes/" + this.node + "/ceph/fs", null);
                     }
 
@@ -17311,10 +17002,9 @@ public class PveClient extends PveClientBase {
                              * 
                              * @param verbose If enabled, will display additional data(eg. statistics).
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getpool(Boolean verbose) throws JSONException {
+                            public Result getpool(Boolean verbose) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("verbose", verbose);
                                 return client.get("/nodes/" + this.node + "/ceph/pool/" + this.name + "/status",
@@ -17325,10 +17015,9 @@ public class PveClient extends PveClientBase {
                              * Show the current pool status.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result getpool() throws JSONException {
+                            public Result getpool() {
                                 return client.get("/nodes/" + this.node + "/ceph/pool/" + this.name + "/status", null);
                             }
 
@@ -17343,11 +17032,9 @@ public class PveClient extends PveClientBase {
                          * @param remove_storages  Remove all pveceph-managed storages configured for
                          *                         this pool
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result destroypool(Boolean force, Boolean remove_ecprofile, Boolean remove_storages)
-                                throws JSONException {
+                        public Result destroypool(Boolean force, Boolean remove_ecprofile, Boolean remove_storages) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("force", force);
                             parameters.put("remove_ecprofile", remove_ecprofile);
@@ -17359,10 +17046,9 @@ public class PveClient extends PveClientBase {
                          * Destroy pool
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result destroypool() throws JSONException {
+                        public Result destroypool() {
                             return client.delete("/nodes/" + this.node + "/ceph/pool/" + this.name + "", null);
                         }
 
@@ -17370,10 +17056,9 @@ public class PveClient extends PveClientBase {
                          * Pool index.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result poolindex() throws JSONException {
+                        public Result poolindex() {
                             return client.get("/nodes/" + this.node + "/ceph/pool/" + this.name + "", null);
                         }
 
@@ -17395,12 +17080,11 @@ public class PveClient extends PveClientBase {
                          * @param target_size_ratio The estimated target ratio of the pool for the PG
                          *                          autoscaler.
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result setpool(String application, String crush_rule, Integer min_size,
                                 String pg_autoscale_mode, Integer pg_num, Integer pg_num_min, Integer size,
-                                String target_size, Float target_size_ratio) throws JSONException {
+                                String target_size, Float target_size_ratio) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("application", application);
                             parameters.put("crush_rule", crush_rule);
@@ -17418,10 +17102,9 @@ public class PveClient extends PveClientBase {
                          * Change POOL settings
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result setpool() throws JSONException {
+                        public Result setpool() {
                             return client.set("/nodes/" + this.node + "/ceph/pool/" + this.name + "", null);
                         }
 
@@ -17432,10 +17115,9 @@ public class PveClient extends PveClientBase {
                      * endpoints).
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result lspools() throws JSONException {
+                    public Result lspools() {
                         return client.get("/nodes/" + this.node + "/ceph/pool", null);
                     }
 
@@ -17464,13 +17146,11 @@ public class PveClient extends PveClientBase {
                      * @param target_size_ratio The estimated target ratio of the pool for the PG
                      *                          autoscaler.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result createpool(String name, Boolean add_storages, String application, String crush_rule,
                             String erasure_coding, Integer min_size, String pg_autoscale_mode, Integer pg_num,
-                            Integer pg_num_min, Integer size, String target_size, Float target_size_ratio)
-                            throws JSONException {
+                            Integer pg_num_min, Integer size, String target_size, Float target_size_ratio) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
                         parameters.put("add_storages", add_storages);
@@ -17492,10 +17172,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param name The name of the pool. It must be unique.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result createpool(String name) throws JSONException {
+                    public Result createpool(String name) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
                         return client.create("/nodes/" + this.node + "/ceph/pool", parameters);
@@ -17530,11 +17209,10 @@ public class PveClient extends PveClientBase {
                      *                        was deprecated in recent Ceph versions.
                      * @param size            Targeted number of replicas per object
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result init(String cluster_network, Boolean disable_cephx, Integer min_size, String network,
-                            Integer pg_bits, Integer size) throws JSONException {
+                            Integer pg_bits, Integer size) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("cluster-network", cluster_network);
                         parameters.put("disable_cephx", disable_cephx);
@@ -17549,10 +17227,9 @@ public class PveClient extends PveClientBase {
                      * Create initial ceph default configuration and setup symlinks.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result init() throws JSONException {
+                    public Result init() {
                         return client.create("/nodes/" + this.node + "/ceph/init", null);
                     }
 
@@ -17572,10 +17249,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param service Ceph service name.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result stop(String service) throws JSONException {
+                    public Result stop(String service) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("service", service);
                         return client.create("/nodes/" + this.node + "/ceph/stop", parameters);
@@ -17585,10 +17261,9 @@ public class PveClient extends PveClientBase {
                      * Stop ceph services.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result stop() throws JSONException {
+                    public Result stop() {
                         return client.create("/nodes/" + this.node + "/ceph/stop", null);
                     }
 
@@ -17608,10 +17283,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param service Ceph service name.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result start(String service) throws JSONException {
+                    public Result start(String service) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("service", service);
                         return client.create("/nodes/" + this.node + "/ceph/start", parameters);
@@ -17621,10 +17295,9 @@ public class PveClient extends PveClientBase {
                      * Start ceph services.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result start() throws JSONException {
+                    public Result start() {
                         return client.create("/nodes/" + this.node + "/ceph/start", null);
                     }
 
@@ -17644,10 +17317,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param service Ceph service name.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result restart(String service) throws JSONException {
+                    public Result restart(String service) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("service", service);
                         return client.create("/nodes/" + this.node + "/ceph/restart", parameters);
@@ -17657,10 +17329,9 @@ public class PveClient extends PveClientBase {
                      * Restart ceph services.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result restart() throws JSONException {
+                    public Result restart() {
                         return client.create("/nodes/" + this.node + "/ceph/restart", null);
                     }
 
@@ -17679,10 +17350,9 @@ public class PveClient extends PveClientBase {
                      * Get ceph status.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result status() throws JSONException {
+                    public Result status() {
                         return client.get("/nodes/" + this.node + "/ceph/status", null);
                     }
 
@@ -17701,10 +17371,9 @@ public class PveClient extends PveClientBase {
                      * Get OSD crush map
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result crush() throws JSONException {
+                    public Result crush() {
                         return client.get("/nodes/" + this.node + "/ceph/crush", null);
                     }
 
@@ -17725,10 +17394,9 @@ public class PveClient extends PveClientBase {
                      * @param limit
                      * @param start
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result log(Integer limit, Integer start) throws JSONException {
+                    public Result log(Integer limit, Integer start) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("limit", limit);
                         parameters.put("start", start);
@@ -17739,10 +17407,9 @@ public class PveClient extends PveClientBase {
                      * Read ceph log
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result log() throws JSONException {
+                    public Result log() {
                         return client.get("/nodes/" + this.node + "/ceph/log", null);
                     }
 
@@ -17761,10 +17428,9 @@ public class PveClient extends PveClientBase {
                      * List ceph rules.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result rules() throws JSONException {
+                    public Result rules() {
                         return client.get("/nodes/" + this.node + "/ceph/rules", null);
                     }
 
@@ -17788,10 +17454,9 @@ public class PveClient extends PveClientBase {
                      * @param service Service type
                      *                Enum: osd,mon,mds
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result cmdSafety(String action, String id, String service) throws JSONException {
+                    public Result cmdSafety(String action, String id, String service) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
                         parameters.put("id", id);
@@ -17805,10 +17470,9 @@ public class PveClient extends PveClientBase {
                  * Directory index.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/nodes/" + this.node + "/ceph", null);
                 }
 
@@ -17850,10 +17514,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param storage The storage identifier.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result defaults(String storage) throws JSONException {
+                    public Result defaults(String storage) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("storage", storage);
                         return client.get("/nodes/" + this.node + "/vzdump/defaults", parameters);
@@ -17863,10 +17526,9 @@ public class PveClient extends PveClientBase {
                      * Get the currently configured vzdump defaults.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result defaults() throws JSONException {
+                    public Result defaults() {
                         return client.get("/nodes/" + this.node + "/vzdump/defaults", null);
                     }
 
@@ -17886,10 +17548,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param volume Volume identifier
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result extractconfig(String volume) throws JSONException {
+                    public Result extractconfig(String volume) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("volume", volume);
                         return client.get("/nodes/" + this.node + "/vzdump/extractconfig", parameters);
@@ -17990,7 +17651,6 @@ public class PveClient extends PveClientBase {
                  *                                  cores, if N is set to a value bigger than 0,
                  *                                  N is used as thread count.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result vzdump(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude,
@@ -17999,7 +17659,7 @@ public class PveClient extends PveClientBase {
                         String notification_mode, String pbs_change_detection_mode, String performance, Integer pigz,
                         String pool, Boolean protected_, String prune_backups, Boolean quiet, Boolean remove,
                         String script, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait,
-                        String storage, String tmpdir, String vmid, Integer zstd) throws JSONException {
+                        String storage, String tmpdir, String vmid, Integer zstd) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("all", all);
                     parameters.put("bwlimit", bwlimit);
@@ -18041,10 +17701,9 @@ public class PveClient extends PveClientBase {
                  * Create backup.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result vzdump() throws JSONException {
+                public Result vzdump() {
                     return client.create("/nodes/" + this.node + "/vzdump", null);
                 }
 
@@ -18119,10 +17778,9 @@ public class PveClient extends PveClientBase {
                          * Read service properties
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result serviceState() throws JSONException {
+                        public Result serviceState() {
                             return client.get("/nodes/" + this.node + "/services/" + this.service + "/state", null);
                         }
 
@@ -18143,10 +17801,9 @@ public class PveClient extends PveClientBase {
                          * Start service.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result serviceStart() throws JSONException {
+                        public Result serviceStart() {
                             return client.create("/nodes/" + this.node + "/services/" + this.service + "/start", null);
                         }
 
@@ -18167,10 +17824,9 @@ public class PveClient extends PveClientBase {
                          * Stop service.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result serviceStop() throws JSONException {
+                        public Result serviceStop() {
                             return client.create("/nodes/" + this.node + "/services/" + this.service + "/stop", null);
                         }
 
@@ -18191,10 +17847,9 @@ public class PveClient extends PveClientBase {
                          * Hard restart service. Use reload if you want to reduce interruptions.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result serviceRestart() throws JSONException {
+                        public Result serviceRestart() {
                             return client.create("/nodes/" + this.node + "/services/" + this.service + "/restart",
                                     null);
                         }
@@ -18216,10 +17871,9 @@ public class PveClient extends PveClientBase {
                          * Reload service. Falls back to restart if service cannot be reloaded.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result serviceReload() throws JSONException {
+                        public Result serviceReload() {
                             return client.create("/nodes/" + this.node + "/services/" + this.service + "/reload", null);
                         }
 
@@ -18229,10 +17883,9 @@ public class PveClient extends PveClientBase {
                      * Directory index
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result srvcmdidx() throws JSONException {
+                    public Result srvcmdidx() {
                         return client.get("/nodes/" + this.node + "/services/" + this.service + "", null);
                     }
 
@@ -18242,10 +17895,9 @@ public class PveClient extends PveClientBase {
                  * Service list.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/nodes/" + this.node + "/services", null);
                 }
 
@@ -18264,10 +17916,9 @@ public class PveClient extends PveClientBase {
                  * Delete subscription key of this node.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result delete() throws JSONException {
+                public Result delete() {
                     return client.delete("/nodes/" + this.node + "/subscription", null);
                 }
 
@@ -18275,10 +17926,9 @@ public class PveClient extends PveClientBase {
                  * Read subscription info.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result get() throws JSONException {
+                public Result get() {
                     return client.get("/nodes/" + this.node + "/subscription", null);
                 }
 
@@ -18287,10 +17937,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param force Always connect to server, even if local cache is still valid.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result update(Boolean force) throws JSONException {
+                public Result update(Boolean force) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("force", force);
                     return client.create("/nodes/" + this.node + "/subscription", parameters);
@@ -18300,10 +17949,9 @@ public class PveClient extends PveClientBase {
                  * Update subscription info.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result update() throws JSONException {
+                public Result update() {
                     return client.create("/nodes/" + this.node + "/subscription", null);
                 }
 
@@ -18312,10 +17960,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param key Proxmox VE subscription key
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result set(String key) throws JSONException {
+                public Result set(String key) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("key", key);
                     return client.set("/nodes/" + this.node + "/subscription", parameters);
@@ -18351,10 +17998,9 @@ public class PveClient extends PveClientBase {
                      * Delete network device configuration
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result deleteNetwork() throws JSONException {
+                    public Result deleteNetwork() {
                         return client.delete("/nodes/" + this.node + "/network/" + this.iface + "", null);
                     }
 
@@ -18362,10 +18008,9 @@ public class PveClient extends PveClientBase {
                      * Read network device configuration
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result networkConfig() throws JSONException {
+                    public Result networkConfig() {
                         return client.get("/nodes/" + this.node + "/network/" + this.iface + "", null);
                     }
 
@@ -18418,7 +18063,6 @@ public class PveClient extends PveClientBase {
                      * @param vlan_raw_device       Specify the raw interface for the vlan
                      *                              interface.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result updateNetwork(String type, String address, String address6, Boolean autostart,
@@ -18426,8 +18070,7 @@ public class PveClient extends PveClientBase {
                             String bridge_vids, Boolean bridge_vlan_aware, String cidr, String cidr6, String comments,
                             String comments6, String delete, String gateway, String gateway6, Integer mtu,
                             String netmask, Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options,
-                            String ovs_ports, Integer ovs_tag, String slaves, Integer vlan_id, String vlan_raw_device)
-                            throws JSONException {
+                            String ovs_ports, Integer ovs_tag, String slaves, Integer vlan_id, String vlan_raw_device) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("type", type);
                         parameters.put("address", address);
@@ -18467,10 +18110,9 @@ public class PveClient extends PveClientBase {
                      *             Enum:
                      *             bridge,bond,eth,alias,vlan,fabric,OVSBridge,OVSBond,OVSPort,OVSIntPort,vnet,unknown
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updateNetwork(String type) throws JSONException {
+                    public Result updateNetwork(String type) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("type", type);
                         return client.set("/nodes/" + this.node + "/network/" + this.iface + "", parameters);
@@ -18482,10 +18124,9 @@ public class PveClient extends PveClientBase {
                  * Revert network configuration changes.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result revertNetworkChanges() throws JSONException {
+                public Result revertNetworkChanges() {
                     return client.delete("/nodes/" + this.node + "/network", null);
                 }
 
@@ -18496,10 +18137,9 @@ public class PveClient extends PveClientBase {
                  *             Enum:
                  *             bridge,bond,eth,alias,vlan,fabric,OVSBridge,OVSBond,OVSPort,OVSIntPort,vnet,any_bridge,any_local_bridge,include_sdn
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index(String type) throws JSONException {
+                public Result index(String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     return client.get("/nodes/" + this.node + "/network", parameters);
@@ -18509,10 +18149,9 @@ public class PveClient extends PveClientBase {
                  * List available networks
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/nodes/" + this.node + "/network", null);
                 }
 
@@ -18565,7 +18204,6 @@ public class PveClient extends PveClientBase {
                  * @param vlan_raw_device       Specify the raw interface for the vlan
                  *                              interface.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result createNetwork(String iface, String type, String address, String address6,
@@ -18573,7 +18211,7 @@ public class PveClient extends PveClientBase {
                         String bridge_ports, String bridge_vids, Boolean bridge_vlan_aware, String cidr, String cidr6,
                         String comments, String comments6, String gateway, String gateway6, Integer mtu, String netmask,
                         Integer netmask6, String ovs_bonds, String ovs_bridge, String ovs_options, String ovs_ports,
-                        Integer ovs_tag, String slaves, Integer vlan_id, String vlan_raw_device) throws JSONException {
+                        Integer ovs_tag, String slaves, Integer vlan_id, String vlan_raw_device) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("iface", iface);
                     parameters.put("type", type);
@@ -18614,10 +18252,9 @@ public class PveClient extends PveClientBase {
                  *              Enum:
                  *              bridge,bond,eth,alias,vlan,fabric,OVSBridge,OVSBond,OVSPort,OVSIntPort,vnet,unknown
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result createNetwork(String iface, String type) throws JSONException {
+                public Result createNetwork(String iface, String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("iface", iface);
                     parameters.put("type", type);
@@ -18630,10 +18267,9 @@ public class PveClient extends PveClientBase {
                  * @param regenerate_frr Whether FRR config generation should get skipped or
                  *                       not.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result reloadNetworkConfig(Boolean regenerate_frr) throws JSONException {
+                public Result reloadNetworkConfig(Boolean regenerate_frr) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("regenerate-frr", regenerate_frr);
                     return client.set("/nodes/" + this.node + "/network", parameters);
@@ -18643,10 +18279,9 @@ public class PveClient extends PveClientBase {
                  * Reload network configuration
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result reloadNetworkConfig() throws JSONException {
+                public Result reloadNetworkConfig() {
                     return client.set("/nodes/" + this.node + "/network", null);
                 }
 
@@ -18704,13 +18339,12 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param download Whether the tasklog file should be downloaded. This parameter
                          *                 can't be used in conjunction with other parameters
-                         * @param limit    The amount of lines to read from the tasklog.
+                         * @param limit    The number of lines to read from the tasklog.
                          * @param start    Start at this line when reading the tasklog
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result readTaskLog(Boolean download, Integer limit, Integer start) throws JSONException {
+                        public Result readTaskLog(Boolean download, Integer limit, Integer start) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("download", download);
                             parameters.put("limit", limit);
@@ -18722,10 +18356,9 @@ public class PveClient extends PveClientBase {
                          * Read task log.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result readTaskLog() throws JSONException {
+                        public Result readTaskLog() {
                             return client.get("/nodes/" + this.node + "/tasks/" + this.upid + "/log", null);
                         }
 
@@ -18746,10 +18379,9 @@ public class PveClient extends PveClientBase {
                          * Read task status.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result readTaskStatus() throws JSONException {
+                        public Result readTaskStatus() {
                             return client.get("/nodes/" + this.node + "/tasks/" + this.upid + "/status", null);
                         }
 
@@ -18759,20 +18391,18 @@ public class PveClient extends PveClientBase {
                      * Stop a task.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result stopTask() throws JSONException {
+                    public Result stopTask() {
                         return client.delete("/nodes/" + this.node + "/tasks/" + this.upid + "", null);
                     }
 
                     /**
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result upidIndex() throws JSONException {
+                    public Result upidIndex() {
                         return client.get("/nodes/" + this.node + "/tasks/" + this.upid + "", null);
                     }
 
@@ -18782,7 +18412,7 @@ public class PveClient extends PveClientBase {
                  * Read task list for one node (finished tasks).
                  * 
                  * @param errors       Only list tasks with a status of ERROR.
-                 * @param limit        Only list this amount of tasks.
+                 * @param limit        Only list this number of tasks.
                  * @param since        Only list tasks since this UNIX epoch.
                  * @param source       List archived, active or all tasks.
                  *                     Enum: archive,active,all
@@ -18793,12 +18423,10 @@ public class PveClient extends PveClientBase {
                  * @param userfilter   Only list tasks from this user.
                  * @param vmid         Only list tasks for this VM.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result nodeTasks(Boolean errors, Integer limit, Integer since, String source, Integer start,
-                        String statusfilter, String typefilter, Integer until, String userfilter, Integer vmid)
-                        throws JSONException {
+                        String statusfilter, String typefilter, Integer until, String userfilter, Integer vmid) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("errors", errors);
                     parameters.put("limit", limit);
@@ -18817,10 +18445,9 @@ public class PveClient extends PveClientBase {
                  * Read task list for one node (finished tasks).
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result nodeTasks() throws JSONException {
+                public Result nodeTasks() {
                     return client.get("/nodes/" + this.node + "/tasks", null);
                 }
 
@@ -18891,10 +18518,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param server The server address (name or IP).
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result nfsscan(String server) throws JSONException {
+                    public Result nfsscan(String server) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("server", server);
                         return client.get("/nodes/" + this.node + "/scan/nfs", parameters);
@@ -18919,11 +18545,9 @@ public class PveClient extends PveClientBase {
                      * @param password User password.
                      * @param username User name.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result cifsscan(String server, String domain, String password, String username)
-                            throws JSONException {
+                    public Result cifsscan(String server, String domain, String password, String username) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("server", server);
                         parameters.put("domain", domain);
@@ -18937,10 +18561,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param server The server address (name or IP).
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result cifsscan(String server) throws JSONException {
+                    public Result cifsscan(String server) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("server", server);
                         return client.get("/nodes/" + this.node + "/scan/cifs", parameters);
@@ -18966,11 +18589,10 @@ public class PveClient extends PveClientBase {
                      * @param fingerprint Certificate SHA 256 fingerprint.
                      * @param port        Optional port.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result pbsscan(String password, String server, String username, String fingerprint,
-                            Integer port) throws JSONException {
+                            Integer port) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("password", password);
                         parameters.put("server", server);
@@ -18987,10 +18609,9 @@ public class PveClient extends PveClientBase {
                      * @param server   The server address (name or IP).
                      * @param username User-name or API token-ID.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result pbsscan(String password, String server, String username) throws JSONException {
+                    public Result pbsscan(String password, String server, String username) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("password", password);
                         parameters.put("server", server);
@@ -19014,10 +18635,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param portal The iSCSI portal (IP or DNS name with optional port).
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result iscsiscan(String portal) throws JSONException {
+                    public Result iscsiscan(String portal) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("portal", portal);
                         return client.get("/nodes/" + this.node + "/scan/iscsi", parameters);
@@ -19038,10 +18658,9 @@ public class PveClient extends PveClientBase {
                      * List local LVM volume groups.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result lvmscan() throws JSONException {
+                    public Result lvmscan() {
                         return client.get("/nodes/" + this.node + "/scan/lvm", null);
                     }
 
@@ -19061,10 +18680,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param vg
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result lvmthinscan(String vg) throws JSONException {
+                    public Result lvmthinscan(String vg) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("vg", vg);
                         return client.get("/nodes/" + this.node + "/scan/lvmthin", parameters);
@@ -19085,10 +18703,9 @@ public class PveClient extends PveClientBase {
                      * Scan zfs pool list on local node.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result zfsscan() throws JSONException {
+                    public Result zfsscan() {
                         return client.get("/nodes/" + this.node + "/scan/zfs", null);
                     }
 
@@ -19098,10 +18715,9 @@ public class PveClient extends PveClientBase {
                  * Index of available scan methods
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/nodes/" + this.node + "/scan", null);
                 }
 
@@ -19175,10 +18791,9 @@ public class PveClient extends PveClientBase {
                              * 
                              * @param pci_id_or_mapping The PCI ID or mapping to list the mdev types for.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result mdevscan(String pci_id_or_mapping) throws JSONException {
+                            public Result mdevscan(String pci_id_or_mapping) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("pci-id-or-mapping", pci_id_or_mapping);
                                 return client.get(
@@ -19193,10 +18808,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param pci_id_or_mapping
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result pciIndex(String pci_id_or_mapping) throws JSONException {
+                        public Result pciIndex(String pci_id_or_mapping) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("pci-id-or-mapping", pci_id_or_mapping);
                             return client.get("/nodes/" + this.node + "/hardware/pci/" + this.pci_id_or_mapping + "",
@@ -19216,10 +18830,9 @@ public class PveClient extends PveClientBase {
                      *                            Otherwise, additional information like vendor and
                      *                            device will be returned.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result pciScan(String pci_class_blacklist, Boolean verbose) throws JSONException {
+                    public Result pciScan(String pci_class_blacklist, Boolean verbose) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("pci-class-blacklist", pci_class_blacklist);
                         parameters.put("verbose", verbose);
@@ -19230,10 +18843,9 @@ public class PveClient extends PveClientBase {
                      * List local PCI devices.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result pciScan() throws JSONException {
+                    public Result pciScan() {
                         return client.get("/nodes/" + this.node + "/hardware/pci", null);
                     }
 
@@ -19252,10 +18864,9 @@ public class PveClient extends PveClientBase {
                      * List local USB devices.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result usbscan() throws JSONException {
+                    public Result usbscan() {
                         return client.get("/nodes/" + this.node + "/hardware/usb", null);
                     }
 
@@ -19265,10 +18876,9 @@ public class PveClient extends PveClientBase {
                  * Index of hardware types
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/nodes/" + this.node + "/hardware", null);
                 }
 
@@ -19304,6 +18914,12 @@ public class PveClient extends PveClientBase {
                         return cpu == null ? (cpu = new PVECpu(client, this.node)) : cpu;
                     }
 
+                    private PVECpuFlags cpuFlags;
+
+                    public PVECpuFlags getCpuFlags() {
+                        return cpuFlags == null ? (cpuFlags = new PVECpuFlags(client, this.node)) : cpuFlags;
+                    }
+
                     private PVEMachines machines;
 
                     public PVEMachines getMachines() {
@@ -19329,11 +18945,31 @@ public class PveClient extends PveClientBase {
                          * List all custom and default CPU models.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result index() throws JSONException {
+                        public Result index() {
                             return client.get("/nodes/" + this.node + "/capabilities/qemu/cpu", null);
+                        }
+
+                    }
+
+                    public class PVECpuFlags {
+                        private final PveClient client;
+                        private final Object node;
+
+                        protected PVECpuFlags(PveClient client, Object node) {
+                            this.client = client;
+                            this.node = node;
+                        }
+
+                        /**
+                         * List of available VM-specific CPU flags.
+                         * 
+                         * @return Result
+                         */
+
+                        public Result index() {
+                            return client.get("/nodes/" + this.node + "/capabilities/qemu/cpu-flags", null);
                         }
 
                     }
@@ -19351,10 +18987,9 @@ public class PveClient extends PveClientBase {
                          * Get available QEMU/KVM machine types.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result types() throws JSONException {
+                        public Result types() {
                             return client.get("/nodes/" + this.node + "/capabilities/qemu/machines", null);
                         }
 
@@ -19374,10 +19009,9 @@ public class PveClient extends PveClientBase {
                          * 'Sys.Audit' permission on '/nodes/&amp;lt;node&amp;gt;'.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result capabilities() throws JSONException {
+                        public Result capabilities() {
                             return client.get("/nodes/" + this.node + "/capabilities/qemu/migration", null);
                         }
 
@@ -19387,10 +19021,9 @@ public class PveClient extends PveClientBase {
                      * QEMU capabilities index.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result qemuCapsIndex() throws JSONException {
+                    public Result qemuCapsIndex() {
                         return client.get("/nodes/" + this.node + "/capabilities/qemu", null);
                     }
 
@@ -19400,10 +19033,9 @@ public class PveClient extends PveClientBase {
                  * Node capabilities index.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/nodes/" + this.node + "/capabilities", null);
                 }
 
@@ -19485,6 +19117,14 @@ public class PveClient extends PveClientBase {
                                 : downloadUrl;
                     }
 
+                    private PVEOciRegistryPull ociRegistryPull;
+
+                    public PVEOciRegistryPull getOciRegistryPull() {
+                        return ociRegistryPull == null
+                                ? (ociRegistryPull = new PVEOciRegistryPull(client, this.node, this.storage))
+                                : ociRegistryPull;
+                    }
+
                     private PVEImportMetadata importMetadata;
 
                     public PVEImportMetadata getImportMetadata() {
@@ -19514,10 +19154,9 @@ public class PveClient extends PveClientBase {
                          *                      Enum: qemu,lxc
                          * @param vmid          Only prune backups for this VM.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result delete(String prune_backups, String type, Integer vmid) throws JSONException {
+                        public Result delete(String prune_backups, String type, Integer vmid) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("prune-backups", prune_backups);
                             parameters.put("type", type);
@@ -19530,10 +19169,9 @@ public class PveClient extends PveClientBase {
                          * Prune backups. Only those using the standard naming scheme are considered.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result delete() throws JSONException {
+                        public Result delete() {
                             return client.delete("/nodes/" + this.node + "/storage/" + this.storage + "/prunebackups",
                                     null);
                         }
@@ -19550,10 +19188,9 @@ public class PveClient extends PveClientBase {
                          *                      Enum: qemu,lxc
                          * @param vmid          Only consider backups for this guest.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result dryrun(String prune_backups, String type, Integer vmid) throws JSONException {
+                        public Result dryrun(String prune_backups, String type, Integer vmid) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("prune-backups", prune_backups);
                             parameters.put("type", type);
@@ -19568,10 +19205,9 @@ public class PveClient extends PveClientBase {
                          * meantime.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result dryrun() throws JSONException {
+                        public Result dryrun() {
                             return client.get("/nodes/" + this.node + "/storage/" + this.storage + "/prunebackups",
                                     null);
                         }
@@ -19612,10 +19248,9 @@ public class PveClient extends PveClientBase {
                              * @param delay Time to wait for the task to finish. We return 'null' if the
                              *              task finish within that time.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result delete(Integer delay) throws JSONException {
+                            public Result delete(Integer delay) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("delay", delay);
                                 return client.delete("/nodes/" + this.node + "/storage/" + this.storage + "/content/"
@@ -19626,10 +19261,9 @@ public class PveClient extends PveClientBase {
                              * Delete volume
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result delete() throws JSONException {
+                            public Result delete() {
                                 return client.delete("/nodes/" + this.node + "/storage/" + this.storage + "/content/"
                                         + this.volume + "", null);
                             }
@@ -19638,10 +19272,9 @@ public class PveClient extends PveClientBase {
                              * Get volume attributes
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result info() throws JSONException {
+                            public Result info() {
                                 return client.get("/nodes/" + this.node + "/storage/" + this.storage + "/content/"
                                         + this.volume + "", null);
                             }
@@ -19652,10 +19285,9 @@ public class PveClient extends PveClientBase {
                              * @param target      Target volume identifier
                              * @param target_node Target node. Default is local node.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result copy(String target, String target_node) throws JSONException {
+                            public Result copy(String target, String target_node) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("target", target);
                                 parameters.put("target_node", target_node);
@@ -19668,10 +19300,9 @@ public class PveClient extends PveClientBase {
                              * 
                              * @param target Target volume identifier
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result copy(String target) throws JSONException {
+                            public Result copy(String target) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("target", target);
                                 return client.create("/nodes/" + this.node + "/storage/" + this.storage + "/content/"
@@ -19684,10 +19315,9 @@ public class PveClient extends PveClientBase {
                              * @param notes      The new notes.
                              * @param protected_ Protection status. Currently only supported for backups.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result updateattributes(String notes, Boolean protected_) throws JSONException {
+                            public Result updateattributes(String notes, Boolean protected_) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("notes", notes);
                                 parameters.put("protected", protected_);
@@ -19699,10 +19329,9 @@ public class PveClient extends PveClientBase {
                              * Update volume attributes
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result updateattributes() throws JSONException {
+                            public Result updateattributes() {
                                 return client.set("/nodes/" + this.node + "/storage/" + this.storage + "/content/"
                                         + this.volume + "", null);
                             }
@@ -19715,10 +19344,9 @@ public class PveClient extends PveClientBase {
                          * @param content Only list content of this type.
                          * @param vmid    Only list images for this VM
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result index(String content, Integer vmid) throws JSONException {
+                        public Result index(String content, Integer vmid) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("content", content);
                             parameters.put("vmid", vmid);
@@ -19730,10 +19358,9 @@ public class PveClient extends PveClientBase {
                          * List storage content.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result index() throws JSONException {
+                        public Result index() {
                             return client.get("/nodes/" + this.node + "/storage/" + this.storage + "/content", null);
                         }
 
@@ -19747,11 +19374,9 @@ public class PveClient extends PveClientBase {
                          * @param format   Format of the image.
                          *                 Enum: raw,qcow2,subvol,vmdk
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result create(String filename, String size, int vmid, String format)
-                                throws JSONException {
+                        public Result create(String filename, String size, int vmid, String format) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("filename", filename);
                             parameters.put("size", size);
@@ -19769,10 +19394,9 @@ public class PveClient extends PveClientBase {
                          *                 (megabyte, 1024K) and 'G' (gigabyte, 1024M)
                          * @param vmid     Specify owner VM
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result create(String filename, String size, int vmid) throws JSONException {
+                        public Result create(String filename, String size, int vmid) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("filename", filename);
                             parameters.put("size", size);
@@ -19825,10 +19449,9 @@ public class PveClient extends PveClientBase {
                              * @param volume   Backup volume ID or name. Currently only PBS snapshots are
                              *                 supported.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result list(String filepath, String volume) throws JSONException {
+                            public Result list(String filepath, String volume) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("filepath", filepath);
                                 parameters.put("volume", volume);
@@ -19858,10 +19481,9 @@ public class PveClient extends PveClientBase {
                              *                 supported.
                              * @param tar      Download dirs as 'tar.zst' instead of 'zip'.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result download(String filepath, String volume, Boolean tar) throws JSONException {
+                            public Result download(String filepath, String volume, Boolean tar) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("filepath", filepath);
                                 parameters.put("volume", volume);
@@ -19878,10 +19500,9 @@ public class PveClient extends PveClientBase {
                              * @param volume   Backup volume ID or name. Currently only PBS snapshots are
                              *                 supported.
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result download(String filepath, String volume) throws JSONException {
+                            public Result download(String filepath, String volume) {
                                 Map<String, Object> parameters = new HashMap<>();
                                 parameters.put("filepath", filepath);
                                 parameters.put("volume", volume);
@@ -19909,10 +19530,9 @@ public class PveClient extends PveClientBase {
                          * Read storage status.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result readStatus() throws JSONException {
+                        public Result readStatus() {
                             return client.get("/nodes/" + this.node + "/storage/" + this.storage + "/status", null);
                         }
 
@@ -19938,10 +19558,9 @@ public class PveClient extends PveClientBase {
                          * @param cf        The RRD consolidation function
                          *                  Enum: AVERAGE,MAX
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result rrd(String ds, String timeframe, String cf) throws JSONException {
+                        public Result rrd(String ds, String timeframe, String cf) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
@@ -19956,10 +19575,9 @@ public class PveClient extends PveClientBase {
                          * @param timeframe Specify the time frame you are interested in.
                          *                  Enum: hour,day,week,month,year
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result rrd(String ds, String timeframe) throws JSONException {
+                        public Result rrd(String ds, String timeframe) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("ds", ds);
                             parameters.put("timeframe", timeframe);
@@ -19987,10 +19605,9 @@ public class PveClient extends PveClientBase {
                          * @param cf        The RRD consolidation function
                          *                  Enum: AVERAGE,MAX
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result rrddata(String timeframe, String cf) throws JSONException {
+                        public Result rrddata(String timeframe, String cf) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
                             parameters.put("cf", cf);
@@ -20004,10 +19621,9 @@ public class PveClient extends PveClientBase {
                          * @param timeframe Specify the time frame you are interested in.
                          *                  Enum: hour,day,week,month,year
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result rrddata(String timeframe) throws JSONException {
+                        public Result rrddata(String timeframe) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("timeframe", timeframe);
                             return client.get("/nodes/" + this.node + "/storage/" + this.storage + "/rrddata",
@@ -20042,11 +19658,10 @@ public class PveClient extends PveClientBase {
                          *                           by the REST handler. You can only overwrite it when
                          *                           connecting to the trusted port on localhost.
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result upload(String content, String filename, String checksum,
-                                String checksum_algorithm, String tmpfilename) throws JSONException {
+                                String checksum_algorithm, String tmpfilename) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("content", content);
                             parameters.put("filename", filename);
@@ -20065,10 +19680,9 @@ public class PveClient extends PveClientBase {
                          * @param filename The name of the file to create. Caution: This will be
                          *                 normalized!
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result upload(String content, String filename) throws JSONException {
+                        public Result upload(String content, String filename) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("content", content);
                             parameters.put("filename", filename);
@@ -20106,12 +19720,10 @@ public class PveClient extends PveClientBase {
                          * @param verify_certificates If false, no SSL/TLS certificates will be
                          *                            verified.
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result downloadUrl(String content, String filename, String url, String checksum,
-                                String checksum_algorithm, String compression, Boolean verify_certificates)
-                                throws JSONException {
+                                String checksum_algorithm, String compression, Boolean verify_certificates) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("content", content);
                             parameters.put("filename", filename);
@@ -20133,15 +19745,60 @@ public class PveClient extends PveClientBase {
                          *                 normalized!
                          * @param url      The URL to download the file from.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result downloadUrl(String content, String filename, String url) throws JSONException {
+                        public Result downloadUrl(String content, String filename, String url) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("content", content);
                             parameters.put("filename", filename);
                             parameters.put("url", url);
                             return client.create("/nodes/" + this.node + "/storage/" + this.storage + "/download-url",
+                                    parameters);
+                        }
+
+                    }
+
+                    public class PVEOciRegistryPull {
+                        private final PveClient client;
+                        private final Object node;
+                        private final Object storage;
+
+                        protected PVEOciRegistryPull(PveClient client, Object node, Object storage) {
+                            this.client = client;
+                            this.node = node;
+                            this.storage = storage;
+                        }
+
+                        /**
+                         * Pull an OCI image from a registry.
+                         * 
+                         * @param reference The reference to the OCI image to download.
+                         * @param filename  Custom destination file name of the OCI image. Caution: This
+                         *                  will be normalized!
+                         * @return Result
+                         */
+
+                        public Result ociRegistryPull(String reference, String filename) {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("reference", reference);
+                            parameters.put("filename", filename);
+                            return client.create(
+                                    "/nodes/" + this.node + "/storage/" + this.storage + "/oci-registry-pull",
+                                    parameters);
+                        }
+
+                        /**
+                         * Pull an OCI image from a registry.
+                         * 
+                         * @param reference The reference to the OCI image to download.
+                         * @return Result
+                         */
+
+                        public Result ociRegistryPull(String reference) {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("reference", reference);
+                            return client.create(
+                                    "/nodes/" + this.node + "/storage/" + this.storage + "/oci-registry-pull",
                                     parameters);
                         }
 
@@ -20164,10 +19821,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param volume Volume identifier for the guest archive/entry.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result getImportMetadata(String volume) throws JSONException {
+                        public Result getImportMetadata(String volume) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("volume", volume);
                             return client.get("/nodes/" + this.node + "/storage/" + this.storage + "/import-metadata",
@@ -20179,10 +19835,9 @@ public class PveClient extends PveClientBase {
                     /**
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result diridx() throws JSONException {
+                    public Result diridx() {
                         return client.get("/nodes/" + this.node + "/storage/" + this.storage + "", null);
                     }
 
@@ -20199,11 +19854,9 @@ public class PveClient extends PveClientBase {
                  *                storages which content is accessible on this 'node' and the
                  *                specified 'target' node.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index(String content, Boolean enabled, Boolean format, String storage, String target)
-                        throws JSONException {
+                public Result index(String content, Boolean enabled, Boolean format, String storage, String target) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("content", content);
                     parameters.put("enabled", enabled);
@@ -20217,10 +19870,9 @@ public class PveClient extends PveClientBase {
                  * Get status for all datastores.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/nodes/" + this.node + "/storage", null);
                 }
 
@@ -20315,10 +19967,9 @@ public class PveClient extends PveClientBase {
                          *                       configured for this node only).
                          * @param cleanup_disks  Also wipe disks so they can be repurposed afterwards.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result delete(Boolean cleanup_config, Boolean cleanup_disks) throws JSONException {
+                        public Result delete(Boolean cleanup_config, Boolean cleanup_disks) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("cleanup-config", cleanup_config);
                             parameters.put("cleanup-disks", cleanup_disks);
@@ -20329,10 +19980,9 @@ public class PveClient extends PveClientBase {
                          * Remove an LVM Volume Group.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result delete() throws JSONException {
+                        public Result delete() {
                             return client.delete("/nodes/" + this.node + "/disks/lvm/" + this.name + "", null);
                         }
 
@@ -20342,10 +19992,9 @@ public class PveClient extends PveClientBase {
                      * List LVM Volume Groups
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result index() throws JSONException {
+                    public Result index() {
                         return client.get("/nodes/" + this.node + "/disks/lvm", null);
                     }
 
@@ -20356,10 +20005,9 @@ public class PveClient extends PveClientBase {
                      * @param name        The storage identifier.
                      * @param add_storage Configure storage using the Volume Group
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result create(String device, String name, Boolean add_storage) throws JSONException {
+                    public Result create(String device, String name, Boolean add_storage) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
                         parameters.put("name", name);
@@ -20373,10 +20021,9 @@ public class PveClient extends PveClientBase {
                      * @param device The block device you want to create the volume group on
                      * @param name   The storage identifier.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result create(String device, String name) throws JSONException {
+                    public Result create(String device, String name) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
                         parameters.put("name", name);
@@ -20418,11 +20065,9 @@ public class PveClient extends PveClientBase {
                          *                       configured for this node only).
                          * @param cleanup_disks  Also wipe disks so they can be repurposed afterwards.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result delete(String volume_group, Boolean cleanup_config, Boolean cleanup_disks)
-                                throws JSONException {
+                        public Result delete(String volume_group, Boolean cleanup_config, Boolean cleanup_disks) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("volume-group", volume_group);
                             parameters.put("cleanup-config", cleanup_config);
@@ -20436,10 +20081,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param volume_group The storage identifier.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result delete(String volume_group) throws JSONException {
+                        public Result delete(String volume_group) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("volume-group", volume_group);
                             return client.delete("/nodes/" + this.node + "/disks/lvmthin/" + this.name + "",
@@ -20452,10 +20096,9 @@ public class PveClient extends PveClientBase {
                      * List LVM thinpools
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result index() throws JSONException {
+                    public Result index() {
                         return client.get("/nodes/" + this.node + "/disks/lvmthin", null);
                     }
 
@@ -20466,10 +20109,9 @@ public class PveClient extends PveClientBase {
                      * @param name        The storage identifier.
                      * @param add_storage Configure storage using the thinpool.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result create(String device, String name, Boolean add_storage) throws JSONException {
+                    public Result create(String device, String name, Boolean add_storage) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
                         parameters.put("name", name);
@@ -20483,10 +20125,9 @@ public class PveClient extends PveClientBase {
                      * @param device The block device you want to create the thinpool on.
                      * @param name   The storage identifier.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result create(String device, String name) throws JSONException {
+                    public Result create(String device, String name) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
                         parameters.put("name", name);
@@ -20527,10 +20168,9 @@ public class PveClient extends PveClientBase {
                          *                       configured for this node only).
                          * @param cleanup_disks  Also wipe disk so it can be repurposed afterwards.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result delete(Boolean cleanup_config, Boolean cleanup_disks) throws JSONException {
+                        public Result delete(Boolean cleanup_config, Boolean cleanup_disks) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("cleanup-config", cleanup_config);
                             parameters.put("cleanup-disks", cleanup_disks);
@@ -20542,10 +20182,9 @@ public class PveClient extends PveClientBase {
                          * Unmounts the storage and removes the mount unit.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result delete() throws JSONException {
+                        public Result delete() {
                             return client.delete("/nodes/" + this.node + "/disks/directory/" + this.name + "", null);
                         }
 
@@ -20555,10 +20194,9 @@ public class PveClient extends PveClientBase {
                      * PVE Managed Directory storages.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result index() throws JSONException {
+                    public Result index() {
                         return client.get("/nodes/" + this.node + "/disks/directory", null);
                     }
 
@@ -20571,11 +20209,9 @@ public class PveClient extends PveClientBase {
                      * @param filesystem  The desired filesystem.
                      *                    Enum: ext4,xfs
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result create(String device, String name, Boolean add_storage, String filesystem)
-                            throws JSONException {
+                    public Result create(String device, String name, Boolean add_storage, String filesystem) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
                         parameters.put("name", name);
@@ -20590,10 +20226,9 @@ public class PveClient extends PveClientBase {
                      * @param device The block device you want to create the filesystem on.
                      * @param name   The storage identifier.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result create(String device, String name) throws JSONException {
+                    public Result create(String device, String name) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("device", device);
                         parameters.put("name", name);
@@ -20634,10 +20269,9 @@ public class PveClient extends PveClientBase {
                          *                       configured for this node only).
                          * @param cleanup_disks  Also wipe disks so they can be repurposed afterwards.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result delete(Boolean cleanup_config, Boolean cleanup_disks) throws JSONException {
+                        public Result delete(Boolean cleanup_config, Boolean cleanup_disks) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("cleanup-config", cleanup_config);
                             parameters.put("cleanup-disks", cleanup_disks);
@@ -20648,10 +20282,9 @@ public class PveClient extends PveClientBase {
                          * Destroy a ZFS pool.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result delete() throws JSONException {
+                        public Result delete() {
                             return client.delete("/nodes/" + this.node + "/disks/zfs/" + this.name + "", null);
                         }
 
@@ -20659,10 +20292,9 @@ public class PveClient extends PveClientBase {
                          * Get details about a zpool.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result detail() throws JSONException {
+                        public Result detail() {
                             return client.get("/nodes/" + this.node + "/disks/zfs/" + this.name + "", null);
                         }
 
@@ -20672,10 +20304,9 @@ public class PveClient extends PveClientBase {
                      * List Zpools.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result index() throws JSONException {
+                    public Result index() {
                         return client.get("/nodes/" + this.node + "/disks/zfs", null);
                     }
 
@@ -20693,11 +20324,10 @@ public class PveClient extends PveClientBase {
                      *                     Enum: on,off,gzip,lz4,lzjb,zle,zstd
                      * @param draid_config
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result create(String devices, String name, String raidlevel, Boolean add_storage,
-                            Integer ashift, String compression, String draid_config) throws JSONException {
+                            Integer ashift, String compression, String draid_config) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("devices", devices);
                         parameters.put("name", name);
@@ -20718,10 +20348,9 @@ public class PveClient extends PveClientBase {
                      *                  Enum:
                      *                  single,mirror,raid10,raidz,raidz2,raidz3,draid,draid2,draid3
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result create(String devices, String name, String raidlevel) throws JSONException {
+                    public Result create(String devices, String name, String raidlevel) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("devices", devices);
                         parameters.put("name", name);
@@ -20748,11 +20377,9 @@ public class PveClient extends PveClientBase {
                      * @param type               Only list specific types of disks.
                      *                           Enum: unused,journal_disks
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result list(Boolean include_partitions, Boolean skipsmart, String type)
-                            throws JSONException {
+                    public Result list(Boolean include_partitions, Boolean skipsmart, String type) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("include-partitions", include_partitions);
                         parameters.put("skipsmart", skipsmart);
@@ -20764,10 +20391,9 @@ public class PveClient extends PveClientBase {
                      * List local disks.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result list() throws JSONException {
+                    public Result list() {
                         return client.get("/nodes/" + this.node + "/disks/list", null);
                     }
 
@@ -20788,10 +20414,9 @@ public class PveClient extends PveClientBase {
                      * @param disk       Block device name
                      * @param healthonly If true returns only the health status
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result smart(String disk, Boolean healthonly) throws JSONException {
+                    public Result smart(String disk, Boolean healthonly) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("disk", disk);
                         parameters.put("healthonly", healthonly);
@@ -20803,10 +20428,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param disk Block device name
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result smart(String disk) throws JSONException {
+                    public Result smart(String disk) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("disk", disk);
                         return client.get("/nodes/" + this.node + "/disks/smart", parameters);
@@ -20829,10 +20453,9 @@ public class PveClient extends PveClientBase {
                      * @param disk Block device name
                      * @param uuid UUID for the GPT table
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result initgpt(String disk, String uuid) throws JSONException {
+                    public Result initgpt(String disk, String uuid) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("disk", disk);
                         parameters.put("uuid", uuid);
@@ -20844,10 +20467,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param disk Block device name
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result initgpt(String disk) throws JSONException {
+                    public Result initgpt(String disk) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("disk", disk);
                         return client.create("/nodes/" + this.node + "/disks/initgpt", parameters);
@@ -20869,10 +20491,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param disk Block device name
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result wipeDisk(String disk) throws JSONException {
+                    public Result wipeDisk(String disk) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("disk", disk);
                         return client.set("/nodes/" + this.node + "/disks/wipedisk", parameters);
@@ -20884,10 +20505,9 @@ public class PveClient extends PveClientBase {
                  * Node index.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/nodes/" + this.node + "/disks", null);
                 }
 
@@ -20940,10 +20560,9 @@ public class PveClient extends PveClientBase {
                      * List available updates.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result listUpdates() throws JSONException {
+                    public Result listUpdates() {
                         return client.get("/nodes/" + this.node + "/apt/update", null);
                     }
 
@@ -20955,10 +20574,9 @@ public class PveClient extends PveClientBase {
                      * @param quiet  Only produces output suitable for logging, omitting progress
                      *               indicators.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updateDatabase(Boolean notify, Boolean quiet) throws JSONException {
+                    public Result updateDatabase(Boolean notify, Boolean quiet) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("notify", notify);
                         parameters.put("quiet", quiet);
@@ -20970,10 +20588,9 @@ public class PveClient extends PveClientBase {
                      * (apt-get update).
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updateDatabase() throws JSONException {
+                    public Result updateDatabase() {
                         return client.create("/nodes/" + this.node + "/apt/update", null);
                     }
 
@@ -20994,10 +20611,9 @@ public class PveClient extends PveClientBase {
                      * @param name    Package name.
                      * @param version Package version.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result changelog(String name, String version) throws JSONException {
+                    public Result changelog(String name, String version) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
                         parameters.put("version", version);
@@ -21009,10 +20625,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param name Package name.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result changelog(String name) throws JSONException {
+                    public Result changelog(String name) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("name", name);
                         return client.get("/nodes/" + this.node + "/apt/changelog", parameters);
@@ -21033,10 +20648,9 @@ public class PveClient extends PveClientBase {
                      * Get APT repository information.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result repositories() throws JSONException {
+                    public Result repositories() {
                         return client.get("/nodes/" + this.node + "/apt/repositories", null);
                     }
 
@@ -21049,11 +20663,9 @@ public class PveClient extends PveClientBase {
                      * @param digest  Digest to detect modifications.
                      * @param enabled Whether the repository should be enabled or not.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result changeRepository(int index, String path, String digest, Boolean enabled)
-                            throws JSONException {
+                    public Result changeRepository(int index, String path, String digest, Boolean enabled) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("index", index);
                         parameters.put("path", path);
@@ -21069,10 +20681,9 @@ public class PveClient extends PveClientBase {
                      * @param index Index within the file (starting from 0).
                      * @param path  Path to the containing file.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result changeRepository(int index, String path) throws JSONException {
+                    public Result changeRepository(int index, String path) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("index", index);
                         parameters.put("path", path);
@@ -21085,10 +20696,9 @@ public class PveClient extends PveClientBase {
                      * @param handle Handle that identifies a repository.
                      * @param digest Digest to detect modifications.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result addRepository(String handle, String digest) throws JSONException {
+                    public Result addRepository(String handle, String digest) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("handle", handle);
                         parameters.put("digest", digest);
@@ -21100,10 +20710,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param handle Handle that identifies a repository.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result addRepository(String handle) throws JSONException {
+                    public Result addRepository(String handle) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("handle", handle);
                         return client.set("/nodes/" + this.node + "/apt/repositories", parameters);
@@ -21124,10 +20733,9 @@ public class PveClient extends PveClientBase {
                      * Get package information for important Proxmox packages.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result versions() throws JSONException {
+                    public Result versions() {
                         return client.get("/nodes/" + this.node + "/apt/versions", null);
                     }
 
@@ -21137,10 +20745,9 @@ public class PveClient extends PveClientBase {
                  * Directory index for apt (Advanced Package Tool).
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/nodes/" + this.node + "/apt", null);
                 }
 
@@ -21203,10 +20810,9 @@ public class PveClient extends PveClientBase {
                          * @param digest Prevent changes if current configuration file has a different
                          *               digest. This can be used to prevent concurrent modifications.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result deleteRule(String digest) throws JSONException {
+                        public Result deleteRule(String digest) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("digest", digest);
                             return client.delete("/nodes/" + this.node + "/firewall/rules/" + this.pos + "",
@@ -21217,10 +20823,9 @@ public class PveClient extends PveClientBase {
                          * Delete rule.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result deleteRule() throws JSONException {
+                        public Result deleteRule() {
                             return client.delete("/nodes/" + this.node + "/firewall/rules/" + this.pos + "", null);
                         }
 
@@ -21228,10 +20833,9 @@ public class PveClient extends PveClientBase {
                          * Get single rule data.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result getRule() throws JSONException {
+                        public Result getRule() {
                             return client.get("/nodes/" + this.node + "/firewall/rules/" + this.pos + "", null);
                         }
 
@@ -21283,13 +20887,11 @@ public class PveClient extends PveClientBase {
                          * @param type      Rule type.
                          *                  Enum: in,out,forward,group
                          * @return Result
-                         * @throws JSONException
                          */
 
                         public Result updateRule(String action, String comment, String delete, String dest,
                                 String digest, String dport, Integer enable, String icmp_type, String iface, String log,
-                                String macro, Integer moveto, String proto, String source, String sport, String type)
-                                throws JSONException {
+                                String macro, Integer moveto, String proto, String source, String sport, String type) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("action", action);
                             parameters.put("comment", comment);
@@ -21314,10 +20916,9 @@ public class PveClient extends PveClientBase {
                          * Modify rule data.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateRule() throws JSONException {
+                        public Result updateRule() {
                             return client.set("/nodes/" + this.node + "/firewall/rules/" + this.pos + "", null);
                         }
 
@@ -21327,10 +20928,9 @@ public class PveClient extends PveClientBase {
                      * List rules.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getRules() throws JSONException {
+                    public Result getRules() {
                         return client.get("/nodes/" + this.node + "/firewall/rules", null);
                     }
 
@@ -21380,12 +20980,11 @@ public class PveClient extends PveClientBase {
                      *                  '80:85', and you can use comma separated list to match
                      *                  several ports or ranges.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result createRule(String action, String type, String comment, String dest, String digest,
                             String dport, Integer enable, String icmp_type, String iface, String log, String macro,
-                            Integer pos, String proto, String source, String sport) throws JSONException {
+                            Integer pos, String proto, String source, String sport) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
                         parameters.put("type", type);
@@ -21413,10 +21012,9 @@ public class PveClient extends PveClientBase {
                      * @param type   Rule type.
                      *               Enum: in,out,forward,group
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result createRule(String action, String type) throws JSONException {
+                    public Result createRule(String action, String type) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("action", action);
                         parameters.put("type", type);
@@ -21438,10 +21036,9 @@ public class PveClient extends PveClientBase {
                      * Get host firewall options.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getOptions() throws JSONException {
+                    public Result getOptions() {
                         return client.get("/nodes/" + this.node + "/firewall/options", null);
                     }
 
@@ -21498,7 +21095,6 @@ public class PveClient extends PveClientBase {
                      * @param tcpflags                             Filter illegal combinations of
                      *                                             TCP flags.
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result setOptions(String delete, String digest, Boolean enable, String log_level_forward,
@@ -21507,7 +21103,7 @@ public class PveClient extends PveClientBase {
                             Integer nf_conntrack_tcp_timeout_established, Integer nf_conntrack_tcp_timeout_syn_recv,
                             Boolean nftables, Boolean nosmurfs, Boolean protection_synflood,
                             Integer protection_synflood_burst, Integer protection_synflood_rate, String smurf_log_level,
-                            String tcp_flags_log_level, Boolean tcpflags) throws JSONException {
+                            String tcp_flags_log_level, Boolean tcpflags) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("delete", delete);
                         parameters.put("digest", digest);
@@ -21537,10 +21133,9 @@ public class PveClient extends PveClientBase {
                      * Set Firewall options.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result setOptions() throws JSONException {
+                    public Result setOptions() {
                         return client.set("/nodes/" + this.node + "/firewall/options", null);
                     }
 
@@ -21563,10 +21158,9 @@ public class PveClient extends PveClientBase {
                      * @param start
                      * @param until Display log until this UNIX epoch.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result log(Integer limit, Integer since, Integer start, Integer until) throws JSONException {
+                    public Result log(Integer limit, Integer since, Integer start, Integer until) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("limit", limit);
                         parameters.put("since", since);
@@ -21579,10 +21173,9 @@ public class PveClient extends PveClientBase {
                      * Read firewall log
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result log() throws JSONException {
+                    public Result log() {
                         return client.get("/nodes/" + this.node + "/firewall/log", null);
                     }
 
@@ -21592,10 +21185,9 @@ public class PveClient extends PveClientBase {
                  * Directory index.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/nodes/" + this.node + "/firewall", null);
                 }
 
@@ -21659,10 +21251,9 @@ public class PveClient extends PveClientBase {
                          * Get replication job status.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result jobStatus() throws JSONException {
+                        public Result jobStatus() {
                             return client.get("/nodes/" + this.node + "/replication/" + this.id + "/status", null);
                         }
 
@@ -21685,10 +21276,9 @@ public class PveClient extends PveClientBase {
                          * @param limit
                          * @param start
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result readJobLog(Integer limit, Integer start) throws JSONException {
+                        public Result readJobLog(Integer limit, Integer start) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("limit", limit);
                             parameters.put("start", start);
@@ -21699,10 +21289,9 @@ public class PveClient extends PveClientBase {
                          * Read replication job log.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result readJobLog() throws JSONException {
+                        public Result readJobLog() {
                             return client.get("/nodes/" + this.node + "/replication/" + this.id + "/log", null);
                         }
 
@@ -21723,10 +21312,9 @@ public class PveClient extends PveClientBase {
                          * Schedule replication job to start as soon as possible.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result scheduleNow() throws JSONException {
+                        public Result scheduleNow() {
                             return client.create("/nodes/" + this.node + "/replication/" + this.id + "/schedule_now",
                                     null);
                         }
@@ -21737,10 +21325,9 @@ public class PveClient extends PveClientBase {
                      * Directory index.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result index() throws JSONException {
+                    public Result index() {
                         return client.get("/nodes/" + this.node + "/replication/" + this.id + "", null);
                     }
 
@@ -21751,10 +21338,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param guest Only list replication jobs for this guest.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result status(Integer guest) throws JSONException {
+                public Result status(Integer guest) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("guest", guest);
                     return client.get("/nodes/" + this.node + "/replication", parameters);
@@ -21764,10 +21350,9 @@ public class PveClient extends PveClientBase {
                  * List status of all replication jobs on this node.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result status() throws JSONException {
+                public Result status() {
                     return client.get("/nodes/" + this.node + "/replication", null);
                 }
 
@@ -21829,10 +21414,9 @@ public class PveClient extends PveClientBase {
                          * Revoke existing certificate from CA.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result revokeCertificate() throws JSONException {
+                        public Result revokeCertificate() {
                             return client.delete("/nodes/" + this.node + "/certificates/acme/certificate", null);
                         }
 
@@ -21841,10 +21425,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param force Overwrite existing custom certificate.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result newCertificate(Boolean force) throws JSONException {
+                        public Result newCertificate(Boolean force) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("force", force);
                             return client.create("/nodes/" + this.node + "/certificates/acme/certificate", parameters);
@@ -21854,10 +21437,9 @@ public class PveClient extends PveClientBase {
                          * Order a new certificate from ACME-compatible CA.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result newCertificate() throws JSONException {
+                        public Result newCertificate() {
                             return client.create("/nodes/" + this.node + "/certificates/acme/certificate", null);
                         }
 
@@ -21866,10 +21448,9 @@ public class PveClient extends PveClientBase {
                          * 
                          * @param force Force renewal even if expiry is more than 30 days away.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result renewCertificate(Boolean force) throws JSONException {
+                        public Result renewCertificate(Boolean force) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("force", force);
                             return client.set("/nodes/" + this.node + "/certificates/acme/certificate", parameters);
@@ -21879,10 +21460,9 @@ public class PveClient extends PveClientBase {
                          * Renew existing certificate from CA.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result renewCertificate() throws JSONException {
+                        public Result renewCertificate() {
                             return client.set("/nodes/" + this.node + "/certificates/acme/certificate", null);
                         }
 
@@ -21892,10 +21472,9 @@ public class PveClient extends PveClientBase {
                      * ACME index.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result index() throws JSONException {
+                    public Result index() {
                         return client.get("/nodes/" + this.node + "/certificates/acme", null);
                     }
 
@@ -21914,10 +21493,9 @@ public class PveClient extends PveClientBase {
                      * Get information about node's certificates.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result info() throws JSONException {
+                    public Result info() {
                         return client.get("/nodes/" + this.node + "/certificates/info", null);
                     }
 
@@ -21937,10 +21515,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param restart Restart pveproxy.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result removeCustomCert(Boolean restart) throws JSONException {
+                    public Result removeCustomCert(Boolean restart) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("restart", restart);
                         return client.delete("/nodes/" + this.node + "/certificates/custom", parameters);
@@ -21950,10 +21527,9 @@ public class PveClient extends PveClientBase {
                      * DELETE custom certificate chain and key.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result removeCustomCert() throws JSONException {
+                    public Result removeCustomCert() {
                         return client.delete("/nodes/" + this.node + "/certificates/custom", null);
                     }
 
@@ -21965,11 +21541,9 @@ public class PveClient extends PveClientBase {
                      * @param key          PEM encoded private key.
                      * @param restart      Restart pveproxy.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result uploadCustomCert(String certificates, Boolean force, String key, Boolean restart)
-                            throws JSONException {
+                    public Result uploadCustomCert(String certificates, Boolean force, String key, Boolean restart) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("certificates", certificates);
                         parameters.put("force", force);
@@ -21983,10 +21557,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param certificates PEM encoded certificate (chain).
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result uploadCustomCert(String certificates) throws JSONException {
+                    public Result uploadCustomCert(String certificates) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("certificates", certificates);
                         return client.create("/nodes/" + this.node + "/certificates/custom", parameters);
@@ -21998,10 +21571,9 @@ public class PveClient extends PveClientBase {
                  * Node index.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result index() throws JSONException {
+                public Result index() {
                     return client.get("/nodes/" + this.node + "/certificates", null);
                 }
 
@@ -22023,10 +21595,9 @@ public class PveClient extends PveClientBase {
                  *                 Enum:
                  *                 acme,acmedomain0,acmedomain1,acmedomain2,acmedomain3,acmedomain4,acmedomain5,ballooning-target,description,startall-onboot-delay,wakeonlan
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getConfig(String property) throws JSONException {
+                public Result getConfig(String property) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("property", property);
                     return client.get("/nodes/" + this.node + "/config", parameters);
@@ -22036,10 +21607,9 @@ public class PveClient extends PveClientBase {
                  * Get node configuration options.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getConfig() throws JSONException {
+                public Result getConfig() {
                     return client.get("/nodes/" + this.node + "/config", null);
                 }
 
@@ -22061,12 +21631,11 @@ public class PveClient extends PveClientBase {
                  *                              the Virtual Guests with on-boot enabled.
                  * @param wakeonlan             Node specific wake on LAN settings.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result setOptions(String acme, Map<Integer, String> acmedomainN, Integer ballooning_target,
                         String delete, String description, String digest, Integer startall_onboot_delay,
-                        String wakeonlan) throws JSONException {
+                        String wakeonlan) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("acme", acme);
                     parameters.put("ballooning-target", ballooning_target);
@@ -22083,10 +21652,9 @@ public class PveClient extends PveClientBase {
                  * Set node configuration options.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result setOptions() throws JSONException {
+                public Result setOptions() {
                     return client.set("/nodes/" + this.node + "/config", null);
                 }
 
@@ -22101,10 +21669,152 @@ public class PveClient extends PveClientBase {
                     this.node = node;
                 }
 
+                private PVEFabrics fabrics;
+
+                public PVEFabrics getFabrics() {
+                    return fabrics == null ? (fabrics = new PVEFabrics(client, this.node)) : fabrics;
+                }
+
                 private PVEZones zones;
 
                 public PVEZones getZones() {
                     return zones == null ? (zones = new PVEZones(client, this.node)) : zones;
+                }
+
+                private PVEVnets vnets;
+
+                public PVEVnets getVnets() {
+                    return vnets == null ? (vnets = new PVEVnets(client, this.node)) : vnets;
+                }
+
+                public class PVEFabrics {
+                    private final PveClient client;
+                    private final Object node;
+
+                    protected PVEFabrics(PveClient client, Object node) {
+                        this.client = client;
+                        this.node = node;
+                    }
+
+                    public PVEFabricItem get(Object fabric) {
+                        return new PVEFabricItem(client, this.node, fabric);
+                    }
+
+                    public class PVEFabricItem {
+                        private final PveClient client;
+                        private final Object node;
+                        private final Object fabric;
+
+                        protected PVEFabricItem(PveClient client, Object node, Object fabric) {
+                            this.client = client;
+                            this.node = node;
+                            this.fabric = fabric;
+                        }
+
+                        private PVERoutes routes;
+
+                        public PVERoutes getRoutes() {
+                            return routes == null ? (routes = new PVERoutes(client, this.node, this.fabric)) : routes;
+                        }
+
+                        private PVENeighbors neighbors;
+
+                        public PVENeighbors getNeighbors() {
+                            return neighbors == null ? (neighbors = new PVENeighbors(client, this.node, this.fabric))
+                                    : neighbors;
+                        }
+
+                        private PVEInterfaces interfaces;
+
+                        public PVEInterfaces getInterfaces() {
+                            return interfaces == null ? (interfaces = new PVEInterfaces(client, this.node, this.fabric))
+                                    : interfaces;
+                        }
+
+                        public class PVERoutes {
+                            private final PveClient client;
+                            private final Object node;
+                            private final Object fabric;
+
+                            protected PVERoutes(PveClient client, Object node, Object fabric) {
+                                this.client = client;
+                                this.node = node;
+                                this.fabric = fabric;
+                            }
+
+                            /**
+                             * Get all routes for a fabric.
+                             * 
+                             * @return Result
+                             */
+
+                            public Result routes() {
+                                return client.get("/nodes/" + this.node + "/sdn/fabrics/" + this.fabric + "/routes",
+                                        null);
+                            }
+
+                        }
+
+                        public class PVENeighbors {
+                            private final PveClient client;
+                            private final Object node;
+                            private final Object fabric;
+
+                            protected PVENeighbors(PveClient client, Object node, Object fabric) {
+                                this.client = client;
+                                this.node = node;
+                                this.fabric = fabric;
+                            }
+
+                            /**
+                             * Get all neighbors for a fabric.
+                             * 
+                             * @return Result
+                             */
+
+                            public Result neighbors() {
+                                return client.get("/nodes/" + this.node + "/sdn/fabrics/" + this.fabric + "/neighbors",
+                                        null);
+                            }
+
+                        }
+
+                        public class PVEInterfaces {
+                            private final PveClient client;
+                            private final Object node;
+                            private final Object fabric;
+
+                            protected PVEInterfaces(PveClient client, Object node, Object fabric) {
+                                this.client = client;
+                                this.node = node;
+                                this.fabric = fabric;
+                            }
+
+                            /**
+                             * Get all interfaces for a fabric.
+                             * 
+                             * @return Result
+                             */
+
+                            public Result interfaces() {
+                                return client.get("/nodes/" + this.node + "/sdn/fabrics/" + this.fabric + "/interfaces",
+                                        null);
+                            }
+
+                        }
+
+                        /**
+                         * Directory index for SDN fabric status.
+                         * 
+                         * @return Result
+                         */
+
+                        public Result diridx() {
+                            return client.get("/nodes/" + this.node + "/sdn/fabrics/" + this.fabric + "", null);
+                        }
+
+                    }
+
                 }
 
                 public class PVEZones {
@@ -22137,6 +21847,18 @@ public class PveClient extends PveClientBase {
                             return content == null ? (content = new PVEContent(client, this.node, this.zone)) : content;
                         }
 
+                        private PVEBridges bridges;
+
+                        public PVEBridges getBridges() {
+                            return bridges == null ? (bridges = new PVEBridges(client, this.node, this.zone)) : bridges;
+                        }
+
+                        private PVEIpVrf ipVrf;
+
+                        public PVEIpVrf getIpVrf() {
+                            return ipVrf == null ? (ipVrf = new PVEIpVrf(client, this.node, this.zone)) : ipVrf;
+                        }
+
                         public class PVEContent {
                             private final PveClient client;
                             private final Object node;
@@ -22152,22 +21874,68 @@ public class PveClient extends PveClientBase {
                              * List zone content.
                              * 
                              * @return Result
-                             * @throws JSONException
                              */
 
-                            public Result index() throws JSONException {
+                            public Result index() {
                                 return client.get("/nodes/" + this.node + "/sdn/zones/" + this.zone + "/content", null);
                             }
 
                         }
 
+                        public class PVEBridges {
+                            private final PveClient client;
+                            private final Object node;
+                            private final Object zone;
+
+                            protected PVEBridges(PveClient client, Object node, Object zone) {
+                                this.client = client;
+                                this.node = node;
+                                this.zone = zone;
+                            }
+
+                            /**
+                             * Get a list of all bridges (vnets) that are part of a zone, as well as the
+                             * ports that are members of that bridge.
+                             * 
+                             * @return Result
+                             */
+
+                            public Result bridges() {
+                                return client.get("/nodes/" + this.node + "/sdn/zones/" + this.zone + "/bridges", null);
+                            }
+
+                        }
+
+                        public class PVEIpVrf {
+                            private final PveClient client;
+                            private final Object node;
+                            private final Object zone;
+
+                            protected PVEIpVrf(PveClient client, Object node, Object zone) {
+                                this.client = client;
+                                this.node = node;
+                                this.zone = zone;
+                            }
+
+                            /**
+                             * Get the IP VRF of an EVPN zone.
+                             * 
+                             * @return Result
+                             */
+
+                            public Result ipVrf() {
+                                return client.get("/nodes/" + this.node + "/sdn/zones/" + this.zone + "/ip-vrf", null);
+                            }
+
+                        }
+
                         /**
+                         * Directory index for SDN zone status.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result diridx() throws JSONException {
+                        public Result diridx() {
                             return client.get("/nodes/" + this.node + "/sdn/zones/" + this.zone + "", null);
                         }
 
@@ -22177,11 +21945,76 @@ public class PveClient extends PveClientBase {
                      * Get status for all zones.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result index() throws JSONException {
+                    public Result index() {
                         return client.get("/nodes/" + this.node + "/sdn/zones", null);
+                    }
+
+                }
+
+                public class PVEVnets {
+                    private final PveClient client;
+                    private final Object node;
+
+                    protected PVEVnets(PveClient client, Object node) {
+                        this.client = client;
+                        this.node = node;
+                    }
+
+                    public PVEVnetItem get(Object vnet) {
+                        return new PVEVnetItem(client, this.node, vnet);
+                    }
+
+                    public class PVEVnetItem {
+                        private final PveClient client;
+                        private final Object node;
+                        private final Object vnet;
+
+                        protected PVEVnetItem(PveClient client, Object node, Object vnet) {
+                            this.client = client;
+                            this.node = node;
+                            this.vnet = vnet;
+                        }
+
+                        private PVEMacVrf macVrf;
+
+                        public PVEMacVrf getMacVrf() {
+                            return macVrf == null ? (macVrf = new PVEMacVrf(client, this.node, this.vnet)) : macVrf;
+                        }
+
+                        public class PVEMacVrf {
+                            private final PveClient client;
+                            private final Object node;
+                            private final Object vnet;
+
+                            protected PVEMacVrf(PveClient client, Object node, Object vnet) {
+                                this.client = client;
+                                this.node = node;
+                                this.vnet = vnet;
+                            }
+
+                            /**
+                             * Get the MAC VRF for a VNet in an EVPN zone.
+                             * 
+                             * @return Result
+                             */
+
+                            public Result macVrf() {
+                                return client.get("/nodes/" + this.node + "/sdn/vnets/" + this.vnet + "/mac-vrf", null);
+                            }
+
+                        }
+
+                        /**
+                         * 
+                         * @return Result
+                         */
+
+                        public Result diridx() {
+                            return client.get("/nodes/" + this.node + "/sdn/vnets/" + this.vnet + "", null);
+                        }
+
                     }
 
                 }
@@ -22190,10 +22023,9 @@ public class PveClient extends PveClientBase {
                  * SDN index.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result sdnindex() throws JSONException {
+                public Result sdnindex() {
                     return client.get("/nodes/" + this.node + "/sdn", null);
                 }
 
@@ -22212,10 +22044,9 @@ public class PveClient extends PveClientBase {
                  * API version details
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result version() throws JSONException {
+                public Result version() {
                     return client.get("/nodes/" + this.node + "/version", null);
                 }
 
@@ -22234,10 +22065,9 @@ public class PveClient extends PveClientBase {
                  * Read node status
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result status() throws JSONException {
+                public Result status() {
                     return client.get("/nodes/" + this.node + "/status", null);
                 }
 
@@ -22247,10 +22077,9 @@ public class PveClient extends PveClientBase {
                  * @param command Specify the command.
                  *                Enum: reboot,shutdown
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result nodeCmd(String command) throws JSONException {
+                public Result nodeCmd(String command) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("command", command);
                     return client.create("/nodes/" + this.node + "/status", parameters);
@@ -22271,10 +22100,9 @@ public class PveClient extends PveClientBase {
                  * Read tap/vm network device interface counters
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result netstat() throws JSONException {
+                public Result netstat() {
                     return client.get("/nodes/" + this.node + "/netstat", null);
                 }
 
@@ -22294,10 +22122,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param commands JSON encoded array of commands.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result execute(String commands) throws JSONException {
+                public Result execute(String commands) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("commands", commands);
                     return client.create("/nodes/" + this.node + "/execute", parameters);
@@ -22318,10 +22145,9 @@ public class PveClient extends PveClientBase {
                  * Try to wake a node via 'wake on LAN' network packet.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result wakeonlan() throws JSONException {
+                public Result wakeonlan() {
                     return client.create("/nodes/" + this.node + "/wakeonlan", null);
                 }
 
@@ -22345,10 +22171,9 @@ public class PveClient extends PveClientBase {
                  * @param cf        The RRD consolidation function
                  *                  Enum: AVERAGE,MAX
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result rrd(String ds, String timeframe, String cf) throws JSONException {
+                public Result rrd(String ds, String timeframe, String cf) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ds", ds);
                     parameters.put("timeframe", timeframe);
@@ -22363,10 +22188,9 @@ public class PveClient extends PveClientBase {
                  * @param timeframe Specify the time frame you are interested in.
                  *                  Enum: hour,day,week,month,year,decade
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result rrd(String ds, String timeframe) throws JSONException {
+                public Result rrd(String ds, String timeframe) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("ds", ds);
                     parameters.put("timeframe", timeframe);
@@ -22392,10 +22216,9 @@ public class PveClient extends PveClientBase {
                  * @param cf        The RRD consolidation function
                  *                  Enum: AVERAGE,MAX
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result rrddata(String timeframe, String cf) throws JSONException {
+                public Result rrddata(String timeframe, String cf) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("timeframe", timeframe);
                     parameters.put("cf", cf);
@@ -22408,10 +22231,9 @@ public class PveClient extends PveClientBase {
                  * @param timeframe Specify the time frame you are interested in.
                  *                  Enum: hour,day,week,month,year,decade
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result rrddata(String timeframe) throws JSONException {
+                public Result rrddata(String timeframe) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("timeframe", timeframe);
                     return client.get("/nodes/" + this.node + "/rrddata", parameters);
@@ -22437,11 +22259,9 @@ public class PveClient extends PveClientBase {
                  * @param start
                  * @param until   Display all log until this date-time string.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result syslog(Integer limit, String service, String since, Integer start, String until)
-                        throws JSONException {
+                public Result syslog(Integer limit, String service, String since, Integer start, String until) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("limit", limit);
                     parameters.put("service", service);
@@ -22455,10 +22275,9 @@ public class PveClient extends PveClientBase {
                  * Read system log
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result syslog() throws JSONException {
+                public Result syslog() {
                     return client.get("/nodes/" + this.node + "/syslog", null);
                 }
 
@@ -22484,11 +22303,10 @@ public class PveClient extends PveClientBase {
                  * @param until       Display all log until this UNIX epoch. Conflicts with
                  *                    'endcursor'.
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result journal(String endcursor, Integer lastentries, Integer since, String startcursor,
-                        Integer until) throws JSONException {
+                        Integer until) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("endcursor", endcursor);
                     parameters.put("lastentries", lastentries);
@@ -22502,10 +22320,9 @@ public class PveClient extends PveClientBase {
                  * Read Journal
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result journal() throws JSONException {
+                public Result journal() {
                     return client.get("/nodes/" + this.node + "/journal", null);
                 }
 
@@ -22525,18 +22342,16 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param cmd       Run specific command or default to login (requires
                  *                  'root@pam')
-                 *                  Enum: upgrade,ceph_install,login
+                 *                  Enum: ceph_install,login,upgrade
                  * @param cmd_opts  Add parameters to a command. Encoded as null terminated
                  *                  strings.
                  * @param height    sets the height of the console in pixels.
                  * @param websocket use websocket instead of standard vnc.
                  * @param width     sets the width of the console in pixels.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result vncshell(String cmd, String cmd_opts, Integer height, Boolean websocket, Integer width)
-                        throws JSONException {
+                public Result vncshell(String cmd, String cmd_opts, Integer height, Boolean websocket, Integer width) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("cmd", cmd);
                     parameters.put("cmd-opts", cmd_opts);
@@ -22550,10 +22365,9 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result vncshell() throws JSONException {
+                public Result vncshell() {
                     return client.create("/nodes/" + this.node + "/vncshell", null);
                 }
 
@@ -22573,14 +22387,13 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param cmd      Run specific command or default to login (requires
                  *                 'root@pam')
-                 *                 Enum: upgrade,ceph_install,login
+                 *                 Enum: ceph_install,login,upgrade
                  * @param cmd_opts Add parameters to a command. Encoded as null terminated
                  *                 strings.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result termproxy(String cmd, String cmd_opts) throws JSONException {
+                public Result termproxy(String cmd, String cmd_opts) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("cmd", cmd);
                     parameters.put("cmd-opts", cmd_opts);
@@ -22591,10 +22404,9 @@ public class PveClient extends PveClientBase {
                  * Creates a VNC Shell proxy.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result termproxy() throws JSONException {
+                public Result termproxy() {
                     return client.create("/nodes/" + this.node + "/termproxy", null);
                 }
 
@@ -22615,10 +22427,9 @@ public class PveClient extends PveClientBase {
                  * @param port      Port number returned by previous vncproxy call.
                  * @param vncticket Ticket from previous call to vncproxy.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result vncwebsocket(int port, String vncticket) throws JSONException {
+                public Result vncwebsocket(int port, String vncticket) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("port", port);
                     parameters.put("vncticket", vncticket);
@@ -22641,7 +22452,7 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param cmd      Run specific command or default to login (requires
                  *                 'root@pam')
-                 *                 Enum: upgrade,ceph_install,login
+                 *                 Enum: ceph_install,login,upgrade
                  * @param cmd_opts Add parameters to a command. Encoded as null terminated
                  *                 strings.
                  * @param proxy    SPICE proxy server. This can be used by the client to specify
@@ -22651,10 +22462,9 @@ public class PveClient extends PveClientBase {
                  *                 reasonable setting is to use same node you use to connect to
                  *                 the API (This is window.location.hostname for the JS GUI).
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result spiceshell(String cmd, String cmd_opts, String proxy) throws JSONException {
+                public Result spiceshell(String cmd, String cmd_opts, String proxy) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("cmd", cmd);
                     parameters.put("cmd-opts", cmd_opts);
@@ -22666,10 +22476,9 @@ public class PveClient extends PveClientBase {
                  * Creates a SPICE shell.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result spiceshell() throws JSONException {
+                public Result spiceshell() {
                     return client.create("/nodes/" + this.node + "/spiceshell", null);
                 }
 
@@ -22688,10 +22497,9 @@ public class PveClient extends PveClientBase {
                  * Read DNS settings.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result dns() throws JSONException {
+                public Result dns() {
                     return client.get("/nodes/" + this.node + "/dns", null);
                 }
 
@@ -22703,10 +22511,9 @@ public class PveClient extends PveClientBase {
                  * @param dns2   Second name server IP address.
                  * @param dns3   Third name server IP address.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result updateDns(String search, String dns1, String dns2, String dns3) throws JSONException {
+                public Result updateDns(String search, String dns1, String dns2, String dns3) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("search", search);
                     parameters.put("dns1", dns1);
@@ -22720,10 +22527,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param search Search domain for host-name lookup.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result updateDns(String search) throws JSONException {
+                public Result updateDns(String search) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("search", search);
                     return client.set("/nodes/" + this.node + "/dns", parameters);
@@ -22744,10 +22550,9 @@ public class PveClient extends PveClientBase {
                  * Read server time and time zone settings.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result time() throws JSONException {
+                public Result time() {
                     return client.get("/nodes/" + this.node + "/time", null);
                 }
 
@@ -22757,10 +22562,9 @@ public class PveClient extends PveClientBase {
                  * @param timezone Time zone. The file '/usr/share/zoneinfo/zone.tab' contains
                  *                 the list of valid names.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result setTimezone(String timezone) throws JSONException {
+                public Result setTimezone(String timezone) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("timezone", timezone);
                     return client.set("/nodes/" + this.node + "/time", parameters);
@@ -22781,10 +22585,9 @@ public class PveClient extends PveClientBase {
                  * Get list of appliances.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result aplinfo() throws JSONException {
+                public Result aplinfo() {
                     return client.get("/nodes/" + this.node + "/aplinfo", null);
                 }
 
@@ -22794,14 +22597,37 @@ public class PveClient extends PveClientBase {
                  * @param storage  The storage where the template will be stored
                  * @param template The template which will downloaded
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result aplDownload(String storage, String template) throws JSONException {
+                public Result aplDownload(String storage, String template) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("storage", storage);
                     parameters.put("template", template);
                     return client.create("/nodes/" + this.node + "/aplinfo", parameters);
+                }
+
+            }
+
+            public class PVEQueryOciRepoTags {
+                private final PveClient client;
+                private final Object node;
+
+                protected PVEQueryOciRepoTags(PveClient client, Object node) {
+                    this.client = client;
+                    this.node = node;
+                }
+
+                /**
+                 * List all tags for an OCI repository reference.
+                 * 
+                 * @param reference The reference to the repository to query tags from.
+                 * @return Result
+                 */
+
+                public Result queryOciRepoTags(String reference) {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("reference", reference);
+                    return client.get("/nodes/" + this.node + "/query-oci-repo-tags", parameters);
                 }
 
             }
@@ -22822,10 +22648,9 @@ public class PveClient extends PveClientBase {
                  * @param verify_certificates If false, no SSL/TLS certificates will be
                  *                            verified.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result queryUrlMetadata(String url, Boolean verify_certificates) throws JSONException {
+                public Result queryUrlMetadata(String url, Boolean verify_certificates) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("url", url);
                     parameters.put("verify-certificates", verify_certificates);
@@ -22837,10 +22662,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param url The URL to query the metadata from.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result queryUrlMetadata(String url) throws JSONException {
+                public Result queryUrlMetadata(String url) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("url", url);
                     return client.get("/nodes/" + this.node + "/query-url-metadata", parameters);
@@ -22861,10 +22685,9 @@ public class PveClient extends PveClientBase {
                  * Gather various systems information about a node
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result report() throws JSONException {
+                public Result report() {
                     return client.get("/nodes/" + this.node + "/report", null);
                 }
 
@@ -22887,10 +22710,9 @@ public class PveClient extends PveClientBase {
                  *              or set to off.
                  * @param vms   Only consider guests from this comma separated list of VMIDs.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result startall(Boolean force, String vms) throws JSONException {
+                public Result startall(Boolean force, String vms) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("force", force);
                     parameters.put("vms", vms);
@@ -22902,10 +22724,9 @@ public class PveClient extends PveClientBase {
                  * onboot=1).
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result startall() throws JSONException {
+                public Result startall() {
                     return client.create("/nodes/" + this.node + "/startall", null);
                 }
 
@@ -22929,10 +22750,9 @@ public class PveClient extends PveClientBase {
                  *                   hard-stop is forced.
                  * @param vms        Only consider Guests with these IDs.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result stopall(Boolean force_stop, Integer timeout, String vms) throws JSONException {
+                public Result stopall(Boolean force_stop, Integer timeout, String vms) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("force-stop", force_stop);
                     parameters.put("timeout", timeout);
@@ -22944,10 +22764,9 @@ public class PveClient extends PveClientBase {
                  * Stop all VMs and Containers.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result stopall() throws JSONException {
+                public Result stopall() {
                     return client.create("/nodes/" + this.node + "/stopall", null);
                 }
 
@@ -22967,10 +22786,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param vms Only consider Guests with these IDs.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result suspendall(String vms) throws JSONException {
+                public Result suspendall(String vms) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("vms", vms);
                     return client.create("/nodes/" + this.node + "/suspendall", parameters);
@@ -22980,10 +22798,9 @@ public class PveClient extends PveClientBase {
                  * Suspend all VMs.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result suspendall() throws JSONException {
+                public Result suspendall() {
                     return client.create("/nodes/" + this.node + "/suspendall", null);
                 }
 
@@ -23008,11 +22825,9 @@ public class PveClient extends PveClientBase {
                  * @param vms              Only consider Guests with these IDs.
                  * @param with_local_disks Enable live storage migration for local disk
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result migrateall(String target, Integer maxworkers, String vms, Boolean with_local_disks)
-                        throws JSONException {
+                public Result migrateall(String target, Integer maxworkers, String vms, Boolean with_local_disks) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("target", target);
                     parameters.put("maxworkers", maxworkers);
@@ -23026,10 +22841,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param target Target node.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result migrateall(String target) throws JSONException {
+                public Result migrateall(String target) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("target", target);
                     return client.create("/nodes/" + this.node + "/migrateall", parameters);
@@ -23050,10 +22864,9 @@ public class PveClient extends PveClientBase {
                  * Get the content of /etc/hosts.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result getEtcHosts() throws JSONException {
+                public Result getEtcHosts() {
                     return client.get("/nodes/" + this.node + "/hosts", null);
                 }
 
@@ -23064,10 +22877,9 @@ public class PveClient extends PveClientBase {
                  * @param digest Prevent changes if current configuration file has a different
                  *               digest. This can be used to prevent concurrent modifications.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result writeEtcHosts(String data, String digest) throws JSONException {
+                public Result writeEtcHosts(String data, String digest) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("data", data);
                     parameters.put("digest", digest);
@@ -23079,10 +22891,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param data The target content of /etc/hosts.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result writeEtcHosts(String data) throws JSONException {
+                public Result writeEtcHosts(String data) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("data", data);
                     return client.create("/nodes/" + this.node + "/hosts", parameters);
@@ -23094,10 +22905,9 @@ public class PveClient extends PveClientBase {
              * Node index.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/nodes/" + this.node + "", null);
             }
 
@@ -23107,10 +22917,9 @@ public class PveClient extends PveClientBase {
          * Cluster node index.
          * 
          * @return Result
-         * @throws JSONException
          */
 
-        public Result index() throws JSONException {
+        public Result index() {
             return client.get("/nodes", null);
         }
 
@@ -23141,10 +22950,9 @@ public class PveClient extends PveClientBase {
              * Delete storage configuration.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result delete() throws JSONException {
+            public Result delete() {
                 return client.delete("/storage/" + this.storage + "", null);
             }
 
@@ -23152,10 +22960,9 @@ public class PveClient extends PveClientBase {
              * Read storage configuration.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result read() throws JSONException {
+            public Result read() {
                 return client.get("/storage/" + this.storage + "", null);
             }
 
@@ -23243,6 +23050,9 @@ public class PveClient extends PveClientBase {
              *                                 already covered backups and only considers
              *                                 older backups.
              * @param saferemove               Zero-out data when removing LVs.
+             * @param saferemove_stepsize      Wipe step size in MiB. It will be capped to
+             *                                 the maximum supported by the storage.
+             *                                 Enum: 1,2,4,8,16,32
              * @param saferemove_throughput    Wipe throughput (cstream -t parameter value).
              * @param server                   Server IP or DNS name.
              * @param shared                   Indicate that this is a single storage with
@@ -23270,7 +23080,6 @@ public class PveClient extends PveClientBase {
              *                                 creation if not specified. Usually
              *                                 '/dev/zvol'.
              * @return Result
-             * @throws JSONException
              */
 
             public Result update(String blocksize, String bwlimit, String comstar_hg, String comstar_tg, String content,
@@ -23280,10 +23089,10 @@ public class PveClient extends PveClientBase {
                     String keyring, Boolean krbd, String lio_tpg, String master_pubkey, Integer max_protected_backups,
                     Boolean mkdir, String monhost, String mountpoint, String namespace_, Boolean nocow, String nodes,
                     Boolean nowritecache, String options, String password, String pool, Integer port,
-                    String preallocation, String prune_backups, Boolean saferemove, String saferemove_throughput,
-                    String server, Boolean shared, Boolean skip_cert_verification, String smbversion,
-                    Boolean snapshot_as_volume_chain, Boolean sparse, String subdir, Boolean tagged_only,
-                    String username, String zfs_base_path) throws JSONException {
+                    String preallocation, String prune_backups, Boolean saferemove, Integer saferemove_stepsize,
+                    String saferemove_throughput, String server, Boolean shared, Boolean skip_cert_verification,
+                    String smbversion, Boolean snapshot_as_volume_chain, Boolean sparse, String subdir,
+                    Boolean tagged_only, String username, String zfs_base_path) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("blocksize", blocksize);
                 parameters.put("bwlimit", bwlimit);
@@ -23323,6 +23132,7 @@ public class PveClient extends PveClientBase {
                 parameters.put("preallocation", preallocation);
                 parameters.put("prune-backups", prune_backups);
                 parameters.put("saferemove", saferemove);
+                parameters.put("saferemove-stepsize", saferemove_stepsize);
                 parameters.put("saferemove_throughput", saferemove_throughput);
                 parameters.put("server", server);
                 parameters.put("shared", shared);
@@ -23341,10 +23151,9 @@ public class PveClient extends PveClientBase {
              * Update storage configuration.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result update() throws JSONException {
+            public Result update() {
                 return client.set("/storage/" + this.storage + "", null);
             }
 
@@ -23357,10 +23166,9 @@ public class PveClient extends PveClientBase {
          *             Enum:
          *             btrfs,cephfs,cifs,dir,esxi,iscsi,iscsidirect,lvm,lvmthin,nfs,pbs,rbd,zfs,zfspool
          * @return Result
-         * @throws JSONException
          */
 
-        public Result index(String type) throws JSONException {
+        public Result index(String type) {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("type", type);
             return client.get("/storage", parameters);
@@ -23370,10 +23178,9 @@ public class PveClient extends PveClientBase {
          * Storage index.
          * 
          * @return Result
-         * @throws JSONException
          */
 
-        public Result index() throws JSONException {
+        public Result index() {
             return client.get("/storage", null);
         }
 
@@ -23470,6 +23277,9 @@ public class PveClient extends PveClientBase {
          *                                 already covered backups and only considers
          *                                 older backups.
          * @param saferemove               Zero-out data when removing LVs.
+         * @param saferemove_stepsize      Wipe step size in MiB. It will be capped to
+         *                                 the maximum supported by the storage.
+         *                                 Enum: 1,2,4,8,16,32
          * @param saferemove_throughput    Wipe throughput (cstream -t parameter value).
          * @param server                   Server IP or DNS name.
          * @param share                    CIFS share.
@@ -23501,7 +23311,6 @@ public class PveClient extends PveClientBase {
          *                                 creation if not specified. Usually
          *                                 '/dev/zvol'.
          * @return Result
-         * @throws JSONException
          */
 
         public Result create(String storage, String type, String authsupported, String base_, String blocksize,
@@ -23512,10 +23321,10 @@ public class PveClient extends PveClientBase {
                 String master_pubkey, Integer max_protected_backups, Boolean mkdir, String monhost, String mountpoint,
                 String namespace_, Boolean nocow, String nodes, Boolean nowritecache, String options, String password,
                 String path, String pool, Integer port, String portal, String preallocation, String prune_backups,
-                Boolean saferemove, String saferemove_throughput, String server, String share, Boolean shared,
-                Boolean skip_cert_verification, String smbversion, Boolean snapshot_as_volume_chain, Boolean sparse,
-                String subdir, Boolean tagged_only, String target, String thinpool, String username, String vgname,
-                String zfs_base_path) throws JSONException {
+                Boolean saferemove, Integer saferemove_stepsize, String saferemove_throughput, String server,
+                String share, Boolean shared, Boolean skip_cert_verification, String smbversion,
+                Boolean snapshot_as_volume_chain, Boolean sparse, String subdir, Boolean tagged_only, String target,
+                String thinpool, String username, String vgname, String zfs_base_path) {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("storage", storage);
             parameters.put("type", type);
@@ -23562,6 +23371,7 @@ public class PveClient extends PveClientBase {
             parameters.put("preallocation", preallocation);
             parameters.put("prune-backups", prune_backups);
             parameters.put("saferemove", saferemove);
+            parameters.put("saferemove-stepsize", saferemove_stepsize);
             parameters.put("saferemove_throughput", saferemove_throughput);
             parameters.put("server", server);
             parameters.put("share", share);
@@ -23588,10 +23398,9 @@ public class PveClient extends PveClientBase {
          *                Enum:
          *                btrfs,cephfs,cifs,dir,esxi,iscsi,iscsidirect,lvm,lvmthin,nfs,pbs,rbd,zfs,zfspool
          * @return Result
-         * @throws JSONException
          */
 
-        public Result create(String storage, String type) throws JSONException {
+        public Result create(String storage, String type) {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("storage", storage);
             parameters.put("type", type);
@@ -23654,6 +23463,12 @@ public class PveClient extends PveClientBase {
 
         public PVETicket getTicket() {
             return ticket == null ? (ticket = new PVETicket(client)) : ticket;
+        }
+
+        private PVEVncticket vncticket;
+
+        public PVEVncticket getVncticket() {
+            return vncticket == null ? (vncticket = new PVEVncticket(client)) : vncticket;
         }
 
         private PVEPassword password;
@@ -23721,10 +23536,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param multiple Request all entries as an array.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result readUserTfaType(Boolean multiple) throws JSONException {
+                    public Result readUserTfaType(Boolean multiple) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("multiple", multiple);
                         return client.get("/access/users/" + this.userid + "/tfa", parameters);
@@ -23734,10 +23548,9 @@ public class PveClient extends PveClientBase {
                      * Get user TFA types (Personal and Realm).
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result readUserTfaType() throws JSONException {
+                    public Result readUserTfaType() {
                         return client.get("/access/users/" + this.userid + "/tfa", null);
                     }
 
@@ -23756,10 +23569,9 @@ public class PveClient extends PveClientBase {
                      * Unlock a user's TFA authentication.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result unlockTfa() throws JSONException {
+                    public Result unlockTfa() {
                         return client.set("/access/users/" + this.userid + "/unlock-tfa", null);
                     }
 
@@ -23793,10 +23605,9 @@ public class PveClient extends PveClientBase {
                          * Remove API token for a specific user.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result removeToken() throws JSONException {
+                        public Result removeToken() {
                             return client.delete("/access/users/" + this.userid + "/token/" + this.tokenid + "", null);
                         }
 
@@ -23804,10 +23615,9 @@ public class PveClient extends PveClientBase {
                          * Get specific API token information.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result readToken() throws JSONException {
+                        public Result readToken() {
                             return client.get("/access/users/" + this.userid + "/token/" + this.tokenid + "", null);
                         }
 
@@ -23821,11 +23631,9 @@ public class PveClient extends PveClientBase {
                          * @param privsep Restrict API token privileges with separate ACLs (default), or
                          *                give full privileges of corresponding user.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result generateToken(String comment, Integer expire, Boolean privsep)
-                                throws JSONException {
+                        public Result generateToken(String comment, Integer expire, Boolean privsep) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("comment", comment);
                             parameters.put("expire", expire);
@@ -23839,10 +23647,9 @@ public class PveClient extends PveClientBase {
                          * which needs to be stored as it cannot be retrieved afterwards!
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result generateToken() throws JSONException {
+                        public Result generateToken() {
                             return client.create("/access/users/" + this.userid + "/token/" + this.tokenid + "", null);
                         }
 
@@ -23850,18 +23657,18 @@ public class PveClient extends PveClientBase {
                          * Update API token for a specific user.
                          * 
                          * @param comment
+                         * @param delete  A list of settings you want to delete.
                          * @param expire  API token expiration date (seconds since epoch). '0' means no
                          *                expiration date.
                          * @param privsep Restrict API token privileges with separate ACLs (default), or
                          *                give full privileges of corresponding user.
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateTokenInfo(String comment, Integer expire, Boolean privsep)
-                                throws JSONException {
+                        public Result updateTokenInfo(String comment, String delete, Integer expire, Boolean privsep) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("comment", comment);
+                            parameters.put("delete", delete);
                             parameters.put("expire", expire);
                             parameters.put("privsep", privsep);
                             return client.set("/access/users/" + this.userid + "/token/" + this.tokenid + "",
@@ -23872,10 +23679,9 @@ public class PveClient extends PveClientBase {
                          * Update API token for a specific user.
                          * 
                          * @return Result
-                         * @throws JSONException
                          */
 
-                        public Result updateTokenInfo() throws JSONException {
+                        public Result updateTokenInfo() {
                             return client.set("/access/users/" + this.userid + "/token/" + this.tokenid + "", null);
                         }
 
@@ -23885,10 +23691,9 @@ public class PveClient extends PveClientBase {
                      * Get user API tokens.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result tokenIndex() throws JSONException {
+                    public Result tokenIndex() {
                         return client.get("/access/users/" + this.userid + "/token", null);
                     }
 
@@ -23898,10 +23703,9 @@ public class PveClient extends PveClientBase {
                  * Delete user.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result deleteUser() throws JSONException {
+                public Result deleteUser() {
                     return client.delete("/access/users/" + this.userid + "", null);
                 }
 
@@ -23909,10 +23713,9 @@ public class PveClient extends PveClientBase {
                  * Get user configuration.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result readUser() throws JSONException {
+                public Result readUser() {
                     return client.get("/access/users/" + this.userid + "", null);
                 }
 
@@ -23931,11 +23734,10 @@ public class PveClient extends PveClientBase {
                  * @param keys      Keys for two factor auth (yubico).
                  * @param lastname
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result updateUser(Boolean append, String comment, String email, Boolean enable, Integer expire,
-                        String firstname, String groups, String keys, String lastname) throws JSONException {
+                        String firstname, String groups, String keys, String lastname) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("append", append);
                     parameters.put("comment", comment);
@@ -23953,10 +23755,9 @@ public class PveClient extends PveClientBase {
                  * Update user configuration.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result updateUser() throws JSONException {
+                public Result updateUser() {
                     return client.set("/access/users/" + this.userid + "", null);
                 }
 
@@ -23968,10 +23769,9 @@ public class PveClient extends PveClientBase {
              * @param enabled Optional filter for enable property.
              * @param full    Include group and token information.
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index(Boolean enabled, Boolean full) throws JSONException {
+            public Result index(Boolean enabled, Boolean full) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("enabled", enabled);
                 parameters.put("full", full);
@@ -23982,10 +23782,9 @@ public class PveClient extends PveClientBase {
              * User index.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/access/users", null);
             }
 
@@ -24005,12 +23804,10 @@ public class PveClient extends PveClientBase {
              * @param lastname
              * @param password  Initial password.
              * @return Result
-             * @throws JSONException
              */
 
             public Result createUser(String userid, String comment, String email, Boolean enable, Integer expire,
-                    String firstname, String groups, String keys, String lastname, String password)
-                    throws JSONException {
+                    String firstname, String groups, String keys, String lastname, String password) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("userid", userid);
                 parameters.put("comment", comment);
@@ -24030,10 +23827,9 @@ public class PveClient extends PveClientBase {
              * 
              * @param userid Full User ID, in the `name@realm` format.
              * @return Result
-             * @throws JSONException
              */
 
-            public Result createUser(String userid) throws JSONException {
+            public Result createUser(String userid) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("userid", userid);
                 return client.create("/access/users", parameters);
@@ -24066,10 +23862,9 @@ public class PveClient extends PveClientBase {
                  * Delete group.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result deleteGroup() throws JSONException {
+                public Result deleteGroup() {
                     return client.delete("/access/groups/" + this.groupid + "", null);
                 }
 
@@ -24077,10 +23872,9 @@ public class PveClient extends PveClientBase {
                  * Get group configuration.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result readGroup() throws JSONException {
+                public Result readGroup() {
                     return client.get("/access/groups/" + this.groupid + "", null);
                 }
 
@@ -24089,10 +23883,9 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param comment
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result updateGroup(String comment) throws JSONException {
+                public Result updateGroup(String comment) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("comment", comment);
                     return client.set("/access/groups/" + this.groupid + "", parameters);
@@ -24102,10 +23895,9 @@ public class PveClient extends PveClientBase {
                  * Update group data.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result updateGroup() throws JSONException {
+                public Result updateGroup() {
                     return client.set("/access/groups/" + this.groupid + "", null);
                 }
 
@@ -24115,10 +23907,9 @@ public class PveClient extends PveClientBase {
              * Group index.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/access/groups", null);
             }
 
@@ -24128,10 +23919,9 @@ public class PveClient extends PveClientBase {
              * @param groupid
              * @param comment
              * @return Result
-             * @throws JSONException
              */
 
-            public Result createGroup(String groupid, String comment) throws JSONException {
+            public Result createGroup(String groupid, String comment) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("groupid", groupid);
                 parameters.put("comment", comment);
@@ -24143,10 +23933,9 @@ public class PveClient extends PveClientBase {
              * 
              * @param groupid
              * @return Result
-             * @throws JSONException
              */
 
-            public Result createGroup(String groupid) throws JSONException {
+            public Result createGroup(String groupid) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("groupid", groupid);
                 return client.create("/access/groups", parameters);
@@ -24179,10 +23968,9 @@ public class PveClient extends PveClientBase {
                  * Delete role.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result deleteRole() throws JSONException {
+                public Result deleteRole() {
                     return client.delete("/access/roles/" + this.roleid + "", null);
                 }
 
@@ -24190,10 +23978,9 @@ public class PveClient extends PveClientBase {
                  * Get role configuration.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result readRole() throws JSONException {
+                public Result readRole() {
                     return client.get("/access/roles/" + this.roleid + "", null);
                 }
 
@@ -24203,10 +23990,9 @@ public class PveClient extends PveClientBase {
                  * @param append
                  * @param privs
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result updateRole(Boolean append, String privs) throws JSONException {
+                public Result updateRole(Boolean append, String privs) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("append", append);
                     parameters.put("privs", privs);
@@ -24217,10 +24003,9 @@ public class PveClient extends PveClientBase {
                  * Update an existing role.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result updateRole() throws JSONException {
+                public Result updateRole() {
                     return client.set("/access/roles/" + this.roleid + "", null);
                 }
 
@@ -24230,10 +24015,9 @@ public class PveClient extends PveClientBase {
              * Role index.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/access/roles", null);
             }
 
@@ -24243,10 +24027,9 @@ public class PveClient extends PveClientBase {
              * @param roleid
              * @param privs
              * @return Result
-             * @throws JSONException
              */
 
-            public Result createRole(String roleid, String privs) throws JSONException {
+            public Result createRole(String roleid, String privs) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("roleid", roleid);
                 parameters.put("privs", privs);
@@ -24258,10 +24041,9 @@ public class PveClient extends PveClientBase {
              * 
              * @param roleid
              * @return Result
-             * @throws JSONException
              */
 
-            public Result createRole(String roleid) throws JSONException {
+            public Result createRole(String roleid) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("roleid", roleid);
                 return client.create("/access/roles", parameters);
@@ -24281,10 +24063,9 @@ public class PveClient extends PveClientBase {
              * Get Access Control List (ACLs).
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result readAcl() throws JSONException {
+            public Result readAcl() {
                 return client.get("/access/acl", null);
             }
 
@@ -24299,11 +24080,10 @@ public class PveClient extends PveClientBase {
              * @param tokens    List of API tokens.
              * @param users     List of users.
              * @return Result
-             * @throws JSONException
              */
 
             public Result updateAcl(String path, String roles, Boolean delete, String groups, Boolean propagate,
-                    String tokens, String users) throws JSONException {
+                    String tokens, String users) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("path", path);
                 parameters.put("roles", roles);
@@ -24321,10 +24101,9 @@ public class PveClient extends PveClientBase {
              * @param path  Access control path
              * @param roles List of roles.
              * @return Result
-             * @throws JSONException
              */
 
-            public Result updateAcl(String path, String roles) throws JSONException {
+            public Result updateAcl(String path, String roles) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("path", path);
                 parameters.put("roles", roles);
@@ -24398,11 +24177,10 @@ public class PveClient extends PveClientBase {
                      * @param scope           Select what to sync.
                      *                        Enum: users,groups,both
                      * @return Result
-                     * @throws JSONException
                      */
 
                     public Result sync(Boolean dry_run, Boolean enable_new, Boolean full, Boolean purge,
-                            String remove_vanished, String scope) throws JSONException {
+                            String remove_vanished, String scope) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("dry-run", dry_run);
                         parameters.put("enable-new", enable_new);
@@ -24419,10 +24197,9 @@ public class PveClient extends PveClientBase {
                      * exist to prevent overwriting.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result sync() throws JSONException {
+                    public Result sync() {
                         return client.create("/access/domains/" + this.realm + "/sync", null);
                     }
 
@@ -24432,10 +24209,9 @@ public class PveClient extends PveClientBase {
                  * Delete an authentication server.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result delete() throws JSONException {
+                public Result delete() {
                     return client.delete("/access/domains/" + this.realm + "", null);
                 }
 
@@ -24443,10 +24219,9 @@ public class PveClient extends PveClientBase {
                  * Get auth server configuration.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result read() throws JSONException {
+                public Result read() {
                     return client.get("/access/domains/" + this.realm + "", null);
                 }
 
@@ -24521,7 +24296,6 @@ public class PveClient extends PveClientBase {
                  * @param user_classes          The objectclasses for users.
                  * @param verify                Verify the server's SSL certificate
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result update(String acr_values, Boolean autocreate, String base_dn, String bind_dn,
@@ -24532,7 +24306,7 @@ public class PveClient extends PveClientBase {
                         Boolean groups_overwrite, String issuer_url, String mode, String password, Integer port,
                         String prompt, Boolean query_userinfo, String scopes, Boolean secure, String server1,
                         String server2, String sslversion, String sync_defaults_options, String sync_attributes,
-                        String tfa, String user_attr, String user_classes, Boolean verify) throws JSONException {
+                        String tfa, String user_attr, String user_classes, Boolean verify) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("acr-values", acr_values);
                     parameters.put("autocreate", autocreate);
@@ -24582,10 +24356,9 @@ public class PveClient extends PveClientBase {
                  * Update authentication server settings.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result update() throws JSONException {
+                public Result update() {
                     return client.set("/access/domains/" + this.realm + "", null);
                 }
 
@@ -24595,10 +24368,9 @@ public class PveClient extends PveClientBase {
              * Authentication domain index.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/access/domains", null);
             }
 
@@ -24674,7 +24446,6 @@ public class PveClient extends PveClientBase {
              *                              username.
              * @param verify                Verify the server's SSL certificate
              * @return Result
-             * @throws JSONException
              */
 
             public Result create(String realm, String type, String acr_values, Boolean autocreate, String base_dn,
@@ -24685,7 +24456,7 @@ public class PveClient extends PveClientBase {
                     String issuer_url, String mode, String password, Integer port, String prompt,
                     Boolean query_userinfo, String scopes, Boolean secure, String server1, String server2,
                     String sslversion, String sync_defaults_options, String sync_attributes, String tfa,
-                    String user_attr, String user_classes, String username_claim, Boolean verify) throws JSONException {
+                    String user_attr, String user_classes, String username_claim, Boolean verify) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("realm", realm);
                 parameters.put("type", type);
@@ -24739,10 +24510,9 @@ public class PveClient extends PveClientBase {
              * @param type  Realm type.
              *              Enum: ad,ldap,openid,pam,pve
              * @return Result
-             * @throws JSONException
              */
 
-            public Result create(String realm, String type) throws JSONException {
+            public Result create(String realm, String type) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("realm", realm);
                 parameters.put("type", type);
@@ -24786,10 +24556,9 @@ public class PveClient extends PveClientBase {
                  * @param redirect_url Redirection Url. The client should set this to the used
                  *                     server url (location.origin).
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result authUrl(String realm, String redirect_url) throws JSONException {
+                public Result authUrl(String realm, String redirect_url) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("realm", realm);
                     parameters.put("redirect-url", redirect_url);
@@ -24814,10 +24583,9 @@ public class PveClient extends PveClientBase {
                  *                     server url (location.origin).
                  * @param state        OpenId state.
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result login(String code, String redirect_url, String state) throws JSONException {
+                public Result login(String code, String redirect_url, String state) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("code", code);
                     parameters.put("redirect-url", redirect_url);
@@ -24831,10 +24599,9 @@ public class PveClient extends PveClientBase {
              * Directory index.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result index() throws JSONException {
+            public Result index() {
                 return client.get("/access/openid", null);
             }
 
@@ -24881,10 +24648,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param password The current password of the user performing the change.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result deleteTfa(String password) throws JSONException {
+                    public Result deleteTfa(String password) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("password", password);
                         return client.delete("/access/tfa/" + this.userid + "/" + this.id + "", parameters);
@@ -24894,10 +24660,9 @@ public class PveClient extends PveClientBase {
                      * Delete a TFA entry by ID.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result deleteTfa() throws JSONException {
+                    public Result deleteTfa() {
                         return client.delete("/access/tfa/" + this.userid + "/" + this.id + "", null);
                     }
 
@@ -24905,10 +24670,9 @@ public class PveClient extends PveClientBase {
                      * Fetch a requested TFA entry if present.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result getTfaEntry() throws JSONException {
+                    public Result getTfaEntry() {
                         return client.get("/access/tfa/" + this.userid + "/" + this.id + "", null);
                     }
 
@@ -24920,11 +24684,9 @@ public class PveClient extends PveClientBase {
                      * @param enable      Whether the entry should be enabled for login.
                      * @param password    The current password of the user performing the change.
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updateTfaEntry(String description, Boolean enable, String password)
-                            throws JSONException {
+                    public Result updateTfaEntry(String description, Boolean enable, String password) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("description", description);
                         parameters.put("enable", enable);
@@ -24936,10 +24698,9 @@ public class PveClient extends PveClientBase {
                      * Add a TFA entry for a user.
                      * 
                      * @return Result
-                     * @throws JSONException
                      */
 
-                    public Result updateTfaEntry() throws JSONException {
+                    public Result updateTfaEntry() {
                         return client.set("/access/tfa/" + this.userid + "/" + this.id + "", null);
                     }
 
@@ -24949,10 +24710,9 @@ public class PveClient extends PveClientBase {
                  * List TFA configurations of users.
                  * 
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result listUserTfa() throws JSONException {
+                public Result listUserTfa() {
                     return client.get("/access/tfa/" + this.userid + "", null);
                 }
 
@@ -24970,11 +24730,10 @@ public class PveClient extends PveClientBase {
                  * @param value       The current value for the provided totp URI, or a
                  *                    Webauthn/U2F challenge response
                  * @return Result
-                 * @throws JSONException
                  */
 
                 public Result addTfaEntry(String type, String challenge, String description, String password,
-                        String totp, String value) throws JSONException {
+                        String totp, String value) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     parameters.put("challenge", challenge);
@@ -24991,10 +24750,9 @@ public class PveClient extends PveClientBase {
                  * @param type TFA Entry Type.
                  *             Enum: totp,u2f,webauthn,recovery,yubico
                  * @return Result
-                 * @throws JSONException
                  */
 
-                public Result addTfaEntry(String type) throws JSONException {
+                public Result addTfaEntry(String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     return client.create("/access/tfa/" + this.userid + "", parameters);
@@ -25006,10 +24764,9 @@ public class PveClient extends PveClientBase {
              * List TFA configurations of users.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result listTfa() throws JSONException {
+            public Result listTfa() {
                 return client.get("/access/tfa", null);
             }
 
@@ -25027,10 +24784,9 @@ public class PveClient extends PveClientBase {
              * Dummy. Useful for formatters which want to provide a login page.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result getTicket() throws JSONException {
+            public Result getTicket() {
                 return client.get("/access/ticket", null);
             }
 
@@ -25051,11 +24807,10 @@ public class PveClient extends PveClientBase {
              * @param tfa_challenge The signed TFA challenge string the user wants to
              *                      respond to.
              * @return Result
-             * @throws JSONException
              */
 
             public Result createTicket(String password, String username, Boolean new_format, String otp, String path,
-                    String privs, String realm, String tfa_challenge) throws JSONException {
+                    String privs, String realm, String tfa_challenge) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("password", password);
                 parameters.put("username", username);
@@ -25074,14 +24829,44 @@ public class PveClient extends PveClientBase {
              * @param password The secret password. This can also be a valid ticket.
              * @param username User name
              * @return Result
-             * @throws JSONException
              */
 
-            public Result createTicket(String password, String username) throws JSONException {
+            public Result createTicket(String password, String username) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("password", password);
                 parameters.put("username", username);
                 return client.create("/access/ticket", parameters);
+            }
+
+        }
+
+        public class PVEVncticket {
+            private final PveClient client;
+
+            protected PVEVncticket(PveClient client) {
+                this.client = client;
+
+            }
+
+            /**
+             * verify VNC authentication ticket.
+             * 
+             * @param authid    UserId or token
+             * @param path      Verify ticket, and check if user have access 'privs' on
+             *                  'path'
+             * @param privs     Verify ticket, and check if user have access 'privs' on
+             *                  'path'
+             * @param vncticket The VNC ticket.
+             * @return Result
+             */
+
+            public Result verifyVncTicket(String authid, String path, String privs, String vncticket) {
+                Map<String, Object> parameters = new HashMap<>();
+                parameters.put("authid", authid);
+                parameters.put("path", path);
+                parameters.put("privs", privs);
+                parameters.put("vncticket", vncticket);
+                return client.create("/access/vncticket", parameters);
             }
 
         }
@@ -25102,11 +24887,9 @@ public class PveClient extends PveClientBase {
              * @param confirmation_password The current password of the user performing the
              *                              change.
              * @return Result
-             * @throws JSONException
              */
 
-            public Result changePassword(String password, String userid, String confirmation_password)
-                    throws JSONException {
+            public Result changePassword(String password, String userid, String confirmation_password) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("password", password);
                 parameters.put("userid", userid);
@@ -25120,10 +24903,9 @@ public class PveClient extends PveClientBase {
              * @param password The new password.
              * @param userid   Full User ID, in the `name@realm` format.
              * @return Result
-             * @throws JSONException
              */
 
-            public Result changePassword(String password, String userid) throws JSONException {
+            public Result changePassword(String password, String userid) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("password", password);
                 parameters.put("userid", userid);
@@ -25146,10 +24928,9 @@ public class PveClient extends PveClientBase {
              * @param path   Only dump this specific path, not the whole tree.
              * @param userid User ID or full API token ID
              * @return Result
-             * @throws JSONException
              */
 
-            public Result permissions(String path, String userid) throws JSONException {
+            public Result permissions(String path, String userid) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("path", path);
                 parameters.put("userid", userid);
@@ -25160,10 +24941,9 @@ public class PveClient extends PveClientBase {
              * Retrieve effective permissions of given user/token.
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result permissions() throws JSONException {
+            public Result permissions() {
                 return client.get("/access/permissions", null);
             }
 
@@ -25173,10 +24953,9 @@ public class PveClient extends PveClientBase {
          * Directory index.
          * 
          * @return Result
-         * @throws JSONException
          */
 
-        public Result index() throws JSONException {
+        public Result index() {
             return client.get("/access", null);
         }
 
@@ -25208,10 +24987,9 @@ public class PveClient extends PveClientBase {
              * /pools/?poolid={poolid}').
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result deletePoolDeprecated() throws JSONException {
+            public Result deletePoolDeprecated() {
                 return client.delete("/pools/" + this.poolid + "", null);
             }
 
@@ -25222,10 +25000,9 @@ public class PveClient extends PveClientBase {
              * @param type
              *             Enum: qemu,lxc,storage
              * @return Result
-             * @throws JSONException
              */
 
-            public Result readPool(String type) throws JSONException {
+            public Result readPool(String type) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("type", type);
                 return client.get("/pools/" + this.poolid + "", parameters);
@@ -25236,10 +25013,9 @@ public class PveClient extends PveClientBase {
              * /pools/?poolid={poolid}').
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result readPool() throws JSONException {
+            public Result readPool() {
                 return client.get("/pools/" + this.poolid + "", null);
             }
 
@@ -25256,11 +25032,10 @@ public class PveClient extends PveClientBase {
              * @param storage    List of storage IDs to add or remove from this pool.
              * @param vms        List of guest VMIDs to add or remove from this pool.
              * @return Result
-             * @throws JSONException
              */
 
             public Result updatePoolDeprecated(Boolean allow_move, String comment, Boolean delete, String storage,
-                    String vms) throws JSONException {
+                    String vms) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("allow-move", allow_move);
                 parameters.put("comment", comment);
@@ -25275,10 +25050,9 @@ public class PveClient extends PveClientBase {
              * /pools/?poolid={poolid}' instead).
              * 
              * @return Result
-             * @throws JSONException
              */
 
-            public Result updatePoolDeprecated() throws JSONException {
+            public Result updatePoolDeprecated() {
                 return client.set("/pools/" + this.poolid + "", null);
             }
 
@@ -25289,10 +25063,9 @@ public class PveClient extends PveClientBase {
          * 
          * @param poolid
          * @return Result
-         * @throws JSONException
          */
 
-        public Result deletePool(String poolid) throws JSONException {
+        public Result deletePool(String poolid) {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("poolid", poolid);
             return client.delete("/pools", parameters);
@@ -25305,10 +25078,9 @@ public class PveClient extends PveClientBase {
          * @param type
          *               Enum: qemu,lxc,storage
          * @return Result
-         * @throws JSONException
          */
 
-        public Result index(String poolid, String type) throws JSONException {
+        public Result index(String poolid, String type) {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("poolid", poolid);
             parameters.put("type", type);
@@ -25319,10 +25091,9 @@ public class PveClient extends PveClientBase {
          * List pools or get pool configuration.
          * 
          * @return Result
-         * @throws JSONException
          */
 
-        public Result index() throws JSONException {
+        public Result index() {
             return client.get("/pools", null);
         }
 
@@ -25332,10 +25103,9 @@ public class PveClient extends PveClientBase {
          * @param poolid
          * @param comment
          * @return Result
-         * @throws JSONException
          */
 
-        public Result createPool(String poolid, String comment) throws JSONException {
+        public Result createPool(String poolid, String comment) {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("poolid", poolid);
             parameters.put("comment", comment);
@@ -25347,10 +25117,9 @@ public class PveClient extends PveClientBase {
          * 
          * @param poolid
          * @return Result
-         * @throws JSONException
          */
 
-        public Result createPool(String poolid) throws JSONException {
+        public Result createPool(String poolid) {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("poolid", poolid);
             return client.create("/pools", parameters);
@@ -25369,11 +25138,10 @@ public class PveClient extends PveClientBase {
          * @param storage    List of storage IDs to add or remove from this pool.
          * @param vms        List of guest VMIDs to add or remove from this pool.
          * @return Result
-         * @throws JSONException
          */
 
         public Result updatePool(String poolid, Boolean allow_move, String comment, Boolean delete, String storage,
-                String vms) throws JSONException {
+                String vms) {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("poolid", poolid);
             parameters.put("allow-move", allow_move);
@@ -25389,10 +25157,9 @@ public class PveClient extends PveClientBase {
          * 
          * @param poolid
          * @return Result
-         * @throws JSONException
          */
 
-        public Result updatePool(String poolid) throws JSONException {
+        public Result updatePool(String poolid) {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("poolid", poolid);
             return client.set("/pools", parameters);
@@ -25412,10 +25179,9 @@ public class PveClient extends PveClientBase {
          * API version details, including some parts of the global datacenter config.
          * 
          * @return Result
-         * @throws JSONException
          */
 
-        public Result version() throws JSONException {
+        public Result version() {
             return client.get("/version", null);
         }
 

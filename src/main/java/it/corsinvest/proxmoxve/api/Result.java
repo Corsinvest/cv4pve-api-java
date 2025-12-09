@@ -6,8 +6,7 @@ package it.corsinvest.proxmoxve.api;
 
 import java.net.HttpURLConnection;
 import java.util.Map;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * Result request API
@@ -16,13 +15,13 @@ public class Result {
 
     private final String _reasonPhrase;
     private final int _statusCode;
-    private final JSONObject _response;
+    private final JsonNode _response;
     private final String _requestResource;
     private final Map<String, Object> _requestParameters;
     private final MethodType _methodType;
     private final ResponseType _responseType;
 
-    protected Result(JSONObject response,
+    protected Result(JsonNode response,
             int statusCode,
             String reasonPhrase,
             String requestResource,
@@ -105,39 +104,46 @@ public class Result {
     /**
      * Proxmox VE response.
      *
-     * @return JSONObject
+     * @return JsonNode
      */
-    public JSONObject getResponse() {
+    public JsonNode getResponse() {
         return _response;
+    }
+
+    /**
+     * Get the data field from the response.
+     *
+     * @return JsonNode representing the data field, or null if not present
+     */
+    public JsonNode getData() {
+        return _response != null ? _response.get("data") : null;
     }
 
     /**
      * Get if response Proxmox VE contain errors
      *
      * @return
-     * @throws org.json.JSONException
      */
-    public boolean responseInError() throws JSONException {
-        return !_response.isNull("errors");
+    public boolean responseInError() {
+        return _response.has("errors") && !_response.get("errors").isNull();
     }
 
     /**
      * Get error
      *
      * @return
-     * @throws org.json.JSONException
      */
-    public String getError() throws JSONException {
-        StringBuilder ret = new StringBuilder();
+    public String getError() {
+        var ret = new StringBuilder();
         if (responseInError()) {
-            JSONObject errors = _response.getJSONObject("errors");
-            for (int i = 0; i < errors.names().length(); i++) {
-                if (ret.length() > 0) {
-                    ret.append("\n");
-                }
-
-                String name = errors.names().getString(i);
-                ret.append(name).append(" : ").append(errors.get(name));
+            var errors = _response.get("errors");
+            if (errors.isObject()) {
+                errors.fieldNames().forEachRemaining(fieldName -> {
+                    if (ret.length() > 0) {
+                        ret.append("\n");
+                    }
+                    ret.append(fieldName).append(" : ").append(errors.get(fieldName).asText());
+                });
             }
         }
         return ret.toString();
