@@ -1,86 +1,129 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>it.corsinvest.proxmoxve</groupId>
-    <artifactId>cv4pve-api-java</artifactId>
-    <version>9.0.0</version>
-    <packaging>jar</packaging>
-    <name>cv4pve-api-java</name>
-    <description>Corsinvest for Proxmox VE Client API Java</description>
-    <url>http://www.corsinvest.it/cv4pve</url>
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-    <scm>
-        <connection>scm:git:git://github.com/corsinvest/cv4pve-api-java.git</connection>
-        <developerConnection>scm:git:ssh://github.com:corsinvest/cv4pve-api-java.git</developerConnection>
-        <url>http://github.com/corsinvest/cv4pve-api-java/tree/master</url>
-    </scm>
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- === PROJECT INFO === -->
+    <groupId>it.corsinvest.proxmoxve.api</groupId>
+    <artifactId>cv4pve-api-java</artifactId>
+    <version>9.1.0</version>
+    <packaging>jar</packaging>
+
+    <name>cv4pve-api-java</name>
+    <description>Java client library for Proxmox VE API - Comprehensive REST API wrapper for managing Proxmox Virtual Environment clusters, VMs, containers, storage, and networking</description>
+    <url>https://github.com/corsinvest/cv4pve-api-java</url>
 
     <organization>
         <name>Corsinvest Srl</name>
+        <url>https://www.corsinvest.it</url>
     </organization>
+
+    <!-- === LICENSE === -->
     <licenses>
         <license>
-            <name>GPL-3.0 license</name>
-            <distribution>>https://www.gnu.org/licenses/gpl-3.0.txt</distribution>
+            <name>GPL-3.0 License</name>
+            <url>https://www.gnu.org/licenses/gpl-3.0.txt</url>
+            <distribution>manual</distribution>
         </license>
     </licenses>
 
-    <!--
-        <distributionManagement>
-            <repository>
-                <id>github</id>
-                <name>GitHub Packages</name>
-                <url>https://maven.pkg.github.com/corsinvest/cv4pve-api-java</url>
-            </repository>
-        </distributionManagement>
-
-    <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-        <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-    </distributionManagement>
-    -->
-
+    <!-- === DEVELOPERS === -->
     <developers>
         <developer>
             <id>dc</id>
             <name>Daniele Corsini</name>
             <email>daniele.corsini@corsinvest.it</email>
-            <roles>
-                <role>Project Manager</role>
-                <role>Architect</role>
-            </roles>
+            <url>https://github.com/corsinvest</url>
             <organization>Corsinvest Srl</organization>
-            <timezone>0</timezone>
+            <timezone>Europe/Rome</timezone>
         </developer>
     </developers>
-    <dependencies>
-        <dependency>
-            <groupId>org.json</groupId>
-            <artifactId>json</artifactId>
-            <version>20231013</version>
-            <type>jar</type>
-        </dependency>
-    </dependencies>
+
+    <!-- === SOURCE CONTROL === -->
+    <scm>
+        <url>https://github.com/corsinvest/cv4pve-api-java</url>
+        <connection>scm:git:https://github.com/corsinvest/cv4pve-api-java.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com:corsinvest/cv4pve-api-java.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+
+    <!-- === ISSUE MANAGEMENT === -->
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/corsinvest/cv4pve-api-java/issues</url>
+    </issueManagement>
+
+    <!-- === PROPERTIES === -->
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.release>17</maven.compiler.release>
+        <jackson.version>2.17.0</jackson.version>
+        <junit.version>5.10.0</junit.version>
     </properties>
 
+    <!-- === DEPENDENCIES === -->
+    <dependencies>
+        <!-- Jackson (JSON) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+        <!-- JUnit Jupiter -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <!-- === DISTRIBUTION MANAGEMENT (Central Portal) === -->
+    <distributionManagement>
+        <repository>
+            <id>central</id>
+            <url>https://central.sonatype.com/api/v1/publisher/upload</url>
+        </repository>
+    </distributionManagement>
+
+    <!-- === BUILD CONFIG === -->
     <build>
         <plugins>
+            <!-- Compiler -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <release>17</release>
+                </configuration>
+            </plugin>
+
+            <!-- Source JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>2.2.1</version>
+                <version>3.3.0</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -91,27 +134,26 @@
                 </executions>
             </plugin>
 
-            <!--
- <plugin>
+            <!-- Javadoc JAR -->
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.9.1</version>
+                <version>3.6.3</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
                         <goals>
                             <goal>jar</goal>
                         </goals>
-                        <configuration>
-                            <source>8</source>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- GPG signing -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
-                <version>1.5</version>
+                <version>3.2.1</version>
                 <executions>
                     <execution>
                         <id>sign-artifacts</id>
@@ -120,13 +162,83 @@
                             <goal>sign</goal>
                         </goals>
                         <configuration>
-                            <keyname>${gpg.keyname}</keyname>
-                            <passphraseServerId>${gpg.keyname}</passphraseServerId>
+                            <skip>${gpg.skip}</skip>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
-                        -->
+
+            <!-- Central Publishing -->
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.7.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                    <autoPublish>true</autoPublish>
+                </configuration>
+            </plugin>
+
+            <!-- Exec plugin for running test examples -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>it.corsinvest.proxmoxve.api.Test</mainClass>
+                    <classpathScope>test</classpathScope>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
+    <!-- === PROFILES === -->
+    <profiles>
+        <profile>
+            <id>dev</id>
+            <properties>
+                <gpg.skip>true</gpg.skip>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>release</id>
+            <properties>
+                <gpg.skip>false</gpg.skip>
+            </properties>
+            <build>
+                <plugins>
+                    <!-- GPG signing for release -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.2.1</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Central Publishing for release -->
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.7.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>true</autoPublish>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>
