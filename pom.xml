@@ -6,9 +6,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <!-- === PROJECT INFO === -->
-    <groupId>it.corsinvest.proxmoxve.api</groupId>
+    <groupId>it.corsinvest.proxmoxve</groupId>
     <artifactId>cv4pve-api-java</artifactId>
-    <version>9.1.0</version>
+    <version>9.1.1</version>
     <packaging>jar</packaging>
 
     <name>cv4pve-api-java</name>

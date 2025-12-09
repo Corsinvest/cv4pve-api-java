@@ -14,7 +14,8 @@ Proxmox VE API Client for Java (Made in Italy)
 
 [![License](https://img.shields.io/github/license/Corsinvest/cv4pve-api-java.svg?style=flat-square)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-17%2B-blue?style=flat-square&logo=java)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
-[![Maven Central](https://img.shields.io/maven-central/v/it.corsinvest.proxmoxve/cv4pve-api-java.svg?style=flat-square)](https://search.maven.org/artifact/it.corsinvest.proxmoxve/cv4pve-api-java)
+[![Maven Central](https://img.shields.io/maven-metadata/v.svg?metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fit%2Fcorsinvest%2Fproxmoxve%2Fapi%2Fcv4pve-api-java%2Fmaven-metadata.xml&label=maven-central&style=flat-square)](https://central.sonatype.com/artifact/it.corsinvest.proxmoxve/cv4pve-api-java)
+[![Maven Central Downloads](https://img.shields.io/maven-central/dm/it.corsinvest.proxmoxve/cv4pve-api-java?style=flat-square&label=downloads)](https://central.sonatype.com/artifact/it.corsinvest.proxmoxve/cv4pve-api-java)
 
 </div>
 
@@ -30,20 +31,20 @@ Proxmox VE API Client for Java (Made in Italy)
 <dependency>
     <groupId>it.corsinvest.proxmoxve</groupId>
     <artifactId>cv4pve-api-java</artifactId>
-    <version>9.1.0</version>
+    <version>9.1.1</version>
 </dependency>
 ```
 
 **Gradle**
 
 ```gradle
-implementation 'it.corsinvest.proxmoxve:cv4pve-api-java:9.1.0'
+implementation 'it.corsinvest.proxmoxve:cv4pve-api-java:9.1.1'
 ```
 
 ### Basic Usage
 
 ```java
-import it.corsinvest.proxmoxve.api.*;
+import it.corsinvest.proxmoxve.*;
 
 // Create client and authenticate
 var client = new PveClient("your-proxmox-host.com", 8006);
