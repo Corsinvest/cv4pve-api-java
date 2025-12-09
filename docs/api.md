@@ -4,7 +4,7 @@
 <dependency>
     <groupId>it.corsinvest.proxmoxve</groupId>
     <artifactId>cv4pve-api-java</artifactId>
-    <version>9.1.0</version>
+    <version>9.1.1</version>
 </dependency>
 ```
 
@@ -56,7 +56,7 @@ client.getNodes().get("pve1").getStorage().get("local").status()
 ### Username/Password Authentication
 
 ```java
-import it.corsinvest.proxmoxve.api.*;
+import it.corsinvest.proxmoxve.*;
 
 var client = new PveClient("pve.example.com", 8006);
 
@@ -291,7 +291,7 @@ public class Result {
 <summary><strong>VM Configuration</strong></summary>
 
 ```java
-import it.corsinvest.proxmoxve.api.*;
+import it.corsinvest.proxmoxve.*;
 
 var client = new PveClient("pve.example.com", 8006);
 client.login("admin@pve", "password");
