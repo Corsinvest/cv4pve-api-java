@@ -1,286 +1,185 @@
-# cv4pve-api-java 🔧
-
 <div align="center">
 
-![cv4pve-api-java Banner](https://img.shields.io/badge/Corsinvest-Proxmox%20VE%20API%20Java-blue?style=for-the-badge&logo=java)
+# Corsinvest.ProxmoxVE.Api for Java
 
-**🚀 Official Java Client Library Suite for Proxmox VE API**
-
-[![License](https://img.shields.io/github/license/Corsinvest/cv4pve-api-java.svg)](LICENSE)
-[![GitHub release](https://img.shields.io/github/release/Corsinvest/cv4pve-api-java.svg)](https://github.com/Corsinvest/cv4pve-api-java/releases)
-![Maven Central](https://img.shields.io/maven-central/v/it.corsinvest.proxmoxve/cv4pve-api-java.svg)
-[![Java Version](https://img.shields.io/badge/Java-8%2B-orange.svg)](https://www.oracle.com/java/)
-
-⭐ **We appreciate your star, it helps!** ⭐
-
-```text
+```
    ______                _                      __
   / ____/___  __________(_)___ _   _____  _____/ /_
  / /   / __ \/ ___/ ___/ / __ \ | / / _ \/ ___/ __/
 / /___/ /_/ / /  (__  ) / / / / |/ /  __(__  ) /_
 \____/\____/_/  /____/_/_/ /_/|___/\___/____/\__/
 
-Corsinvest for Proxmox VE Api Client  (Made in Italy 🇮🇹)
+Proxmox VE API Client for Java (Made in Italy)
 ```
+
+[![License](https://img.shields.io/github/license/Corsinvest/cv4pve-api-java.svg?style=flat-square)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-17%2B-blue?style=flat-square&logo=java)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
+[![Maven Central](https://img.shields.io/maven-central/v/it.corsinvest.proxmoxve/cv4pve-api-java.svg?style=flat-square)](https://search.maven.org/artifact/it.corsinvest.proxmoxve/cv4pve-api-java)
 
 </div>
 
-## 📖 About
+---
 
-**cv4pve-api-java** is a comprehensive Java client library that provides seamless integration with Proxmox VE's REST API. Designed for developers who need to programmatically manage virtual machines, containers, storage, and cluster resources in Proxmox VE environments.
+## Quick Start
 
-## 📦 Package Suite
+### Add the dependency to your project
 
-| Package | Description | Status |
-|---------|-------------|---------|
-| **cv4pve-api-java** | Core API Client Library | ✅ Available |
-
-## 🚀 Quick Start
-
-### Installation
-
-Add the following dependency to your `pom.xml`:
+**Maven**
 
 ```xml
 <dependency>
     <groupId>it.corsinvest.proxmoxve</groupId>
     <artifactId>cv4pve-api-java</artifactId>
-    <version>9.0.0</version>
+    <version>9.1.0</version>
 </dependency>
+```
+
+**Gradle**
+
+```gradle
+implementation 'it.corsinvest.proxmoxve:cv4pve-api-java:9.1.0'
 ```
 
 ### Basic Usage
 
 ```java
-import it.corsinvest.proxmoxve.api.PveClient;
-import org.json.JSONArray;
-import org.json.JSONObject;
+import it.corsinvest.proxmoxve.api.*;
 
-PveClient client = new PveClient("your-proxmox-host.com", 8006);
+// Create client and authenticate
+var client = new PveClient("your-proxmox-host.com", 8006);
+if (client.login("root@pam", "your-password")) {
+    // Get cluster status
+    var status = client.getCluster().getStatus().getStatus().getData();
+    System.out.println("Cluster: " + status.get(0).get("name").asText());
 
-if (client.login("root", "password", "pam")) {
-    // Get cluster version
-    System.out.println(client.getVersion().version().getResponse().get("data"));
-
-    // List nodes
-    JSONArray nodes = client.getNodes().index().getResponse().getJSONArray("data");
-    for (int i = 0; i < nodes.length(); i++) {
-        System.out.println(nodes.get(i));
-    }
-
-    // List VMs
-    JSONArray vms = client.getNodes().get("pve1").getQemu().vmlist()
-        .getResponse().getJSONArray("data");
-    for (int i = 0; i < vms.length(); i++) {
-        JSONObject vm = vms.getJSONObject(i);
-        System.out.println("VM " + vm.getInt("vmid") + ": " +
-            vm.getString("name") + " - Status: " + vm.getString("status"));
-    }
+    // Manage VMs
+    var vm = client.getNodes().get("pve1")
+        .getQemu().get(100).getConfig().vmConfig()
+        .getData();
+    System.out.println("VM: " + vm.get("name").asText());
 }
 ```
 
-## 🌟 Key Features
+---
+
+## Package Suite
+
+### [cv4pve-api-java](./docs/api.md)
+
+[![Maven Central](https://img.shields.io/maven-central/v/it.corsinvest.proxmoxve/cv4pve-api-java.svg?style=flat-square)](https://search.maven.org/artifact/it.corsinvest.proxmoxve/cv4pve-api-java)
+
+Core Java client library for Proxmox VE API. Foundation package with complete API coverage.
+
+---
+
+## Key Features
 
 ### Developer Experience
-
-- **💡 Intuitive API Structure** - Mirrors Proxmox VE API hierarchy for easy navigation
-- **📝 Comprehensive Documentation** - Detailed JavaDoc comments on all methods and parameters
-- **🔧 Easy Integration** - Simple Maven dependency and minimal setup required
-- **⚡ Flexible Response Handling** - Result class with comprehensive error handling
+- **Intuitive API structure** that mirrors Proxmox VE API hierarchy
+- **Modern Java 17+** with var, pattern matching, records, and other contemporary features
+- **Jackson JSON parsing** for robust data handling
+- **JavaDoc support** in all IDEs
+- **Auto-generated** from official API documentation
+- **Tree structure** matching Proxmox VE API paths
 
 ### Core Functionality
-
-- **🌐 Complete API Coverage** - Full implementation of Proxmox VE REST API endpoints
-- **🖥️ VM & Container Management** - Create, configure, start, stop, and monitor VMs and containers
-- **💾 Storage Operations** - Manage storage pools, volumes, and backups
-- **📊 Cluster Management** - Monitor cluster status, resources, and performance
+- **Full API coverage** for Proxmox VE 9.x
+- **VM/CT management** (create, configure, snapshot, clone)
+- **Cluster operations** (status, resources, HA, corosync)
+- **Storage management** (local, shared, backup, replication)
+- **Network configuration** (bridges, VLANs, SDN, firewall)
 
 ### Enterprise Ready
+- **API token authentication** (Proxmox VE 6.2+)
+- **Two-factor authentication** support
+- **SSL certificate validation** with custom trust managers
+- **Configurable timeouts** and HTTP proxy support
+- **Thread-safe connection handling**
 
-- **🔐 Multiple Authentication Methods** - Username/password, API tokens, and two-factor authentication
-- **🛡️ Security First** - Secure communication with SSL/TLS support
-- **📈 Task Management** - Built-in support for monitoring long-running operations (waitForTaskToFinish, taskIsRunning)
-- **⏱️ Connection Management** - Configurable timeouts and proxy support
+---
 
-### Technical Excellence
+## Documentation
 
-- **🚀 Minimal Dependencies** - Lightweight design using only org.json library
-- **🏗️ Java 8+ Compatible** - Wide compatibility with modern and legacy environments
-- **🔄 Error Handling** - Comprehensive Result class with status codes and error messages
-- **📱 Cross-Platform** - Works on Windows, Linux, and macOS
+### Getting Started
 
-## 📚 Result Class
+- **[Authentication](./docs/authentication.md)** - API tokens and security
+- **[Basic Examples](./docs/examples.md)** - Common usage patterns
+- **[Advanced Usage](./docs/advanced.md)** - Complex scenarios and best practices
+- **[Common Issues](./docs/common-issues.md)** - Configuration patterns and troubleshooting
 
-The `Result` class provides comprehensive response handling:
+### API Reference
 
-```java
-Result result = client.getNodes().index();
+- **[API Structure](./docs/apistructure.md)** - Understanding the tree structure
+- **[Result Handling](./docs/results.md)** - Working with responses
+- **[Error Handling](./docs/errorhandling.md)** - Exception management
+- **[Task Management](./docs/tasks.md)** - Long-running operations
 
-// Get response data
-JSONObject response = result.getResponse();
+---
 
-// Check for errors
-boolean hasError = result.responseInError();
-String errorMessage = result.getError();
+## Examples
 
-// HTTP status information
-int statusCode = result.getStatusCode();
-String reasonPhrase = result.getReasonPhrase();
-boolean isSuccess = result.isSuccessStatusCode();
-```
-
-### Result Methods
-
-- **getResponse()** - Returns JSONObject from Proxmox VE (data, errors, etc.)
-- **responseInError()** - Boolean indicating errors from Proxmox VE
-- **getStatusCode()** - HTTP response status code
-- **getReasonPhrase()** - Status message from server
-- **isSuccessStatusCode()** - Boolean indicating HTTP success (2xx status)
-- **getError()** - Returns error message if present
-
-## 📚 Advanced Features
-
-### Tree Structure Navigation
-
-Navigate the API using an intuitive tree structure that mirrors Proxmox VE's organization:
+### VM Management
 
 ```java
-client.getNodes().get("pve1").getQemu().get(100).getSnapshot().snapshotList();
-```
+// Create and configure a VM
+var client = new PveClient("pve.example.com", 8006);
+client.login("admin@pve", "password");
 
-### Task Management
+var result = client.getNodes().get("pve1").getQemu().createVm(
+    100,           // vmid
+    "web-server",  // name
+    4096,          // memory
+    2              // cores
+);
 
-Handle long-running operations efficiently:
-
-```java
-// Create snapshot
-JSONObject result = client.getNodes().get("pve1")
-    .getQemu().get(100).getSnapshot()
-    .snapshot("my-snapshot")
-    .getResponse();
-
-String upid = result.getString("data");
-System.out.println("Task UPID: " + upid);
-
-// Wait for task completion
-client.waitForTaskToFinish("pve1", upid, 500, 10000);
-
-// Check task status
-boolean isRunning = client.taskIsRunning("pve1", upid);
-String exitStatus = client.getExitStatusTask("pve1", upid);
-```
-
-### API Token Authentication
-
-From Proxmox VE 6.2+, use API tokens for authentication without passwords:
-
-```java
-// Format: USER@REALM!TOKENID=UUID
-client.setApiToken("root@pam!mytoken=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx");
-```
-
-**Note:** When using Privilege Separation, ensure appropriate permissions are set for the API token.
-
-### Lite Client Version
-
-For basic operations, use `PveClientBase` with only get/set/create/delete methods:
-
-```java
-import it.corsinvest.proxmoxve.api.PveClientBase;
-
-PveClientBase client = new PveClientBase("10.92.90.91", 8006);
-// Use basic CRUD operations
-```
-
-### Debug Logging
-
-Enable debug output to console for troubleshooting:
-
-```java
-client.setDebugLevel(2); // Set debug level (0-3)
-```
-
-## 🎯 Use Cases
-
-Perfect for:
-- **🏢 Infrastructure Automation** - Automate VM/CT deployment and configuration
-- **📊 Monitoring & Analytics** - Build custom dashboards and monitoring solutions
-- **💾 Backup Management** - Implement automated backup and disaster recovery workflows
-- **🌐 Multi-tenant Environments** - Manage multiple Proxmox VE clusters and tenants
-- **🔄 DevOps Integration** - Integrate with CI/CD pipelines and deployment automation
-
-## 💡 Code Examples
-
-### Snapshot Management
-
-```java
-// List snapshots
-JSONArray snapshots = client.getNodes().get("pve1")
-    .getQemu().get(100).getSnapshot().snapshotList()
-    .getResponse().getJSONArray("data");
-
-for (int i = 0; i < snapshots.length(); i++) {
-    System.out.println(snapshots.get(i));
+if (result.isSuccessStatusCode()) {
+    System.out.println("VM created successfully!");
 }
-
-// Create snapshot
-JSONObject createResult = client.getNodes().get("pve1")
-    .getQemu().get(100).getSnapshot()
-    .snapshot("backup-snapshot")
-    .getResponse();
-
-String upid = createResult.getString("data");
-client.waitForTaskToFinish("pve1", upid, 500, 10000);
-
-// Delete snapshot
-Result deleteResult = client.getNodes().get("pve1")
-    .getQemu().get(100).getSnapshot()
-    .get("backup-snapshot").delsnapshot();
-
-System.out.println(deleteResult.getResponse().get("data"));
 ```
 
-### Iterating with Streams
+### Cluster Monitoring
 
 ```java
-// Using forEach with JSONArray conversion
-PveClient.<JSONObject>JSONArrayToList(
-    client.getNodes().index().getResponse().getJSONArray("data")
-).forEach((node) -> {
-    System.out.println("Node: " + node.getString("node"));
-});
+// Get cluster resources
+var resources = client.getCluster().getResources().resources().getData();
+
+for (var resource : resources) {
+    if (resource.get("type").asText().equals("qemu")) {
+        System.out.println("VM " + resource.get("vmid").asInt() + ": " +
+                          resource.get("name").asText() + " on " +
+                          resource.get("node").asText() + " - " +
+                          resource.get("status").asText());
+    }
+}
 ```
 
-## ⚙️ Requirements
+### VM Discovery
 
-- **Java:** 8 or higher
-- **Dependencies:** org.json library (automatically managed by Maven)
-- **Maven:** For dependency management
+```java
+// Get all VMs in cluster
+var resources = client.getCluster().getResources().resources().getData();
 
-## 🤝 Community & Support
+for (var resource : resources) {
+    if (resource.get("type").asText().equals("qemu")) {
+        var node = resource.get("node").asText();
+        var vmid = resource.get("vmid").asInt();
+        var name = resource.get("name").asText();
+        var status = resource.get("status").asText();
+        System.out.println("VM " + vmid + " (" + name + ") on " + node + " - " + status);
+    }
+}
+```
 
-### 🆘 Getting Help
+---
 
-- 📚 **[Proxmox VE API Documentation](https://pve.proxmox.com/pve-docs/api-viewer/)** - Official API reference
-- 🐛 **[GitHub Issues](https://github.com/Corsinvest/cv4pve-api-java/issues)** - Bug reports and feature requests
-- 💼 **[Commercial Support](https://www.corsinvest.it/cv4pve)** - Professional consulting and support
+## Support
 
-### 🏢 About Corsinvest
-
-**Corsinvest Srl** is an Italian software company specializing in virtualization solutions. We develop professional tools and libraries for Proxmox VE that help businesses automate and manage their virtual infrastructure efficiently.
-
-### 🤝 Contributing
-
-We welcome contributions from the community! Whether it's bug fixes, new features, or documentation improvements, your help makes this project better for everyone.
-
-## 📄 License
-
-**Copyright © Corsinvest Srl**
-
-This software is part of the **cv4pve-tools** suite. For licensing details, please visit [LICENSE](LICENSE).
+Professional support and consulting available through [Corsinvest](https://www.corsinvest.it/cv4pve).
 
 ---
 
 <div align="center">
-  <sub>Part of <a href="https://www.corsinvest.it/cv4pve">cv4pve-tools</a> suite | Made with ❤️ in Italy by <a href="https://www.corsinvest.it">Corsinvest</a></sub>
+  <sub>Part of <a href="https://www.corsinvest.it/cv4pve">cv4pve</a> suite | Made with ❤️ in Italy by <a href="https://www.corsinvest.it">Corsinvest</a></sub>
+  <br>
+  <sub>Copyright © Corsinvest Srl</sub>
 </div>
