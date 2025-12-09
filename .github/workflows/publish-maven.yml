@@ -1,0 +1,77 @@
+name: Publish Maven Packages
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+        server-id: ossrh
+        server-username: MAVEN_USERNAME
+        server-password: MAVEN_PASSWORD
+        gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+        gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+    - name: Validate version consistency
+      run: |
+        # Extract version from pom.xml
+        POM_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+        # Remove 'v' prefix from tag and compare
+        TAG_VERSION=${GITHUB_REF#refs/tags/v}
+
+        echo "POM version: $POM_VERSION"
+        echo "Tag version: $TAG_VERSION"
+
+        if [ "$POM_VERSION" != "$TAG_VERSION" ]; then
+          echo "Error: Version in pom.xml ($POM_VERSION) does not match tag version ($TAG_VERSION)"
+          exit 1
+        fi
+
+    - name: Check if prerelease
+      id: prerelease_check
+      run: |
+        # Check if the tag contains prerelease indicators
+        if [[ "${{ github.ref_name }}" =~ -(alpha|beta|rc|snapshot|preview|pre|dev|experimental) ]]; then
+          echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
+        else
+          echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Build with Maven
+      run: mvn clean package -DskipTests
+
+    - name: Publish to Maven Central
+      run: mvn deploy -P release
+      env:
+        MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+        MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+        MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+    - name: Create Release and Upload JARs
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        generate_release_notes: true
+        draft: false
+        prerelease: ${{ steps.prerelease_check.outputs.IS_PRERELEASE }}
+        files: |
+          target/cv4pve-api-java-*.jar
+          target/cv4pve-api-java-*-sources.jar
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
