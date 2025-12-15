@@ -1,5 +1,3 @@
-<div align="center">
-
 # Corsinvest.ProxmoxVE.Api for Java
 
 ```
@@ -16,7 +14,6 @@ Proxmox VE API Client for Java (Made in Italy)
 [![Java](https://img.shields.io/badge/Java-17%2B-blue?style=flat-square&logo=java)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
 [![Maven Central](https://img.shields.io/maven-metadata/v.svg?metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fit%2Fcorsinvest%2Fproxmoxve%2Fcv4pve-api-java%2Fmaven-metadata.xml&label=maven-central&style=flat-square)](https://central.sonatype.com/artifact/it.corsinvest.proxmoxve/cv4pve-api-java)
 
-</div>
 
 ---
 
@@ -168,8 +165,6 @@ Professional support and consulting available through [Corsinvest](https://www.c
 
 ---
 
-<div align="center">
-  <sub>Part of <a href="https://www.corsinvest.it/cv4pve">cv4pve</a> suite | Made with ❤️ in Italy by <a href="https://www.corsinvest.it">Corsinvest</a></sub>
-  <br>
-  <sub>Copyright © Corsinvest Srl</sub>
-</div>
+Part of [cv4pve](https://www.corsinvest.it/cv4pve) suite | Made with ❤️ in Italy by [Corsinvest](https://www.corsinvest.it)
+
+Copyright © Corsinvest Srl
