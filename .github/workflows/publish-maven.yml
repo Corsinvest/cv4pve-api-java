@@ -71,7 +71,7 @@ jobs:
         draft: false
         prerelease: ${{ steps.prerelease_check.outputs.IS_PRERELEASE }}
         files: |
-          target/cv4pve-api-java-[0-9]*.jar
+          target/cv4pve-api-java-[0-9]*[0-9].jar
           target/cv4pve-api-java-[0-9]*-sources.jar
           target/cv4pve-api-java-[0-9]*-javadoc.jar
       env:
