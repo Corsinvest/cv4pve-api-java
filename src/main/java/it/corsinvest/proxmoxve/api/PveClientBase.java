@@ -579,11 +579,13 @@ public class PveClientBase {
         }
 
         var timeStart = System.currentTimeMillis();
-        var waitTime = System.currentTimeMillis();
         while (isRunning && (System.currentTimeMillis() - timeStart) < timeOut) {
-            if ((System.currentTimeMillis() - waitTime) >= wait) {
-                waitTime = System.currentTimeMillis();
-                isRunning = taskIsRunning(task);
+            isRunning = taskIsRunning(task);
+            try {
+                Thread.sleep(wait);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
             }
         }
 
