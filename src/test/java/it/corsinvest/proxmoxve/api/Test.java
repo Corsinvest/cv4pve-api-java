@@ -1,7 +1,7 @@
 
 /*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
- * SPDX-License-Identifier: GPL-3.0-only
+ * SPDX-License-Identifier: MIT
  */
 
 package it.corsinvest.proxmoxve.api;
