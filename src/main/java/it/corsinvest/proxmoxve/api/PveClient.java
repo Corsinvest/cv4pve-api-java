@@ -94,6 +94,12 @@ public class PveClient extends PveClientBase {
             return notifications == null ? (notifications = new PVENotifications(client)) : notifications;
         }
 
+        private PVEQemu qemu;
+
+        public PVEQemu getQemu() {
+            return qemu == null ? (qemu = new PVEQemu(client)) : qemu;
+        }
+
         private PVEConfig config;
 
         public PVEConfig getConfig() {
@@ -1640,6 +1646,282 @@ public class PveClient extends PveClientBase {
 
         }
 
+        public class PVEQemu {
+            private final PveClient client;
+
+            protected PVEQemu(PveClient client) {
+                this.client = client;
+
+            }
+
+            private PVECpuFlags cpuFlags;
+
+            public PVECpuFlags getCpuFlags() {
+                return cpuFlags == null ? (cpuFlags = new PVECpuFlags(client)) : cpuFlags;
+            }
+
+            private PVECustomCpuModels customCpuModels;
+
+            public PVECustomCpuModels getCustomCpuModels() {
+                return customCpuModels == null ? (customCpuModels = new PVECustomCpuModels(client)) : customCpuModels;
+            }
+
+            public class PVECpuFlags {
+                private final PveClient client;
+
+                protected PVECpuFlags(PveClient client) {
+                    this.client = client;
+
+                }
+
+                /**
+                 * List of available CPU flags. Currently only implemented for x86_64, returns
+                 * an empty list for aarch64.
+                 * 
+                 * @param accel Acceleration type to check node compatibility for.
+                 *              Enum: kvm,tcg
+                 * @param arch  Virtual processor architecture. Defaults to the host
+                 *              architecture.
+                 *              Enum: x86_64,aarch64
+                 * @return Result
+                 */
+
+                public Result index(String accel, String arch) {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("accel", accel);
+                    parameters.put("arch", arch);
+                    return client.get("/cluster/qemu/cpu-flags", parameters);
+                }
+
+                /**
+                 * List of available CPU flags. Currently only implemented for x86_64, returns
+                 * an empty list for aarch64.
+                 * 
+                 * @return Result
+                 */
+
+                public Result index() {
+                    return client.get("/cluster/qemu/cpu-flags", null);
+                }
+
+            }
+
+            public class PVECustomCpuModels {
+                private final PveClient client;
+
+                protected PVECustomCpuModels(PveClient client) {
+                    this.client = client;
+
+                }
+
+                public PVECputypeItem get(Object cputype) {
+                    return new PVECputypeItem(client, cputype);
+                }
+
+                public class PVECputypeItem {
+                    private final PveClient client;
+                    private final Object cputype;
+
+                    protected PVECputypeItem(PveClient client, Object cputype) {
+                        this.client = client;
+                        this.cputype = cputype;
+                    }
+
+                    /**
+                     * Delete a custom CPU model definition.
+                     * 
+                     * @return Result
+                     */
+
+                    public Result delete() {
+                        return client.delete("/cluster/qemu/custom-cpu-models/" + this.cputype + "", null);
+                    }
+
+                    /**
+                     * Retrieve details about a specific custom CPU model.
+                     * 
+                     * @return Result
+                     */
+
+                    public Result info() {
+                        return client.get("/cluster/qemu/custom-cpu-models/" + this.cputype + "", null);
+                    }
+
+                    /**
+                     * Update a custom CPU model definition.
+                     * 
+                     * @param delete          A list of properties to delete.
+                     * @param digest          Prevent changes if current configuration file has a
+                     *                        different digest. This can be used to prevent
+                     *                        concurrent modifications.
+                     * @param flags           List of additional CPU flags separated by ';'. Use
+                     *                        '+FLAG' to enable, '-FLAG' to disable a flag. There is
+                     *                        a special 'nested-virt' shorthand which controls
+                     *                        nested virtualization for the current CPU ('svm' for
+                     *                        AMD and 'vmx' for Intel). Custom CPU models can
+                     *                        specify any flag supported by QEMU/KVM, VM-specific
+                     *                        flags must be from the following set for security
+                     *                        reasons: aes, amd-no-ssb, amd-ssbd, hv-evmcs,
+                     *                        hv-tlbflush, ibpb, md-clear, nested-virt, pcid,
+                     *                        pdpe1gb, spec-ctrl, ssbd, virt-ssbd
+                     * @param guest_phys_bits Number of physical address bits available to the
+                     *                        guest.
+                     * @param hidden          Do not identify as a KVM virtual machine. Only affects
+                     *                        vCPUs with x86-64 architecture.
+                     * @param hv_vendor_id    The Hyper-V vendor ID. Some drivers or programs inside
+                     *                        Windows guests need a specific ID.
+                     * @param level           Maximum input value for the basic CPUID leaves the
+                     *                        guest can query - that is the vendor (leaf 0),
+                     *                        family/model/stepping and feature bits (leaf 1), cache
+                     *                        and topology info (leaves 4 and B), and so on.
+                     *                        Higher-numbered leaves are hidden. Setting '30' is a
+                     *                        common workaround for Hyper-V boot failures on Windows
+                     *                        guests running on recent Intel hosts. Only applies
+                     *                        when the vCPU architecture is x86_64.
+                     * @param phys_bits       The physical memory address bits that are reported to
+                     *                        the guest OS. Should be smaller or equal to the
+                     *                        host's. Set to 'host' to use value from host CPU, but
+                     *                        note that doing so will break live migration to CPUs
+                     *                        with other values.
+                     * @param reported_model  CPU model and vendor to report to the guest. Must be a
+                     *                        QEMU/KVM supported model. Only valid for custom CPU
+                     *                        model definitions, default models will always report
+                     *                        themselves to the guest OS.
+                     *                        Enum:
+                     *                        486,a64fx,athlon,Broadwell,Broadwell-IBRS,Broadwell-noTSX,Broadwell-noTSX-IBRS,Cascadelake-Server,Cascadelake-Server-noTSX,Cascadelake-Server-v2,Cascadelake-Server-v4,Cascadelake-Server-v5,ClearwaterForest,ClearwaterForest-v2,ClearwaterForest-v3,Conroe,Cooperlake,Cooperlake-v2,core2duo,coreduo,cortex-a35,cortex-a53,cortex-a55,cortex-a57,cortex-a710,cortex-a72,cortex-a76,cortex-a78ae,DiamondRapids,EPYC,EPYC-Genoa,EPYC-Genoa-v2,EPYC-IBPB,EPYC-Milan,EPYC-Milan-v2,EPYC-Milan-v3,EPYC-Rome,EPYC-Rome-v2,EPYC-Rome-v3,EPYC-Rome-v4,EPYC-Rome-v5,EPYC-Turin,EPYC-v3,EPYC-v4,EPYC-v5,GraniteRapids,GraniteRapids-v2,GraniteRapids-v3,GraniteRapids-v4,GraniteRapids-v5,Haswell,Haswell-IBRS,Haswell-noTSX,Haswell-noTSX-IBRS,host,Icelake-Client,Icelake-Client-noTSX,Icelake-Server,Icelake-Server-noTSX,Icelake-Server-v3,Icelake-Server-v4,Icelake-Server-v5,Icelake-Server-v6,Icelake-Server-v7,IvyBridge,IvyBridge-IBRS,KnightsMill,kvm32,kvm64,max,Nehalem,Nehalem-IBRS,neoverse-n1,neoverse-n2,neoverse-v1,Opteron_G1,Opteron_G2,Opteron_G3,Opteron_G4,Opteron_G5,Penryn,pentium,pentium2,pentium3,phenom,qemu32,qemu64,SandyBridge,SandyBridge-IBRS,SapphireRapids,SapphireRapids-v2,SapphireRapids-v3,SapphireRapids-v4,SapphireRapids-v5,SapphireRapids-v6,SierraForest,SierraForest-v2,SierraForest-v3,SierraForest-v4,SierraForest-v5,Skylake-Client,Skylake-Client-IBRS,Skylake-Client-noTSX-IBRS,Skylake-Client-v4,Skylake-Server,Skylake-Server-IBRS,Skylake-Server-noTSX-IBRS,Skylake-Server-v4,Skylake-Server-v5,Westmere,Westmere-IBRS
+                     * @return Result
+                     */
+
+                    public Result update(String delete, String digest, String flags, Integer guest_phys_bits,
+                            Boolean hidden, String hv_vendor_id, Integer level, String phys_bits,
+                            String reported_model) {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("delete", delete);
+                        parameters.put("digest", digest);
+                        parameters.put("flags", flags);
+                        parameters.put("guest-phys-bits", guest_phys_bits);
+                        parameters.put("hidden", hidden);
+                        parameters.put("hv-vendor-id", hv_vendor_id);
+                        parameters.put("level", level);
+                        parameters.put("phys-bits", phys_bits);
+                        parameters.put("reported-model", reported_model);
+                        return client.set("/cluster/qemu/custom-cpu-models/" + this.cputype + "", parameters);
+                    }
+
+                    /**
+                     * Update a custom CPU model definition.
+                     * 
+                     * @return Result
+                     */
+
+                    public Result update() {
+                        return client.set("/cluster/qemu/custom-cpu-models/" + this.cputype + "", null);
+                    }
+
+                }
+
+                /**
+                 * List all custom CPU model definitions visible to the user.
+                 * 
+                 * @return Result
+                 */
+
+                public Result config() {
+                    return client.get("/cluster/qemu/custom-cpu-models", null);
+                }
+
+                /**
+                 * Add a custom CPU model definition.
+                 * 
+                 * @param cputype         Name for the custom CPU model. The 'custom-' prefix is
+                 *                        optional.
+                 * @param reported_model  CPU model and vendor to report to the guest. Must be a
+                 *                        QEMU/KVM supported model. Only valid for custom CPU
+                 *                        model definitions, default models will always report
+                 *                        themselves to the guest OS.
+                 *                        Enum:
+                 *                        486,a64fx,athlon,Broadwell,Broadwell-IBRS,Broadwell-noTSX,Broadwell-noTSX-IBRS,Cascadelake-Server,Cascadelake-Server-noTSX,Cascadelake-Server-v2,Cascadelake-Server-v4,Cascadelake-Server-v5,ClearwaterForest,ClearwaterForest-v2,ClearwaterForest-v3,Conroe,Cooperlake,Cooperlake-v2,core2duo,coreduo,cortex-a35,cortex-a53,cortex-a55,cortex-a57,cortex-a710,cortex-a72,cortex-a76,cortex-a78ae,DiamondRapids,EPYC,EPYC-Genoa,EPYC-Genoa-v2,EPYC-IBPB,EPYC-Milan,EPYC-Milan-v2,EPYC-Milan-v3,EPYC-Rome,EPYC-Rome-v2,EPYC-Rome-v3,EPYC-Rome-v4,EPYC-Rome-v5,EPYC-Turin,EPYC-v3,EPYC-v4,EPYC-v5,GraniteRapids,GraniteRapids-v2,GraniteRapids-v3,GraniteRapids-v4,GraniteRapids-v5,Haswell,Haswell-IBRS,Haswell-noTSX,Haswell-noTSX-IBRS,host,Icelake-Client,Icelake-Client-noTSX,Icelake-Server,Icelake-Server-noTSX,Icelake-Server-v3,Icelake-Server-v4,Icelake-Server-v5,Icelake-Server-v6,Icelake-Server-v7,IvyBridge,IvyBridge-IBRS,KnightsMill,kvm32,kvm64,max,Nehalem,Nehalem-IBRS,neoverse-n1,neoverse-n2,neoverse-v1,Opteron_G1,Opteron_G2,Opteron_G3,Opteron_G4,Opteron_G5,Penryn,pentium,pentium2,pentium3,phenom,qemu32,qemu64,SandyBridge,SandyBridge-IBRS,SapphireRapids,SapphireRapids-v2,SapphireRapids-v3,SapphireRapids-v4,SapphireRapids-v5,SapphireRapids-v6,SierraForest,SierraForest-v2,SierraForest-v3,SierraForest-v4,SierraForest-v5,Skylake-Client,Skylake-Client-IBRS,Skylake-Client-noTSX-IBRS,Skylake-Client-v4,Skylake-Server,Skylake-Server-IBRS,Skylake-Server-noTSX-IBRS,Skylake-Server-v4,Skylake-Server-v5,Westmere,Westmere-IBRS
+                 * @param flags           List of additional CPU flags separated by ';'. Use
+                 *                        '+FLAG' to enable, '-FLAG' to disable a flag. There is
+                 *                        a special 'nested-virt' shorthand which controls
+                 *                        nested virtualization for the current CPU ('svm' for
+                 *                        AMD and 'vmx' for Intel). Custom CPU models can
+                 *                        specify any flag supported by QEMU/KVM, VM-specific
+                 *                        flags must be from the following set for security
+                 *                        reasons: aes, amd-no-ssb, amd-ssbd, hv-evmcs,
+                 *                        hv-tlbflush, ibpb, md-clear, nested-virt, pcid,
+                 *                        pdpe1gb, spec-ctrl, ssbd, virt-ssbd
+                 * @param guest_phys_bits Number of physical address bits available to the
+                 *                        guest.
+                 * @param hidden          Do not identify as a KVM virtual machine. Only affects
+                 *                        vCPUs with x86-64 architecture.
+                 * @param hv_vendor_id    The Hyper-V vendor ID. Some drivers or programs inside
+                 *                        Windows guests need a specific ID.
+                 * @param level           Maximum input value for the basic CPUID leaves the
+                 *                        guest can query - that is the vendor (leaf 0),
+                 *                        family/model/stepping and feature bits (leaf 1), cache
+                 *                        and topology info (leaves 4 and B), and so on.
+                 *                        Higher-numbered leaves are hidden. Setting '30' is a
+                 *                        common workaround for Hyper-V boot failures on Windows
+                 *                        guests running on recent Intel hosts. Only applies
+                 *                        when the vCPU architecture is x86_64.
+                 * @param phys_bits       The physical memory address bits that are reported to
+                 *                        the guest OS. Should be smaller or equal to the
+                 *                        host's. Set to 'host' to use value from host CPU, but
+                 *                        note that doing so will break live migration to CPUs
+                 *                        with other values.
+                 * @return Result
+                 */
+
+                public Result create(String cputype, String reported_model, String flags, Integer guest_phys_bits,
+                        Boolean hidden, String hv_vendor_id, Integer level, String phys_bits) {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("cputype", cputype);
+                    parameters.put("reported-model", reported_model);
+                    parameters.put("flags", flags);
+                    parameters.put("guest-phys-bits", guest_phys_bits);
+                    parameters.put("hidden", hidden);
+                    parameters.put("hv-vendor-id", hv_vendor_id);
+                    parameters.put("level", level);
+                    parameters.put("phys-bits", phys_bits);
+                    return client.create("/cluster/qemu/custom-cpu-models", parameters);
+                }
+
+                /**
+                 * Add a custom CPU model definition.
+                 * 
+                 * @param cputype        Name for the custom CPU model. The 'custom-' prefix is
+                 *                       optional.
+                 * @param reported_model CPU model and vendor to report to the guest. Must be a
+                 *                       QEMU/KVM supported model. Only valid for custom CPU
+                 *                       model definitions, default models will always report
+                 *                       themselves to the guest OS.
+                 *                       Enum:
+                 *                       486,a64fx,athlon,Broadwell,Broadwell-IBRS,Broadwell-noTSX,Broadwell-noTSX-IBRS,Cascadelake-Server,Cascadelake-Server-noTSX,Cascadelake-Server-v2,Cascadelake-Server-v4,Cascadelake-Server-v5,ClearwaterForest,ClearwaterForest-v2,ClearwaterForest-v3,Conroe,Cooperlake,Cooperlake-v2,core2duo,coreduo,cortex-a35,cortex-a53,cortex-a55,cortex-a57,cortex-a710,cortex-a72,cortex-a76,cortex-a78ae,DiamondRapids,EPYC,EPYC-Genoa,EPYC-Genoa-v2,EPYC-IBPB,EPYC-Milan,EPYC-Milan-v2,EPYC-Milan-v3,EPYC-Rome,EPYC-Rome-v2,EPYC-Rome-v3,EPYC-Rome-v4,EPYC-Rome-v5,EPYC-Turin,EPYC-v3,EPYC-v4,EPYC-v5,GraniteRapids,GraniteRapids-v2,GraniteRapids-v3,GraniteRapids-v4,GraniteRapids-v5,Haswell,Haswell-IBRS,Haswell-noTSX,Haswell-noTSX-IBRS,host,Icelake-Client,Icelake-Client-noTSX,Icelake-Server,Icelake-Server-noTSX,Icelake-Server-v3,Icelake-Server-v4,Icelake-Server-v5,Icelake-Server-v6,Icelake-Server-v7,IvyBridge,IvyBridge-IBRS,KnightsMill,kvm32,kvm64,max,Nehalem,Nehalem-IBRS,neoverse-n1,neoverse-n2,neoverse-v1,Opteron_G1,Opteron_G2,Opteron_G3,Opteron_G4,Opteron_G5,Penryn,pentium,pentium2,pentium3,phenom,qemu32,qemu64,SandyBridge,SandyBridge-IBRS,SapphireRapids,SapphireRapids-v2,SapphireRapids-v3,SapphireRapids-v4,SapphireRapids-v5,SapphireRapids-v6,SierraForest,SierraForest-v2,SierraForest-v3,SierraForest-v4,SierraForest-v5,Skylake-Client,Skylake-Client-IBRS,Skylake-Client-noTSX-IBRS,Skylake-Client-v4,Skylake-Server,Skylake-Server-IBRS,Skylake-Server-noTSX-IBRS,Skylake-Server-v4,Skylake-Server-v5,Westmere,Westmere-IBRS
+                 * @return Result
+                 */
+
+                public Result create(String cputype, String reported_model) {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("cputype", cputype);
+                    parameters.put("reported-model", reported_model);
+                    return client.create("/cluster/qemu/custom-cpu-models", parameters);
+                }
+
+            }
+
+            /**
+             * Cluster-wide QEMU index
+             * 
+             * @return Result
+             */
+
+            public Result index() {
+                return client.get("/cluster/qemu", null);
+            }
+
+        }
+
         public class PVEConfig {
             private final PveClient client;
 
@@ -1914,18 +2196,24 @@ public class PveClient extends PveClientBase {
              * Generate new cluster configuration. If no links given, default to local IP
              * address as link0.
              * 
-             * @param clustername The name of the cluster.
-             * @param linkN       Address and priority information of a single corosync
-             *                    link. (up to 8 links supported; link0..link7)
-             * @param nodeid      Node id for this node.
-             * @param votes       Number of votes for this node.
+             * @param clustername       The name of the cluster.
+             * @param linkN             Address and priority information of a single
+             *                          corosync link. (up to 8 links supported;
+             *                          link0..link7)
+             * @param nodeid            Node id for this node.
+             * @param token_coefficient Coefficient used to determine Corosync's token
+             *                          timeout. See the corosync.conf(5) manual for more
+             *                          details.
+             * @param votes             Number of votes for this node.
              * @return Result
              */
 
-            public Result create(String clustername, Map<Integer, String> linkN, Integer nodeid, Integer votes) {
+            public Result create(String clustername, Map<Integer, String> linkN, Integer nodeid,
+                    Integer token_coefficient, Integer votes) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("clustername", clustername);
                 parameters.put("nodeid", nodeid);
+                parameters.put("token-coefficient", token_coefficient);
                 parameters.put("votes", votes);
                 addIndexedParameter(parameters, "link", linkN);
                 return client.create("/cluster/config", parameters);
@@ -3106,7 +3394,9 @@ public class PveClient extends PveClientBase {
                  * @param compress                  Compress dump file.
                  *                                  Enum: 0,1,gzip,lzo,zstd
                  * @param delete                    A list of settings you want to delete.
-                 * @param dow                       Day of week selection.
+                 * @param dow                       Deprecated: Use 'schedule' instead. Day of
+                 *                                  week selection. 'starttime' and 'dow' will
+                 *                                  be converted into 'schedule' if used.
                  * @param dumpdir                   Store resulting files to specified
                  *                                  directory.
                  * @param enabled                   Enable or disable the job.
@@ -3133,9 +3423,6 @@ public class PveClient extends PveClientBase {
                  *                                  targets/matchers instead. Comma-separated
                  *                                  list of email addresses or users that should
                  *                                  receive email notifications.
-                 * @param maxfiles                  Deprecated: use 'prune-backups' instead.
-                 *                                  Maximal number of backup files per guest
-                 *                                  system.
                  * @param mode                      Backup mode.
                  *                                  Enum: snapshot,suspend,stop
                  * @param node                      Only run if executed on this node.
@@ -3182,7 +3469,9 @@ public class PveClient extends PveClientBase {
                  * @param schedule                  Backup schedule. The format is a subset of
                  *                                  `systemd` calendar events.
                  * @param script                    Use specified hook script.
-                 * @param starttime                 Job Start time.
+                 * @param starttime                 Deprecated: Use 'schedule' instead. Job
+                 *                                  Start time. 'starttime' and 'dow' will be
+                 *                                  converted into 'schedule' if used.
                  * @param stdexcludes               Exclude temporary files and logs.
                  * @param stop                      Stop running backup jobs on this host.
                  * @param stopwait                  Maximal time to wait until a guest system is
@@ -3201,7 +3490,7 @@ public class PveClient extends PveClientBase {
                 public Result updateJob(Boolean all, Integer bwlimit, String comment, String compress, String delete,
                         String dow, String dumpdir, Boolean enabled, String exclude, List<Object> exclude_path,
                         String fleecing, Integer ionice, Integer lockwait, String mailnotification, String mailto,
-                        Integer maxfiles, String mode, String node, String notes_template, String notification_mode,
+                        String mode, String node, String notes_template, String notification_mode,
                         String pbs_change_detection_mode, String performance, Integer pigz, String pool,
                         Boolean protected_, String prune_backups, Boolean quiet, Boolean remove, Boolean repeat_missed,
                         String schedule, String script, String starttime, Boolean stdexcludes, Boolean stop,
@@ -3222,7 +3511,6 @@ public class PveClient extends PveClientBase {
                     parameters.put("lockwait", lockwait);
                     parameters.put("mailnotification", mailnotification);
                     parameters.put("mailto", mailto);
-                    parameters.put("maxfiles", maxfiles);
                     parameters.put("mode", mode);
                     parameters.put("node", node);
                     parameters.put("notes-template", notes_template);
@@ -3279,7 +3567,9 @@ public class PveClient extends PveClientBase {
              * @param comment                   Description for the Job.
              * @param compress                  Compress dump file.
              *                                  Enum: 0,1,gzip,lzo,zstd
-             * @param dow                       Day of week selection.
+             * @param dow                       Deprecated: Use 'schedule' instead. Day of
+             *                                  week selection. 'starttime' and 'dow' will
+             *                                  be converted into 'schedule' if used.
              * @param dumpdir                   Store resulting files to specified
              *                                  directory.
              * @param enabled                   Enable or disable the job.
@@ -3307,9 +3597,6 @@ public class PveClient extends PveClientBase {
              *                                  targets/matchers instead. Comma-separated
              *                                  list of email addresses or users that should
              *                                  receive email notifications.
-             * @param maxfiles                  Deprecated: use 'prune-backups' instead.
-             *                                  Maximal number of backup files per guest
-             *                                  system.
              * @param mode                      Backup mode.
              *                                  Enum: snapshot,suspend,stop
              * @param node                      Only run if executed on this node.
@@ -3356,7 +3643,9 @@ public class PveClient extends PveClientBase {
              * @param schedule                  Backup schedule. The format is a subset of
              *                                  `systemd` calendar events.
              * @param script                    Use specified hook script.
-             * @param starttime                 Job Start time.
+             * @param starttime                 Deprecated: Use 'schedule' instead. Job
+             *                                  Start time. 'starttime' and 'dow' will be
+             *                                  converted into 'schedule' if used.
              * @param stdexcludes               Exclude temporary files and logs.
              * @param stop                      Stop running backup jobs on this host.
              * @param stopwait                  Maximal time to wait until a guest system is
@@ -3374,12 +3663,12 @@ public class PveClient extends PveClientBase {
 
             public Result createJob(Boolean all, Integer bwlimit, String comment, String compress, String dow,
                     String dumpdir, Boolean enabled, String exclude, List<Object> exclude_path, String fleecing,
-                    String id, Integer ionice, Integer lockwait, String mailnotification, String mailto,
-                    Integer maxfiles, String mode, String node, String notes_template, String notification_mode,
-                    String pbs_change_detection_mode, String performance, Integer pigz, String pool, Boolean protected_,
-                    String prune_backups, Boolean quiet, Boolean remove, Boolean repeat_missed, String schedule,
-                    String script, String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait,
-                    String storage, String tmpdir, String vmid, Integer zstd) {
+                    String id, Integer ionice, Integer lockwait, String mailnotification, String mailto, String mode,
+                    String node, String notes_template, String notification_mode, String pbs_change_detection_mode,
+                    String performance, Integer pigz, String pool, Boolean protected_, String prune_backups,
+                    Boolean quiet, Boolean remove, Boolean repeat_missed, String schedule, String script,
+                    String starttime, Boolean stdexcludes, Boolean stop, Integer stopwait, String storage,
+                    String tmpdir, String vmid, Integer zstd) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("all", all);
                 parameters.put("bwlimit", bwlimit);
@@ -3396,7 +3685,6 @@ public class PveClient extends PveClientBase {
                 parameters.put("lockwait", lockwait);
                 parameters.put("mailnotification", mailnotification);
                 parameters.put("mailto", mailto);
-                parameters.put("maxfiles", maxfiles);
                 parameters.put("mode", mode);
                 parameters.put("node", node);
                 parameters.put("notes-template", notes_template);
@@ -3580,7 +3868,7 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Request resource relocatzion to another node. This stops the service on the
+                         * Request resource relocation to another node. This stops the service on the
                          * old node, and restarts it on the target node.
                          * 
                          * @param node Target node.
@@ -3632,28 +3920,33 @@ public class PveClient extends PveClientBase {
                     /**
                      * Update resource configuration.
                      * 
-                     * @param comment      Description.
-                     * @param delete       A list of settings you want to delete.
-                     * @param digest       Prevent changes if current configuration file has a
-                     *                     different digest. This can be used to prevent concurrent
-                     *                     modifications.
-                     * @param failback     Automatically migrate HA resource to the node with the
-                     *                     highest priority according to their node affinity rules,
-                     *                     if a node with a higher priority than the current node
-                     *                     comes online.
-                     * @param group        The HA group identifier.
-                     * @param max_relocate Maximal number of service relocate tries when a service
-                     *                     failes to start.
-                     * @param max_restart  Maximal number of tries to restart the service on a node
-                     *                     after its start failed.
-                     * @param state        Requested resource state.
-                     *                     Enum: started,stopped,enabled,disabled,ignored
+                     * @param auto_rebalance HA resource may be migrated during automatic
+                     *                       rebalancing
+                     * @param comment        Description.
+                     * @param delete         A list of settings you want to delete.
+                     * @param digest         Prevent changes if current configuration file has a
+                     *                       different digest. This can be used to prevent
+                     *                       concurrent modifications.
+                     * @param failback       Automatically migrate HA resource to the node with the
+                     *                       highest priority according to their node affinity
+                     *                       rules, if a node with a higher priority than the
+                     *                       current node comes online.
+                     * @param group          The HA group identifier.
+                     * @param max_relocate   Maximal number of resource relocate tries when a
+                     *                       resource fails to start.
+                     * @param max_restart    Maximal number of tries to restart the resource on a
+                     *                       node after its start failed. When reached, the HA
+                     *                       manager will try to relocate the resource to an
+                     *                       eligible node.
+                     * @param state          Requested resource state.
+                     *                       Enum: started,stopped,enabled,disabled,ignored
                      * @return Result
                      */
 
-                    public Result update(String comment, String delete, String digest, Boolean failback, String group,
-                            Integer max_relocate, Integer max_restart, String state) {
+                    public Result update(Boolean auto_rebalance, String comment, String delete, String digest,
+                            Boolean failback, String group, Integer max_relocate, Integer max_restart, String state) {
                         Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("auto-rebalance", auto_rebalance);
                         parameters.put("comment", comment);
                         parameters.put("delete", delete);
                         parameters.put("digest", digest);
@@ -3704,32 +3997,37 @@ public class PveClient extends PveClientBase {
                 /**
                  * Create a new HA resource.
                  * 
-                 * @param sid          HA resource ID. This consists of a resource type followed
-                 *                     by a resource specific name, separated with colon
-                 *                     (example: vm:100 / ct:100). For virtual machines and
-                 *                     containers, you can simply use the VM or CT id as a
-                 *                     shortcut (example: 100).
-                 * @param comment      Description.
-                 * @param failback     Automatically migrate HA resource to the node with the
-                 *                     highest priority according to their node affinity rules,
-                 *                     if a node with a higher priority than the current node
-                 *                     comes online.
-                 * @param group        The HA group identifier.
-                 * @param max_relocate Maximal number of service relocate tries when a service
-                 *                     failes to start.
-                 * @param max_restart  Maximal number of tries to restart the service on a node
-                 *                     after its start failed.
-                 * @param state        Requested resource state.
-                 *                     Enum: started,stopped,enabled,disabled,ignored
-                 * @param type         Resource type.
-                 *                     Enum: ct,vm
+                 * @param sid            HA resource ID. This consists of a resource type
+                 *                       followed by a resource specific name, separated with
+                 *                       colon (example: vm:100 / ct:100). For virtual machines
+                 *                       and containers, you can simply use the VM or CT id as a
+                 *                       shortcut (example: 100).
+                 * @param auto_rebalance HA resource may be migrated during automatic
+                 *                       rebalancing
+                 * @param comment        Description.
+                 * @param failback       Automatically migrate HA resource to the node with the
+                 *                       highest priority according to their node affinity
+                 *                       rules, if a node with a higher priority than the
+                 *                       current node comes online.
+                 * @param group          The HA group identifier.
+                 * @param max_relocate   Maximal number of resource relocate tries when a
+                 *                       resource fails to start.
+                 * @param max_restart    Maximal number of tries to restart the resource on a
+                 *                       node after its start failed. When reached, the HA
+                 *                       manager will try to relocate the resource to an
+                 *                       eligible node.
+                 * @param state          Requested resource state.
+                 *                       Enum: started,stopped,enabled,disabled,ignored
+                 * @param type           Resource type.
+                 *                       Enum: ct,vm
                  * @return Result
                  */
 
-                public Result create(String sid, String comment, Boolean failback, String group, Integer max_relocate,
-                        Integer max_restart, String state, String type) {
+                public Result create(String sid, Boolean auto_rebalance, String comment, Boolean failback, String group,
+                        Integer max_relocate, Integer max_restart, String state, String type) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("sid", sid);
+                    parameters.put("auto-rebalance", auto_rebalance);
                     parameters.put("comment", comment);
                     parameters.put("failback", failback);
                     parameters.put("group", group);
@@ -4097,6 +4395,18 @@ public class PveClient extends PveClientBase {
                     return managerStatus == null ? (managerStatus = new PVEManagerStatus(client)) : managerStatus;
                 }
 
+                private PVEDisarmHa disarmHa;
+
+                public PVEDisarmHa getDisarmHa() {
+                    return disarmHa == null ? (disarmHa = new PVEDisarmHa(client)) : disarmHa;
+                }
+
+                private PVEArmHa armHa;
+
+                public PVEArmHa getArmHa() {
+                    return armHa == null ? (armHa = new PVEArmHa(client)) : armHa;
+                }
+
                 public class PVECurrent {
                     private final PveClient client;
 
@@ -4106,7 +4416,7 @@ public class PveClient extends PveClientBase {
                     }
 
                     /**
-                     * Get HA manger status.
+                     * Get HA manager status.
                      * 
                      * @return Result
                      */
@@ -4126,13 +4436,62 @@ public class PveClient extends PveClientBase {
                     }
 
                     /**
-                     * Get full HA manger status, including LRM status.
+                     * Get full HA manager status, including LRM status.
                      * 
                      * @return Result
                      */
 
                     public Result managerStatus() {
                         return client.get("/cluster/ha/status/manager_status", null);
+                    }
+
+                }
+
+                public class PVEDisarmHa {
+                    private final PveClient client;
+
+                    protected PVEDisarmHa(PveClient client) {
+                        this.client = client;
+
+                    }
+
+                    /**
+                     * Request disarming the HA stack, releasing all watchdogs cluster-wide.
+                     * 
+                     * @param resource_mode Controls how HA managed resources are handled while
+                     *                      disarmed. The current state of resources is not
+                     *                      affected. 'freeze': new commands and state changes are
+                     *                      not applied. 'ignore': resources are removed from HA
+                     *                      tracking and can be managed as if they were not HA
+                     *                      managed.
+                     *                      Enum: freeze,ignore
+                     * @return Result
+                     */
+
+                    public Result disarmHa(String resource_mode) {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("resource-mode", resource_mode);
+                        return client.create("/cluster/ha/status/disarm-ha", parameters);
+                    }
+
+                }
+
+                public class PVEArmHa {
+                    private final PveClient client;
+
+                    protected PVEArmHa(PveClient client) {
+                        this.client = client;
+
+                    }
+
+                    /**
+                     * Request re-arming the HA stack after it was disarmed.
+                     * 
+                     * @return Result
+                     */
+
+                    public Result armHa() {
+                        return client.create("/cluster/ha/status/arm-ha", null);
                     }
 
                 }
@@ -4251,7 +4610,7 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param api              API plugin name
                      *                         Enum:
-                     *                         1984hosting,acmedns,acmeproxy,active24,ad,ali,alviy,anx,artfiles,arvan,aurora,autodns,aws,azion,azure,beget,bookmyname,bunny,cf,clouddns,cloudns,cn,conoha,constellix,cpanel,curanet,cyon,da,ddnss,desec,df,dgon,dnsexit,dnshome,dnsimple,dnsservices,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgecenter,edgedns,euserv,exoscale,fornex,freedns,freemyip,gandi_livedns,gcloud,gcore,gd,geoscaling,googledomains,he,he_ddns,hetzner,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ionos_cloud,ipv64,ispconfig,jd,joker,kappernet,kas,kinghost,knot,la,leaseweb,lexicon,limacity,linode,linode_v4,loopia,lua,maradns,me,miab,mijnhost,misaka,myapi,mydevil,mydnsjp,mythic_beasts,namecheap,namecom,namesilo,nanelo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,oci,omglol,one,online,openprovider,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rage4,rcode0,regru,scaleway,schlundtech,selectel,selfhost,servercow,simply,technitium,tele3,tencent,timeweb,transip,udr,ultra,unoeuro,variomedia,veesp,vercel,vscale,vultr,websupport,west_cn,world4you,yandex360,yc,zilore,zone,zoneedit,zonomi
+                     *                         1984hosting,acmedns,acmeproxy,active24,ad,ali,alviy,anx,artfiles,arvan,aurora,autodns,aws,azion,azure,beget,bookmyname,bunny,cf,clouddns,cloudns,cn,conoha,constellix,cpanel,curanet,cyon,da,ddnss,desec,df,dgon,dnsexit,dnshome,dnsimple,dnsservices,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgecenter,edgedns,euserv,exoscale,fornex,freedns,freemyip,gandi_livedns,gcloud,gcore,gd,geoscaling,googledomains,he,he_ddns,hetzner,hetznercloud,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ionos_cloud,ipv64,ispconfig,jd,joker,kappernet,kas,kinghost,knot,la,leaseweb,lexicon,limacity,linode,linode_v4,loopia,lua,maradns,me,miab,mijnhost,misaka,myapi,mydevil,mydnsjp,mythic_beasts,namecheap,namecom,namesilo,nanelo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,oci,omglol,one,online,openprovider,openprovider_rest,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rage4,rcode0,regru,scaleway,schlundtech,selectel,selfhost,servercow,simply,spaceship,technitium,tele3,tencent,timeweb,transip,udr,ultra,unoeuro,variomedia,veesp,vercel,vscale,vultr,websupport,west_cn,world4you,yandex360,yc,zilore,zone,zoneedit,zonomi
                      * @param data             DNS plugin data. (base64 encoded)
                      * @param delete           A list of settings you want to delete.
                      * @param digest           Prevent changes if current configuration file has a
@@ -4322,7 +4681,7 @@ public class PveClient extends PveClientBase {
                  *                         Enum: dns,standalone
                  * @param api              API plugin name
                  *                         Enum:
-                 *                         1984hosting,acmedns,acmeproxy,active24,ad,ali,alviy,anx,artfiles,arvan,aurora,autodns,aws,azion,azure,beget,bookmyname,bunny,cf,clouddns,cloudns,cn,conoha,constellix,cpanel,curanet,cyon,da,ddnss,desec,df,dgon,dnsexit,dnshome,dnsimple,dnsservices,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgecenter,edgedns,euserv,exoscale,fornex,freedns,freemyip,gandi_livedns,gcloud,gcore,gd,geoscaling,googledomains,he,he_ddns,hetzner,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ionos_cloud,ipv64,ispconfig,jd,joker,kappernet,kas,kinghost,knot,la,leaseweb,lexicon,limacity,linode,linode_v4,loopia,lua,maradns,me,miab,mijnhost,misaka,myapi,mydevil,mydnsjp,mythic_beasts,namecheap,namecom,namesilo,nanelo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,oci,omglol,one,online,openprovider,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rage4,rcode0,regru,scaleway,schlundtech,selectel,selfhost,servercow,simply,technitium,tele3,tencent,timeweb,transip,udr,ultra,unoeuro,variomedia,veesp,vercel,vscale,vultr,websupport,west_cn,world4you,yandex360,yc,zilore,zone,zoneedit,zonomi
+                 *                         1984hosting,acmedns,acmeproxy,active24,ad,ali,alviy,anx,artfiles,arvan,aurora,autodns,aws,azion,azure,beget,bookmyname,bunny,cf,clouddns,cloudns,cn,conoha,constellix,cpanel,curanet,cyon,da,ddnss,desec,df,dgon,dnsexit,dnshome,dnsimple,dnsservices,doapi,domeneshop,dp,dpi,dreamhost,duckdns,durabledns,dyn,dynu,dynv6,easydns,edgecenter,edgedns,euserv,exoscale,fornex,freedns,freemyip,gandi_livedns,gcloud,gcore,gd,geoscaling,googledomains,he,he_ddns,hetzner,hetznercloud,hexonet,hostingde,huaweicloud,infoblox,infomaniak,internetbs,inwx,ionos,ionos_cloud,ipv64,ispconfig,jd,joker,kappernet,kas,kinghost,knot,la,leaseweb,lexicon,limacity,linode,linode_v4,loopia,lua,maradns,me,miab,mijnhost,misaka,myapi,mydevil,mydnsjp,mythic_beasts,namecheap,namecom,namesilo,nanelo,nederhost,neodigit,netcup,netlify,nic,njalla,nm,nsd,nsone,nsupdate,nw,oci,omglol,one,online,openprovider,openprovider_rest,openstack,opnsense,ovh,pdns,pleskxml,pointhq,porkbun,rackcorp,rackspace,rage4,rcode0,regru,scaleway,schlundtech,selectel,selfhost,servercow,simply,spaceship,technitium,tele3,tencent,timeweb,transip,udr,ultra,unoeuro,variomedia,veesp,vercel,vscale,vultr,websupport,west_cn,world4you,yandex360,yc,zilore,zone,zoneedit,zonomi
                  * @param data             DNS plugin data. (base64 encoded)
                  * @param disable          Flag to disable the config.
                  * @param nodes            List of cluster node names.
@@ -4638,7 +4997,10 @@ public class PveClient extends PveClientBase {
                 /**
                  * Get ceph metadata.
                  * 
-                 * @param scope
+                 * @param scope Which metadata facet to return: 'all' enriches the per-daemon
+                 *              metadata with the PVE-side service state (presence of unit, data
+                 *              directory), 'versions' collects only per-node Ceph binary
+                 *              version data.
                  *              Enum: all,versions
                  * @return Result
                  */
@@ -4713,7 +5075,8 @@ public class PveClient extends PveClientBase {
                     }
 
                     /**
-                     * Set or clear (unset) a specific ceph flag
+                     * Set or clear (unset) a specific Ceph flag. Runs synchronously (unlike the
+                     * bulk PUT /cluster/ceph/flags endpoint, which forks a worker task).
                      * 
                      * @param value The new value of the flag
                      * @return Result
@@ -4738,7 +5101,9 @@ public class PveClient extends PveClientBase {
                 }
 
                 /**
-                 * Set/Unset multiple ceph flags at once.
+                 * Set/Unset multiple Ceph flags at once. Each flag is a top-level optional
+                 * boolean: passing true sets the flag, false unsets it, omitting it leaves the
+                 * current state untouched. Runs as a worker task; returns a UPID to follow.
                  * 
                  * @param nobackfill   Backfilling of PGs is suspended.
                  * @param nodeep_scrub Deep Scrubbing is disabled.
@@ -4776,7 +5141,9 @@ public class PveClient extends PveClientBase {
                 }
 
                 /**
-                 * Set/Unset multiple ceph flags at once.
+                 * Set/Unset multiple Ceph flags at once. Each flag is a top-level optional
+                 * boolean: passing true sets the flag, false unsets it, omitting it leaves the
+                 * current state untouched. Runs as a worker task; returns a UPID to follow.
                  * 
                  * @return Result
                  */
@@ -5541,15 +5908,18 @@ public class PveClient extends PveClientBase {
                     /**
                      * Bulk start or resume all guests on the cluster.
                      * 
-                     * @param maxworkers How many parallel tasks at maximum should be started.
-                     * @param timeout    Default start timeout in seconds. Only valid for VMs.
-                     *                   (default depends on the guest configuration).
-                     * @param vms        Only consider guests from this list of VMIDs.
+                     * @param max_workers Defines the maximum number of tasks running concurrently.
+                     * @param maxworkers  Defines the maximum number of tasks running concurrently.
+                     *                    Deprecated, use 'max-workers' instead.
+                     * @param timeout     Default start timeout in seconds. Only valid for VMs.
+                     *                    (default depends on the guest configuration).
+                     * @param vms         Only consider guests from this list of VMIDs.
                      * @return Result
                      */
 
-                    public Result start(Integer maxworkers, Integer timeout, List<Object> vms) {
+                    public Result start(Integer max_workers, Integer maxworkers, Integer timeout, List<Object> vms) {
                         Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("max-workers", max_workers);
                         parameters.put("maxworkers", maxworkers);
                         parameters.put("timeout", timeout);
                         parameters.put("vms", vms);
@@ -5579,17 +5949,21 @@ public class PveClient extends PveClientBase {
                     /**
                      * Bulk shutdown all guests on the cluster.
                      * 
-                     * @param force_stop Makes sure the Guest stops after the timeout.
-                     * @param maxworkers How many parallel tasks at maximum should be started.
-                     * @param timeout    Default shutdown timeout in seconds if none is configured
-                     *                   for the guest.
-                     * @param vms        Only consider guests from this list of VMIDs.
+                     * @param force_stop  Makes sure the Guest stops after the timeout.
+                     * @param max_workers Defines the maximum number of tasks running concurrently.
+                     * @param maxworkers  Defines the maximum number of tasks running concurrently.
+                     *                    Deprecated, use 'max-workers' instead.
+                     * @param timeout     Default shutdown timeout in seconds if none is configured
+                     *                    for the guest.
+                     * @param vms         Only consider guests from this list of VMIDs.
                      * @return Result
                      */
 
-                    public Result shutdown(Boolean force_stop, Integer maxworkers, Integer timeout, List<Object> vms) {
+                    public Result shutdown(Boolean force_stop, Integer max_workers, Integer maxworkers, Integer timeout,
+                            List<Object> vms) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("force-stop", force_stop);
+                        parameters.put("max-workers", max_workers);
                         parameters.put("maxworkers", maxworkers);
                         parameters.put("timeout", timeout);
                         parameters.put("vms", vms);
@@ -5619,7 +5993,9 @@ public class PveClient extends PveClientBase {
                     /**
                      * Bulk suspend all guests on the cluster.
                      * 
-                     * @param maxworkers   How many parallel tasks at maximum should be started.
+                     * @param max_workers  Defines the maximum number of tasks running concurrently.
+                     * @param maxworkers   Defines the maximum number of tasks running concurrently.
+                     *                     Deprecated, use 'max-workers' instead.
                      * @param statestorage The storage for the VM state.
                      * @param to_disk      If set, suspends the guests to disk. Will be resumed on
                      *                     next start.
@@ -5627,8 +6003,10 @@ public class PveClient extends PveClientBase {
                      * @return Result
                      */
 
-                    public Result suspend(Integer maxworkers, String statestorage, Boolean to_disk, List<Object> vms) {
+                    public Result suspend(Integer max_workers, Integer maxworkers, String statestorage, Boolean to_disk,
+                            List<Object> vms) {
                         Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("max-workers", max_workers);
                         parameters.put("maxworkers", maxworkers);
                         parameters.put("statestorage", statestorage);
                         parameters.put("to-disk", to_disk);
@@ -5660,7 +6038,10 @@ public class PveClient extends PveClientBase {
                      * Bulk migrate all guests on the cluster.
                      * 
                      * @param target           Target node.
-                     * @param maxworkers       How many parallel tasks at maximum should be started.
+                     * @param max_workers      Defines the maximum number of tasks running
+                     *                         concurrently.
+                     * @param maxworkers       Defines the maximum number of tasks running
+                     *                         concurrently. Deprecated, use 'max-workers' instead.
                      * @param online           Enable live migration for VMs and restart migration
                      *                         for CTs.
                      * @param vms              Only consider guests from this list of VMIDs.
@@ -5668,10 +6049,11 @@ public class PveClient extends PveClientBase {
                      * @return Result
                      */
 
-                    public Result migrate(String target, Integer maxworkers, Boolean online, List<Object> vms,
-                            Boolean with_local_disks) {
+                    public Result migrate(String target, Integer max_workers, Integer maxworkers, Boolean online,
+                            List<Object> vms, Boolean with_local_disks) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("target", target);
+                        parameters.put("max-workers", max_workers);
                         parameters.put("maxworkers", maxworkers);
                         parameters.put("online", online);
                         parameters.put("vms", vms);
@@ -5762,6 +6144,18 @@ public class PveClient extends PveClientBase {
                 return fabrics == null ? (fabrics = new PVEFabrics(client)) : fabrics;
             }
 
+            private PVEPrefixLists prefixLists;
+
+            public PVEPrefixLists getPrefixLists() {
+                return prefixLists == null ? (prefixLists = new PVEPrefixLists(client)) : prefixLists;
+            }
+
+            private PVERouteMaps routeMaps;
+
+            public PVERouteMaps getRouteMaps() {
+                return routeMaps == null ? (routeMaps = new PVERouteMaps(client)) : routeMaps;
+            }
+
             private PVELock lock;
 
             public PVELock getLock() {
@@ -5772,6 +6166,12 @@ public class PveClient extends PveClientBase {
 
             public PVERollback getRollback() {
                 return rollback == null ? (rollback = new PVERollback(client)) : rollback;
+            }
+
+            private PVEDryRun dryRun;
+
+            public PVEDryRun getDryRun() {
+                return dryRun == null ? (dryRun = new PVEDryRun(client)) : dryRun;
             }
 
             public class PVEVnets {
@@ -6736,6 +7136,7 @@ public class PveClient extends PveClientBase {
                      * @param reversedns                  reverse dns api server
                      * @param rt_import                   List of Route Targets that should be
                      *                                    imported into the VRF of the zone.
+                     * @param secondary_controllers       Additional controllers.
                      * @param tag                         Service-VLAN Tag (outer VLAN)
                      * @param vlan_protocol               Which VLAN protocol should be used for the
                      *                                    creation of the QinQ zone.
@@ -6751,8 +7152,8 @@ public class PveClient extends PveClientBase {
                             Boolean disable_arp_nd_suppression, String dns, String dnszone, Integer dp_id,
                             String exitnodes, Boolean exitnodes_local_routing, String exitnodes_primary, String fabric,
                             String ipam, String lock_token, String mac, Integer mtu, String nodes, String peers,
-                            String reversedns, String rt_import, Integer tag, String vlan_protocol, Integer vrf_vxlan,
-                            Integer vxlan_port) {
+                            String reversedns, String rt_import, List<Object> secondary_controllers, Integer tag,
+                            String vlan_protocol, Integer vrf_vxlan, Integer vxlan_port) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("advertise-subnets", advertise_subnets);
                         parameters.put("bridge", bridge);
@@ -6777,6 +7178,7 @@ public class PveClient extends PveClientBase {
                         parameters.put("peers", peers);
                         parameters.put("reversedns", reversedns);
                         parameters.put("rt-import", rt_import);
+                        parameters.put("secondary-controllers", secondary_controllers);
                         parameters.put("tag", tag);
                         parameters.put("vlan-protocol", vlan_protocol);
                         parameters.put("vrf-vxlan", vrf_vxlan);
@@ -6861,6 +7263,7 @@ public class PveClient extends PveClientBase {
                  * @param reversedns                  reverse dns api server
                  * @param rt_import                   List of Route Targets that should be
                  *                                    imported into the VRF of the zone.
+                 * @param secondary_controllers       Additional controllers.
                  * @param tag                         Service-VLAN Tag (outer VLAN)
                  * @param vlan_protocol               Which VLAN protocol should be used for the
                  *                                    creation of the QinQ zone.
@@ -6876,7 +7279,8 @@ public class PveClient extends PveClientBase {
                         Boolean disable_arp_nd_suppression, String dns, String dnszone, Integer dp_id, String exitnodes,
                         Boolean exitnodes_local_routing, String exitnodes_primary, String fabric, String ipam,
                         String lock_token, String mac, Integer mtu, String nodes, String peers, String reversedns,
-                        String rt_import, Integer tag, String vlan_protocol, Integer vrf_vxlan, Integer vxlan_port) {
+                        String rt_import, List<Object> secondary_controllers, Integer tag, String vlan_protocol,
+                        Integer vrf_vxlan, Integer vxlan_port) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("type", type);
                     parameters.put("zone", zone);
@@ -6901,6 +7305,7 @@ public class PveClient extends PveClientBase {
                     parameters.put("peers", peers);
                     parameters.put("reversedns", reversedns);
                     parameters.put("rt-import", rt_import);
+                    parameters.put("secondary-controllers", secondary_controllers);
                     parameters.put("tag", tag);
                     parameters.put("vlan-protocol", vlan_protocol);
                     parameters.put("vrf-vxlan", vrf_vxlan);
@@ -6999,6 +7404,10 @@ public class PveClient extends PveClientBase {
                      * Update sdn controller object configuration.
                      * 
                      * @param asn                         autonomous system number
+                     * @param bgp_mode                    Whether to use eBGP or iBGP. Auto mode
+                     *                                    chooses depending on BGP controller or
+                     *                                    falls back to iBGP.
+                     *                                    Enum: auto,external,internal
                      * @param bgp_multipath_as_path_relax Consider different AS paths of equal
                      *                                    length for multipath computation.
                      * @param delete                      A list of settings you want to delete.
@@ -7019,15 +7428,25 @@ public class PveClient extends PveClientBase {
                      * @param loopback                    Name of the loopback/dummy interface that
                      *                                    provides the Router-IP.
                      * @param node                        The cluster node name.
+                     * @param nodes                       List of cluster node names.
+                     * @param peer_group_name             Name of the peer group for this EVPN
+                     *                                    controller
                      * @param peers                       peers address list.
+                     * @param route_map_in                Route Map that should be applied for
+                     *                                    incoming routes
+                     * @param route_map_out               Route Map that should be applied for
+                     *                                    outgoing routes
                      * @return Result
                      */
 
-                    public Result update(Integer asn, Boolean bgp_multipath_as_path_relax, String delete, String digest,
-                            Boolean ebgp, Integer ebgp_multihop, String fabric, String isis_domain, String isis_ifaces,
-                            String isis_net, String lock_token, String loopback, String node, String peers) {
+                    public Result update(Integer asn, String bgp_mode, Boolean bgp_multipath_as_path_relax,
+                            String delete, String digest, Boolean ebgp, Integer ebgp_multihop, String fabric,
+                            String isis_domain, String isis_ifaces, String isis_net, String lock_token, String loopback,
+                            String node, String nodes, String peer_group_name, String peers, String route_map_in,
+                            String route_map_out) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("asn", asn);
+                        parameters.put("bgp-mode", bgp_mode);
                         parameters.put("bgp-multipath-as-path-relax", bgp_multipath_as_path_relax);
                         parameters.put("delete", delete);
                         parameters.put("digest", digest);
@@ -7040,7 +7459,11 @@ public class PveClient extends PveClientBase {
                         parameters.put("lock-token", lock_token);
                         parameters.put("loopback", loopback);
                         parameters.put("node", node);
+                        parameters.put("nodes", nodes);
+                        parameters.put("peer-group-name", peer_group_name);
                         parameters.put("peers", peers);
+                        parameters.put("route-map-in", route_map_in);
+                        parameters.put("route-map-out", route_map_out);
                         return client.set("/cluster/sdn/controllers/" + this.controller + "", parameters);
                     }
 
@@ -7091,6 +7514,10 @@ public class PveClient extends PveClientBase {
                  * @param type                        Plugin type.
                  *                                    Enum: bgp,evpn,faucet,isis
                  * @param asn                         autonomous system number
+                 * @param bgp_mode                    Whether to use eBGP or iBGP. Auto mode
+                 *                                    chooses depending on BGP controller or
+                 *                                    falls back to iBGP.
+                 *                                    Enum: auto,external,internal
                  * @param bgp_multipath_as_path_relax Consider different AS paths of equal
                  *                                    length for multipath computation.
                  * @param ebgp                        Enable eBGP (remote-as external).
@@ -7107,17 +7534,27 @@ public class PveClient extends PveClientBase {
                  * @param loopback                    Name of the loopback/dummy interface that
                  *                                    provides the Router-IP.
                  * @param node                        The cluster node name.
+                 * @param nodes                       List of cluster node names.
+                 * @param peer_group_name             Name of the peer group for this EVPN
+                 *                                    controller
                  * @param peers                       peers address list.
+                 * @param route_map_in                Route Map that should be applied for
+                 *                                    incoming routes
+                 * @param route_map_out               Route Map that should be applied for
+                 *                                    outgoing routes
                  * @return Result
                  */
 
-                public Result create(String controller, String type, Integer asn, Boolean bgp_multipath_as_path_relax,
-                        Boolean ebgp, Integer ebgp_multihop, String fabric, String isis_domain, String isis_ifaces,
-                        String isis_net, String lock_token, String loopback, String node, String peers) {
+                public Result create(String controller, String type, Integer asn, String bgp_mode,
+                        Boolean bgp_multipath_as_path_relax, Boolean ebgp, Integer ebgp_multihop, String fabric,
+                        String isis_domain, String isis_ifaces, String isis_net, String lock_token, String loopback,
+                        String node, String nodes, String peer_group_name, String peers, String route_map_in,
+                        String route_map_out) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("controller", controller);
                     parameters.put("type", type);
                     parameters.put("asn", asn);
+                    parameters.put("bgp-mode", bgp_mode);
                     parameters.put("bgp-multipath-as-path-relax", bgp_multipath_as_path_relax);
                     parameters.put("ebgp", ebgp);
                     parameters.put("ebgp-multihop", ebgp_multihop);
@@ -7128,7 +7565,11 @@ public class PveClient extends PveClientBase {
                     parameters.put("lock-token", lock_token);
                     parameters.put("loopback", loopback);
                     parameters.put("node", node);
+                    parameters.put("nodes", nodes);
+                    parameters.put("peer-group-name", peer_group_name);
                     parameters.put("peers", peers);
+                    parameters.put("route-map-in", route_map_in);
+                    parameters.put("route-map-out", route_map_out);
                     return client.create("/cluster/sdn/controllers", parameters);
                 }
 
@@ -7584,28 +8025,45 @@ public class PveClient extends PveClientBase {
                          * Update a fabric
                          * 
                          * @param delete
-                         * @param protocol       Type of configuration entry in an SDN Fabric section
-                         *                       config
-                         *                       Enum: openfabric,ospf
-                         * @param area           OSPF area. Either a IPv4 address or a 32-bit number.
-                         *                       Gets validated in rust.
-                         * @param csnp_interval  The csnp_interval property for Openfabric
-                         * @param digest         Prevent changes if current configuration file has a
-                         *                       different digest. This can be used to prevent
-                         *                       concurrent modifications.
-                         * @param hello_interval The hello_interval property for Openfabric
-                         * @param ip6_prefix     The IP prefix for Node IPs
-                         * @param ip_prefix      The IP prefix for Node IPs
-                         * @param lock_token     the token for unlocking the global SDN configuration
+                         * @param protocol             Type of configuration entry in an SDN Fabric
+                         *                             section config
+                         *                             Enum: openfabric,ospf,wireguard,bgp
+                         * @param redistribute
+                         * @param area                 OSPF area. Either a IPv4 address or a 32-bit
+                         *                             number. Gets validated in rust.
+                         * @param csnp_interval        The csnp_interval property for Openfabric
+                         * @param digest               Prevent changes if current configuration file has
+                         *                             a different digest. This can be used to prevent
+                         *                             concurrent modifications.
+                         * @param hello_interval       The hello_interval property for Openfabric
+                         * @param ip6_prefix           The IP prefix for Node IPs
+                         * @param ip_prefix            The IP prefix for Node IPs
+                         * @param lock_token           the token for unlocking the global SDN
+                         *                             configuration
+                         * @param persistent_keepalive A seconds interval, between 1 and 65535
+                         *                             inclusive, of how often to send an authenticated
+                         *                             empty packet to the peer for the purpose of
+                         *                             keeping a stateful firewall or NAT mapping valid
+                         *                             persistently. For example, if the interface very
+                         *                             rarely sends traffic, but it might at anytime
+                         *                             receive traffic from another node, and it is
+                         *                             behind NAT, the interface might benefit from
+                         *                             having a persistent keepalive interval of 25
+                         *                             seconds. If unset or set to 0, it is turned off
+                         * @param route_filter         A prefix list that should be used for filtering
+                         *                             routes that are to be installed into the kernel
+                         *                             routing table
                          * @return Result
                          */
 
-                        public Result updateFabric(List<Object> delete, String protocol, String area,
-                                Float csnp_interval, String digest, Float hello_interval, String ip6_prefix,
-                                String ip_prefix, String lock_token) {
+                        public Result updateFabric(List<Object> delete, String protocol, List<Object> redistribute,
+                                String area, Float csnp_interval, String digest, Float hello_interval,
+                                String ip6_prefix, String ip_prefix, String lock_token, Float persistent_keepalive,
+                                String route_filter) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("delete", delete);
                             parameters.put("protocol", protocol);
+                            parameters.put("redistribute", redistribute);
                             parameters.put("area", area);
                             parameters.put("csnp_interval", csnp_interval);
                             parameters.put("digest", digest);
@@ -7613,6 +8071,8 @@ public class PveClient extends PveClientBase {
                             parameters.put("ip6_prefix", ip6_prefix);
                             parameters.put("ip_prefix", ip_prefix);
                             parameters.put("lock-token", lock_token);
+                            parameters.put("persistent_keepalive", persistent_keepalive);
+                            parameters.put("route_filter", route_filter);
                             return client.set("/cluster/sdn/fabrics/fabric/" + this.id + "", parameters);
                         }
 
@@ -7620,15 +8080,18 @@ public class PveClient extends PveClientBase {
                          * Update a fabric
                          * 
                          * @param delete
-                         * @param protocol Type of configuration entry in an SDN Fabric section config
-                         *                 Enum: openfabric,ospf
+                         * @param protocol     Type of configuration entry in an SDN Fabric section
+                         *                     config
+                         *                     Enum: openfabric,ospf,wireguard,bgp
+                         * @param redistribute
                          * @return Result
                          */
 
-                        public Result updateFabric(List<Object> delete, String protocol) {
+                        public Result updateFabric(List<Object> delete, String protocol, List<Object> redistribute) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("delete", delete);
                             parameters.put("protocol", protocol);
+                            parameters.put("redistribute", redistribute);
                             return client.set("/cluster/sdn/fabrics/fabric/" + this.id + "", parameters);
                         }
 
@@ -7662,28 +8125,45 @@ public class PveClient extends PveClientBase {
                     /**
                      * Add a fabric
                      * 
-                     * @param id             Identifier for SDN fabrics
-                     * @param protocol       Type of configuration entry in an SDN Fabric section
-                     *                       config
-                     *                       Enum: openfabric,ospf
-                     * @param area           OSPF area. Either a IPv4 address or a 32-bit number.
-                     *                       Gets validated in rust.
-                     * @param csnp_interval  The csnp_interval property for Openfabric
-                     * @param digest         Prevent changes if current configuration file has a
-                     *                       different digest. This can be used to prevent
-                     *                       concurrent modifications.
-                     * @param hello_interval The hello_interval property for Openfabric
-                     * @param ip6_prefix     The IP prefix for Node IPs
-                     * @param ip_prefix      The IP prefix for Node IPs
-                     * @param lock_token     the token for unlocking the global SDN configuration
+                     * @param id                   Identifier for SDN fabrics
+                     * @param protocol             Type of configuration entry in an SDN Fabric
+                     *                             section config
+                     *                             Enum: openfabric,ospf,wireguard,bgp
+                     * @param redistribute
+                     * @param area                 OSPF area. Either a IPv4 address or a 32-bit
+                     *                             number. Gets validated in rust.
+                     * @param csnp_interval        The csnp_interval property for Openfabric
+                     * @param digest               Prevent changes if current configuration file has
+                     *                             a different digest. This can be used to prevent
+                     *                             concurrent modifications.
+                     * @param hello_interval       The hello_interval property for Openfabric
+                     * @param ip6_prefix           The IP prefix for Node IPs
+                     * @param ip_prefix            The IP prefix for Node IPs
+                     * @param lock_token           the token for unlocking the global SDN
+                     *                             configuration
+                     * @param persistent_keepalive A seconds interval, between 1 and 65535
+                     *                             inclusive, of how often to send an authenticated
+                     *                             empty packet to the peer for the purpose of
+                     *                             keeping a stateful firewall or NAT mapping valid
+                     *                             persistently. For example, if the interface very
+                     *                             rarely sends traffic, but it might at anytime
+                     *                             receive traffic from another node, and it is
+                     *                             behind NAT, the interface might benefit from
+                     *                             having a persistent keepalive interval of 25
+                     *                             seconds. If unset or set to 0, it is turned off
+                     * @param route_filter         A prefix list that should be used for filtering
+                     *                             routes that are to be installed into the kernel
+                     *                             routing table
                      * @return Result
                      */
 
-                    public Result addFabric(String id, String protocol, String area, Float csnp_interval, String digest,
-                            Float hello_interval, String ip6_prefix, String ip_prefix, String lock_token) {
+                    public Result addFabric(String id, String protocol, List<Object> redistribute, String area,
+                            Float csnp_interval, String digest, Float hello_interval, String ip6_prefix,
+                            String ip_prefix, String lock_token, Float persistent_keepalive, String route_filter) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("id", id);
                         parameters.put("protocol", protocol);
+                        parameters.put("redistribute", redistribute);
                         parameters.put("area", area);
                         parameters.put("csnp_interval", csnp_interval);
                         parameters.put("digest", digest);
@@ -7691,22 +8171,27 @@ public class PveClient extends PveClientBase {
                         parameters.put("ip6_prefix", ip6_prefix);
                         parameters.put("ip_prefix", ip_prefix);
                         parameters.put("lock-token", lock_token);
+                        parameters.put("persistent_keepalive", persistent_keepalive);
+                        parameters.put("route_filter", route_filter);
                         return client.create("/cluster/sdn/fabrics/fabric", parameters);
                     }
 
                     /**
                      * Add a fabric
                      * 
-                     * @param id       Identifier for SDN fabrics
-                     * @param protocol Type of configuration entry in an SDN Fabric section config
-                     *                 Enum: openfabric,ospf
+                     * @param id           Identifier for SDN fabrics
+                     * @param protocol     Type of configuration entry in an SDN Fabric section
+                     *                     config
+                     *                     Enum: openfabric,ospf,wireguard,bgp
+                     * @param redistribute
                      * @return Result
                      */
 
-                    public Result addFabric(String id, String protocol) {
+                    public Result addFabric(String id, String protocol, List<Object> redistribute) {
                         Map<String, Object> parameters = new HashMap<>();
                         parameters.put("id", id);
                         parameters.put("protocol", protocol);
+                        parameters.put("redistribute", redistribute);
                         return client.create("/cluster/sdn/fabrics/fabric", parameters);
                     }
 
@@ -7773,29 +8258,43 @@ public class PveClient extends PveClientBase {
                             /**
                              * Update a node
                              * 
-                             * @param interfaces
-                             * @param protocol   Type of configuration entry in an SDN Fabric section config
-                             *                   Enum: openfabric,ospf
                              * @param delete
-                             * @param digest     Prevent changes if current configuration file has a
-                             *                   different digest. This can be used to prevent concurrent
-                             *                   modifications.
-                             * @param ip         IPv4 address for this node
-                             * @param ip6        IPv6 address for this node
-                             * @param lock_token the token for unlocking the global SDN configuration
+                             * @param interfaces
+                             * @param protocol    Type of configuration entry in an SDN Fabric section
+                             *                    config
+                             *                    Enum: openfabric,ospf,wireguard,bgp
+                             * @param allowed_ips A list of IPs that are routable via this node in the
+                             *                    WireGuard fabric.
+                             * @param digest      Prevent changes if current configuration file has a
+                             *                    different digest. This can be used to prevent concurrent
+                             *                    modifications.
+                             * @param endpoint    The endpoint used for connecting to this node.
+                             * @param ip          IPv4 address for this node
+                             * @param ip6         IPv6 address for this node
+                             * @param lock_token  the token for unlocking the global SDN configuration
+                             * @param peers
+                             * @param public_key  The public key for the external node.
+                             * @param role        The role of this node in the WireGuard fabric.
+                             *                    Enum: internal,external
                              * @return Result
                              */
 
-                            public Result updateNode(List<Object> interfaces, String protocol, List<Object> delete,
-                                    String digest, String ip, String ip6, String lock_token) {
+                            public Result updateNode(List<Object> delete, List<Object> interfaces, String protocol,
+                                    List<Object> allowed_ips, String digest, String endpoint, String ip, String ip6,
+                                    String lock_token, List<Object> peers, String public_key, String role) {
                                 Map<String, Object> parameters = new HashMap<>();
+                                parameters.put("delete", delete);
                                 parameters.put("interfaces", interfaces);
                                 parameters.put("protocol", protocol);
-                                parameters.put("delete", delete);
+                                parameters.put("allowed_ips", allowed_ips);
                                 parameters.put("digest", digest);
+                                parameters.put("endpoint", endpoint);
                                 parameters.put("ip", ip);
                                 parameters.put("ip6", ip6);
                                 parameters.put("lock-token", lock_token);
+                                parameters.put("peers", peers);
+                                parameters.put("public_key", public_key);
+                                parameters.put("role", role);
                                 return client.set(
                                         "/cluster/sdn/fabrics/node/" + this.fabric_id + "/" + this.node_id + "",
                                         parameters);
@@ -7804,14 +8303,16 @@ public class PveClient extends PveClientBase {
                             /**
                              * Update a node
                              * 
+                             * @param delete
                              * @param interfaces
                              * @param protocol   Type of configuration entry in an SDN Fabric section config
-                             *                   Enum: openfabric,ospf
+                             *                   Enum: openfabric,ospf,wireguard,bgp
                              * @return Result
                              */
 
-                            public Result updateNode(List<Object> interfaces, String protocol) {
+                            public Result updateNode(List<Object> delete, List<Object> interfaces, String protocol) {
                                 Map<String, Object> parameters = new HashMap<>();
+                                parameters.put("delete", delete);
                                 parameters.put("interfaces", interfaces);
                                 parameters.put("protocol", protocol);
                                 return client.set(
@@ -7850,28 +8351,42 @@ public class PveClient extends PveClientBase {
                          * Add a node
                          * 
                          * @param interfaces
-                         * @param node_id    Identifier for nodes in an SDN fabric
-                         * @param protocol   Type of configuration entry in an SDN Fabric section config
-                         *                   Enum: openfabric,ospf
-                         * @param digest     Prevent changes if current configuration file has a
-                         *                   different digest. This can be used to prevent concurrent
-                         *                   modifications.
-                         * @param ip         IPv4 address for this node
-                         * @param ip6        IPv6 address for this node
-                         * @param lock_token the token for unlocking the global SDN configuration
+                         * @param node_id     Identifier for nodes in an SDN fabric
+                         * @param protocol    Type of configuration entry in an SDN Fabric section
+                         *                    config
+                         *                    Enum: openfabric,ospf,wireguard,bgp
+                         * @param allowed_ips A list of IPs that are routable via this node in the
+                         *                    WireGuard fabric.
+                         * @param digest      Prevent changes if current configuration file has a
+                         *                    different digest. This can be used to prevent concurrent
+                         *                    modifications.
+                         * @param endpoint    The endpoint used for connecting to this node.
+                         * @param ip          IPv4 address for this node
+                         * @param ip6         IPv6 address for this node
+                         * @param lock_token  the token for unlocking the global SDN configuration
+                         * @param peers
+                         * @param public_key  The public key for the external node.
+                         * @param role        The role of this node in the WireGuard fabric.
+                         *                    Enum: internal,external
                          * @return Result
                          */
 
-                        public Result addNode(List<Object> interfaces, String node_id, String protocol, String digest,
-                                String ip, String ip6, String lock_token) {
+                        public Result addNode(List<Object> interfaces, String node_id, String protocol,
+                                List<Object> allowed_ips, String digest, String endpoint, String ip, String ip6,
+                                String lock_token, List<Object> peers, String public_key, String role) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("interfaces", interfaces);
                             parameters.put("node_id", node_id);
                             parameters.put("protocol", protocol);
+                            parameters.put("allowed_ips", allowed_ips);
                             parameters.put("digest", digest);
+                            parameters.put("endpoint", endpoint);
                             parameters.put("ip", ip);
                             parameters.put("ip6", ip6);
                             parameters.put("lock-token", lock_token);
+                            parameters.put("peers", peers);
+                            parameters.put("public_key", public_key);
+                            parameters.put("role", role);
                             return client.create("/cluster/sdn/fabrics/node/" + this.fabric_id + "", parameters);
                         }
 
@@ -7881,7 +8396,7 @@ public class PveClient extends PveClientBase {
                          * @param interfaces
                          * @param node_id    Identifier for nodes in an SDN fabric
                          * @param protocol   Type of configuration entry in an SDN Fabric section config
-                         *                   Enum: openfabric,ospf
+                         *                   Enum: openfabric,ospf,wireguard,bgp
                          * @return Result
                          */
 
@@ -7965,6 +8480,622 @@ public class PveClient extends PveClientBase {
 
                 public Result index() {
                     return client.get("/cluster/sdn/fabrics", null);
+                }
+
+            }
+
+            public class PVEPrefixLists {
+                private final PveClient client;
+
+                protected PVEPrefixLists(PveClient client) {
+                    this.client = client;
+
+                }
+
+                public PVEIdItem get(Object id) {
+                    return new PVEIdItem(client, id);
+                }
+
+                public class PVEIdItem {
+                    private final PveClient client;
+                    private final Object id;
+
+                    protected PVEIdItem(PveClient client, Object id) {
+                        this.client = client;
+                        this.id = id;
+                    }
+
+                    private PVEEntries entries;
+
+                    public PVEEntries getEntries() {
+                        return entries == null ? (entries = new PVEEntries(client, this.id)) : entries;
+                    }
+
+                    public class PVEEntries {
+                        private final PveClient client;
+                        private final Object id;
+
+                        protected PVEEntries(PveClient client, Object id) {
+                            this.client = client;
+                            this.id = id;
+                        }
+
+                        public PVEUrlSeqItem get(Object url_seq) {
+                            return new PVEUrlSeqItem(client, this.id, url_seq);
+                        }
+
+                        public class PVEUrlSeqItem {
+                            private final PveClient client;
+                            private final Object id;
+                            private final Object url_seq;
+
+                            protected PVEUrlSeqItem(PveClient client, Object id, Object url_seq) {
+                                this.client = client;
+                                this.id = id;
+                                this.url_seq = url_seq;
+                            }
+
+                            /**
+                             * Delete Prefix List Entry
+                             * 
+                             * @param lock_token the token for unlocking the global SDN configuration
+                             * @return Result
+                             */
+
+                            public Result deletePrefixListEntry(String lock_token) {
+                                Map<String, Object> parameters = new HashMap<>();
+                                parameters.put("lock-token", lock_token);
+                                return client.delete(
+                                        "/cluster/sdn/prefix-lists/" + this.id + "/entries/" + this.url_seq + "",
+                                        parameters);
+                            }
+
+                            /**
+                             * Delete Prefix List Entry
+                             * 
+                             * @return Result
+                             */
+
+                            public Result deletePrefixListEntry() {
+                                return client.delete(
+                                        "/cluster/sdn/prefix-lists/" + this.id + "/entries/" + this.url_seq + "", null);
+                            }
+
+                            /**
+                             * Get Prefix List Entry
+                             * 
+                             * @return Result
+                             */
+
+                            public Result getPrefixListEntry() {
+                                return client.get(
+                                        "/cluster/sdn/prefix-lists/" + this.id + "/entries/" + this.url_seq + "", null);
+                            }
+
+                            /**
+                             * Update Prefix List Entry
+                             * 
+                             * @param action
+                             *                   Enum: permit,deny
+                             * @param delete
+                             * @param digest     Prevent changes if current configuration file has a
+                             *                   different digest. This can be used to prevent concurrent
+                             *                   modifications.
+                             * @param ge
+                             * @param le
+                             * @param lock_token the token for unlocking the global SDN configuration
+                             * @param prefix
+                             * @param seq
+                             * @return Result
+                             */
+
+                            public Result updatePrefixListEntry(String action, List<Object> delete, String digest,
+                                    Integer ge, Integer le, String lock_token, String prefix, Integer seq) {
+                                Map<String, Object> parameters = new HashMap<>();
+                                parameters.put("action", action);
+                                parameters.put("delete", delete);
+                                parameters.put("digest", digest);
+                                parameters.put("ge", ge);
+                                parameters.put("le", le);
+                                parameters.put("lock-token", lock_token);
+                                parameters.put("prefix", prefix);
+                                parameters.put("seq", seq);
+                                return client.set(
+                                        "/cluster/sdn/prefix-lists/" + this.id + "/entries/" + this.url_seq + "",
+                                        parameters);
+                            }
+
+                            /**
+                             * Update Prefix List Entry
+                             * 
+                             * @return Result
+                             */
+
+                            public Result updatePrefixListEntry() {
+                                return client.set(
+                                        "/cluster/sdn/prefix-lists/" + this.id + "/entries/" + this.url_seq + "", null);
+                            }
+
+                        }
+
+                        /**
+                         * List Prefix List Entries
+                         * 
+                         * @return Result
+                         */
+
+                        public Result getPrefixListEntries() {
+                            return client.get("/cluster/sdn/prefix-lists/" + this.id + "/entries", null);
+                        }
+
+                        /**
+                         * Create Prefix List Entry
+                         * 
+                         * @param action
+                         *                   Enum: permit,deny
+                         * @param prefix
+                         * @param ge
+                         * @param le
+                         * @param lock_token the token for unlocking the global SDN configuration
+                         * @param seq
+                         * @return Result
+                         */
+
+                        public Result createPrefixListEntry(String action, String prefix, Integer ge, Integer le,
+                                String lock_token, Integer seq) {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("action", action);
+                            parameters.put("prefix", prefix);
+                            parameters.put("ge", ge);
+                            parameters.put("le", le);
+                            parameters.put("lock-token", lock_token);
+                            parameters.put("seq", seq);
+                            return client.create("/cluster/sdn/prefix-lists/" + this.id + "/entries", parameters);
+                        }
+
+                        /**
+                         * Create Prefix List Entry
+                         * 
+                         * @param action
+                         *               Enum: permit,deny
+                         * @param prefix
+                         * @return Result
+                         */
+
+                        public Result createPrefixListEntry(String action, String prefix) {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("action", action);
+                            parameters.put("prefix", prefix);
+                            return client.create("/cluster/sdn/prefix-lists/" + this.id + "/entries", parameters);
+                        }
+
+                    }
+
+                    /**
+                     * Delete Prefix List
+                     * 
+                     * @param lock_token the token for unlocking the global SDN configuration
+                     * @return Result
+                     */
+
+                    public Result deletePrefixList(String lock_token) {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("lock-token", lock_token);
+                        return client.delete("/cluster/sdn/prefix-lists/" + this.id + "", parameters);
+                    }
+
+                    /**
+                     * Delete Prefix List
+                     * 
+                     * @return Result
+                     */
+
+                    public Result deletePrefixList() {
+                        return client.delete("/cluster/sdn/prefix-lists/" + this.id + "", null);
+                    }
+
+                    /**
+                     * Get Prefix List
+                     * 
+                     * @return Result
+                     */
+
+                    public Result getPrefixList() {
+                        return client.get("/cluster/sdn/prefix-lists/" + this.id + "", null);
+                    }
+
+                    /**
+                     * Update Prefix List
+                     * 
+                     * @param delete
+                     * @param digest     Prevent changes if current configuration file has a
+                     *                   different digest. This can be used to prevent concurrent
+                     *                   modifications.
+                     * @param entries
+                     * @param lock_token the token for unlocking the global SDN configuration
+                     * @return Result
+                     */
+
+                    public Result updatePrefixList(List<Object> delete, String digest, List<Object> entries,
+                            String lock_token) {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("delete", delete);
+                        parameters.put("digest", digest);
+                        parameters.put("entries", entries);
+                        parameters.put("lock-token", lock_token);
+                        return client.set("/cluster/sdn/prefix-lists/" + this.id + "", parameters);
+                    }
+
+                    /**
+                     * Update Prefix List
+                     * 
+                     * @return Result
+                     */
+
+                    public Result updatePrefixList() {
+                        return client.set("/cluster/sdn/prefix-lists/" + this.id + "", null);
+                    }
+
+                }
+
+                /**
+                 * List Prefix Lists
+                 * 
+                 * @param pending Display pending config.
+                 * @param running Display running config.
+                 * @param verbose If 0, only returns id - otherwise returns all properties.
+                 * @return Result
+                 */
+
+                public Result listPrefixLists(Boolean pending, Boolean running, Boolean verbose) {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("pending", pending);
+                    parameters.put("running", running);
+                    parameters.put("verbose", verbose);
+                    return client.get("/cluster/sdn/prefix-lists", parameters);
+                }
+
+                /**
+                 * List Prefix Lists
+                 * 
+                 * @return Result
+                 */
+
+                public Result listPrefixLists() {
+                    return client.get("/cluster/sdn/prefix-lists", null);
+                }
+
+                /**
+                 * Create Prefix List
+                 * 
+                 * @param id         The SDN prefix list identifier
+                 * @param digest     Prevent changes if current configuration file has a
+                 *                   different digest. This can be used to prevent concurrent
+                 *                   modifications.
+                 * @param entries
+                 * @param lock_token the token for unlocking the global SDN configuration
+                 * @return Result
+                 */
+
+                public Result createPrefixListEntry(String id, String digest, List<Object> entries, String lock_token) {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("id", id);
+                    parameters.put("digest", digest);
+                    parameters.put("entries", entries);
+                    parameters.put("lock-token", lock_token);
+                    return client.create("/cluster/sdn/prefix-lists", parameters);
+                }
+
+                /**
+                 * Create Prefix List
+                 * 
+                 * @param id The SDN prefix list identifier
+                 * @return Result
+                 */
+
+                public Result createPrefixListEntry(String id) {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("id", id);
+                    return client.create("/cluster/sdn/prefix-lists", parameters);
+                }
+
+            }
+
+            public class PVERouteMaps {
+                private final PveClient client;
+
+                protected PVERouteMaps(PveClient client) {
+                    this.client = client;
+
+                }
+
+                private PVEEntries entries;
+
+                public PVEEntries getEntries() {
+                    return entries == null ? (entries = new PVEEntries(client)) : entries;
+                }
+
+                public class PVEEntries {
+                    private final PveClient client;
+
+                    protected PVEEntries(PveClient client) {
+                        this.client = client;
+
+                    }
+
+                    public PVERouteMapIdItem get(Object route_map_id) {
+                        return new PVERouteMapIdItem(client, route_map_id);
+                    }
+
+                    public class PVERouteMapIdItem {
+                        private final PveClient client;
+                        private final Object route_map_id;
+
+                        protected PVERouteMapIdItem(PveClient client, Object route_map_id) {
+                            this.client = client;
+                            this.route_map_id = route_map_id;
+                        }
+
+                        private PVEEntry entry;
+
+                        public PVEEntry getEntry() {
+                            return entry == null ? (entry = new PVEEntry(client, this.route_map_id)) : entry;
+                        }
+
+                        public class PVEEntry {
+                            private final PveClient client;
+                            private final Object route_map_id;
+
+                            protected PVEEntry(PveClient client, Object route_map_id) {
+                                this.client = client;
+                                this.route_map_id = route_map_id;
+                            }
+
+                            public PVEOrderItem get(Object order) {
+                                return new PVEOrderItem(client, this.route_map_id, order);
+                            }
+
+                            public class PVEOrderItem {
+                                private final PveClient client;
+                                private final Object route_map_id;
+                                private final Object order;
+
+                                protected PVEOrderItem(PveClient client, Object route_map_id, Object order) {
+                                    this.client = client;
+                                    this.route_map_id = route_map_id;
+                                    this.order = order;
+                                }
+
+                                /**
+                                 * Delete Route Map Entry
+                                 * 
+                                 * @param route_map_id The SDN route map identifier
+                                 * @param lock_token   the token for unlocking the global SDN configuration
+                                 * @return Result
+                                 */
+
+                                public Result deleteRouteMapEntry(String route_map_id, String lock_token) {
+                                    Map<String, Object> parameters = new HashMap<>();
+                                    parameters.put("route-map-id", route_map_id);
+                                    parameters.put("lock-token", lock_token);
+                                    return client.delete("/cluster/sdn/route-maps/entries/" + this.route_map_id
+                                            + "/entry/" + this.order + "", parameters);
+                                }
+
+                                /**
+                                 * Delete Route Map Entry
+                                 * 
+                                 * @param route_map_id The SDN route map identifier
+                                 * @return Result
+                                 */
+
+                                public Result deleteRouteMapEntry(String route_map_id) {
+                                    Map<String, Object> parameters = new HashMap<>();
+                                    parameters.put("route-map-id", route_map_id);
+                                    return client.delete("/cluster/sdn/route-maps/entries/" + this.route_map_id
+                                            + "/entry/" + this.order + "", parameters);
+                                }
+
+                                /**
+                                 * Get Route Map Entry
+                                 * 
+                                 * @param route_map_id The SDN route map identifier
+                                 * @return Result
+                                 */
+
+                                public Result getRouteMapEntry(String route_map_id) {
+                                    Map<String, Object> parameters = new HashMap<>();
+                                    parameters.put("route-map-id", route_map_id);
+                                    return client.get("/cluster/sdn/route-maps/entries/" + this.route_map_id + "/entry/"
+                                            + this.order + "", parameters);
+                                }
+
+                                /**
+                                 * Update Route Map Entry
+                                 * 
+                                 * @param route_map_id The SDN route map identifier
+                                 * @param action       Matching policy of a route map entry.
+                                 *                     Enum: permit,deny
+                                 * @param call         The SDN route map identifier
+                                 * @param delete
+                                 * @param digest       Prevent changes if current configuration file has a
+                                 *                     different digest. This can be used to prevent concurrent
+                                 *                     modifications.
+                                 * @param exit_action
+                                 * @param lock_token   the token for unlocking the global SDN configuration
+                                 * @param match
+                                 * @param set
+                                 * @return Result
+                                 */
+
+                                public Result updateRouteMapEntry(String route_map_id, String action, String call,
+                                        List<Object> delete, String digest, String exit_action, String lock_token,
+                                        List<Object> match, List<Object> set) {
+                                    Map<String, Object> parameters = new HashMap<>();
+                                    parameters.put("route-map-id", route_map_id);
+                                    parameters.put("action", action);
+                                    parameters.put("call", call);
+                                    parameters.put("delete", delete);
+                                    parameters.put("digest", digest);
+                                    parameters.put("exit-action", exit_action);
+                                    parameters.put("lock-token", lock_token);
+                                    parameters.put("match", match);
+                                    parameters.put("set", set);
+                                    return client.set("/cluster/sdn/route-maps/entries/" + this.route_map_id + "/entry/"
+                                            + this.order + "", parameters);
+                                }
+
+                                /**
+                                 * Update Route Map Entry
+                                 * 
+                                 * @param route_map_id The SDN route map identifier
+                                 * @return Result
+                                 */
+
+                                public Result updateRouteMapEntry(String route_map_id) {
+                                    Map<String, Object> parameters = new HashMap<>();
+                                    parameters.put("route-map-id", route_map_id);
+                                    return client.set("/cluster/sdn/route-maps/entries/" + this.route_map_id + "/entry/"
+                                            + this.order + "", parameters);
+                                }
+
+                            }
+
+                        }
+
+                        /**
+                         * List all entries for a given Route Map
+                         * 
+                         * @param route_map_id The SDN route map identifier
+                         * @param pending      Display pending config.
+                         * @param running      Display running config.
+                         * @return Result
+                         */
+
+                        public Result listRouteMapEntriesForRouteMap(String route_map_id, Boolean pending,
+                                Boolean running) {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("route-map-id", route_map_id);
+                            parameters.put("pending", pending);
+                            parameters.put("running", running);
+                            return client.get("/cluster/sdn/route-maps/entries/" + this.route_map_id + "", parameters);
+                        }
+
+                        /**
+                         * List all entries for a given Route Map
+                         * 
+                         * @param route_map_id The SDN route map identifier
+                         * @return Result
+                         */
+
+                        public Result listRouteMapEntriesForRouteMap(String route_map_id) {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("route-map-id", route_map_id);
+                            return client.get("/cluster/sdn/route-maps/entries/" + this.route_map_id + "", parameters);
+                        }
+
+                    }
+
+                    /**
+                     * Lists all route map entries.
+                     * 
+                     * @param pending Display pending config.
+                     * @param running Display running config.
+                     * @return Result
+                     */
+
+                    public Result listRouteMapEntries(Boolean pending, Boolean running) {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("pending", pending);
+                        parameters.put("running", running);
+                        return client.get("/cluster/sdn/route-maps/entries", parameters);
+                    }
+
+                    /**
+                     * Lists all route map entries.
+                     * 
+                     * @return Result
+                     */
+
+                    public Result listRouteMapEntries() {
+                        return client.get("/cluster/sdn/route-maps/entries", null);
+                    }
+
+                    /**
+                     * Create Route Map entry
+                     * 
+                     * @param action       Matching policy of a route map entry.
+                     *                     Enum: permit,deny
+                     * @param order        The index of this route map entry
+                     * @param route_map_id The SDN route map identifier
+                     * @param call         The SDN route map identifier
+                     * @param digest       Prevent changes if current configuration file has a
+                     *                     different digest. This can be used to prevent concurrent
+                     *                     modifications.
+                     * @param exit_action
+                     * @param lock_token   the token for unlocking the global SDN configuration
+                     * @param match
+                     * @param set
+                     * @return Result
+                     */
+
+                    public Result createRouteMapEntry(String action, int order, String route_map_id, String call,
+                            String digest, String exit_action, String lock_token, List<Object> match,
+                            List<Object> set) {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("action", action);
+                        parameters.put("order", order);
+                        parameters.put("route-map-id", route_map_id);
+                        parameters.put("call", call);
+                        parameters.put("digest", digest);
+                        parameters.put("exit-action", exit_action);
+                        parameters.put("lock-token", lock_token);
+                        parameters.put("match", match);
+                        parameters.put("set", set);
+                        return client.create("/cluster/sdn/route-maps/entries", parameters);
+                    }
+
+                    /**
+                     * Create Route Map entry
+                     * 
+                     * @param action       Matching policy of a route map entry.
+                     *                     Enum: permit,deny
+                     * @param order        The index of this route map entry
+                     * @param route_map_id The SDN route map identifier
+                     * @return Result
+                     */
+
+                    public Result createRouteMapEntry(String action, int order, String route_map_id) {
+                        Map<String, Object> parameters = new HashMap<>();
+                        parameters.put("action", action);
+                        parameters.put("order", order);
+                        parameters.put("route-map-id", route_map_id);
+                        return client.create("/cluster/sdn/route-maps/entries", parameters);
+                    }
+
+                }
+
+                /**
+                 * List Route Maps
+                 * 
+                 * @param running Display running config.
+                 * @return Result
+                 */
+
+                public Result listRouteMaps(Boolean running) {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("running", running);
+                    return client.get("/cluster/sdn/route-maps", parameters);
+                }
+
+                /**
+                 * List Route Maps
+                 * 
+                 * @return Result
+                 */
+
+                public Result listRouteMaps() {
+                    return client.get("/cluster/sdn/route-maps", null);
                 }
 
             }
@@ -8065,6 +9196,30 @@ public class PveClient extends PveClientBase {
 
             }
 
+            public class PVEDryRun {
+                private final PveClient client;
+
+                protected PVEDryRun(PveClient client) {
+                    this.client = client;
+
+                }
+
+                /**
+                 * Dry-run the SDN apply action and return the difference between the current
+                 * configuration and the pending configuration
+                 * 
+                 * @param node The cluster node name.
+                 * @return Result
+                 */
+
+                public Result dryRun(String node) {
+                    Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("node", node);
+                    return client.get("/cluster/sdn/dry-run", parameters);
+                }
+
+            }
+
             /**
              * Directory index.
              * 
@@ -8080,7 +9235,7 @@ public class PveClient extends PveClientBase {
              * 
              * @param lock_token   the token for unlocking the global SDN configuration
              * @param release_lock When lock-token has been provided and configuration
-             *                     successfully commited, release the lock automatically
+             *                     successfully committed, release the lock automatically
              *                     afterwards
              * @return Result
              */
@@ -8248,6 +9403,7 @@ public class PveClient extends PveClientBase {
              * @param language           Default GUI language.
              *                           Enum:
              *                           ar,ca,da,de,en,es,eu,fa,fr,hr,he,it,ja,ka,kr,nb,nl,nn,pl,pt_BR,ru,sl,sv,tr,ukr,zh_CN,zh_TW
+             * @param location           The location of the cluster.
              * @param mac_prefix         Prefix for the auto-generated MAC addresses of
              *                           virtual guests. The default 'BC:24:11' is the OUI
              *                           assigned by the IEEE to Proxmox Server Solutions
@@ -8279,8 +9435,8 @@ public class PveClient extends PveClientBase {
 
             public Result setOptions(String bwlimit, String consent_text, String console, String crs, String delete,
                     String description, String email_from, String fencing, String ha, String http_proxy,
-                    String keyboard, String language, String mac_prefix, Integer max_workers, String migration,
-                    Boolean migration_unsecure, String next_id, String notify, String registered_tags,
+                    String keyboard, String language, String location, String mac_prefix, Integer max_workers,
+                    String migration, Boolean migration_unsecure, String next_id, String notify, String registered_tags,
                     String replication, String tag_style, String u2f, String user_tag_access, String webauthn) {
                 Map<String, Object> parameters = new HashMap<>();
                 parameters.put("bwlimit", bwlimit);
@@ -8295,6 +9451,7 @@ public class PveClient extends PveClientBase {
                 parameters.put("http_proxy", http_proxy);
                 parameters.put("keyboard", keyboard);
                 parameters.put("language", language);
+                parameters.put("location", location);
                 parameters.put("mac_prefix", mac_prefix);
                 parameters.put("max_workers", max_workers);
                 parameters.put("migration", migration);
@@ -10538,6 +11695,28 @@ public class PveClient extends PveClientBase {
                             /**
                              * Reads the given file via guest agent. Is limited to 16777216 bytes.
                              * 
+                             * @param file   The path to the file
+                             * @param count  Number of bytes to read.
+                             * @param decode Data received from the QEMU Guest-Agent is base64 encoded. If
+                             *               this is set to true, the data is decoded. Otherwise the content
+                             *               is forwarded with base64 encoding. Defaults to true.
+                             * @param offset Offset to start reading at
+                             * @return Result
+                             */
+
+                            public Result fileRead(String file, Integer count, Boolean decode, Integer offset) {
+                                Map<String, Object> parameters = new HashMap<>();
+                                parameters.put("file", file);
+                                parameters.put("count", count);
+                                parameters.put("decode", decode);
+                                parameters.put("offset", offset);
+                                return client.get("/nodes/" + this.node + "/qemu/" + this.vmid + "/agent/file-read",
+                                        parameters);
+                            }
+
+                            /**
+                             * Reads the given file via guest agent. Is limited to 16777216 bytes.
+                             * 
                              * @param file The path to the file
                              * @return Result
                              */
@@ -10772,7 +11951,7 @@ public class PveClient extends PveClientBase {
                          * @param amd_sev                Secure Encrypted Virtualization (SEV) features
                          *                               by AMD CPUs
                          * @param arch                   Virtual processor architecture. Defaults to the
-                         *                               host.
+                         *                               host architecture.
                          *                               Enum: x86_64,aarch64
                          * @param args                   Arbitrary arguments passed to kvm.
                          * @param audio0                 Configure a audio device, useful in combination
@@ -10781,8 +11960,10 @@ public class PveClient extends PveClientBase {
                          *                               ignored).
                          * @param background_delay       Time to wait for the task to finish. We return
                          *                               'null' if the task finish within that time.
-                         * @param balloon                Amount of target RAM for the VM in MiB. Using
-                         *                               zero disables the ballon driver.
+                         * @param balloon                Amount of target RAM for the VM in MiB. The
+                         *                               balloon driver is enabled by default, unless it
+                         *                               is explicitly disabled by setting the value to
+                         *                               zero.
                          * @param bios                   Select BIOS implementation.
                          *                               Enum: seabios,ovmf
                          * @param boot                   Specify guest boot order. Use the 'order='
@@ -10900,7 +12081,8 @@ public class PveClient extends PveClientBase {
                          *                               converge in the very end, because too much
                          *                               newly dirtied RAM needs to be transferred, the
                          *                               limit will be increased automatically
-                         *                               step-by-step until migration can converge.
+                         *                               step-by-step until migration can converge. Will
+                         *                               be capped to 2000 seconds (maximum in QEMU).
                          * @param migrate_speed          Set maximum speed (in MB/s) for migrations.
                          *                               Value 0 is no limit.
                          * @param name                   Set a name for the VM. Only used on the
@@ -11142,14 +12324,15 @@ public class PveClient extends PveClientBase {
                          * @param amd_sev            Secure Encrypted Virtualization (SEV) features by
                          *                           AMD CPUs
                          * @param arch               Virtual processor architecture. Defaults to the
-                         *                           host.
+                         *                           host architecture.
                          *                           Enum: x86_64,aarch64
                          * @param args               Arbitrary arguments passed to kvm.
                          * @param audio0             Configure a audio device, useful in combination
                          *                           with QXL/Spice.
                          * @param autostart          Automatic restart after crash (currently ignored).
-                         * @param balloon            Amount of target RAM for the VM in MiB. Using zero
-                         *                           disables the ballon driver.
+                         * @param balloon            Amount of target RAM for the VM in MiB. The balloon
+                         *                           driver is enabled by default, unless it is
+                         *                           explicitly disabled by setting the value to zero.
                          * @param bios               Select BIOS implementation.
                          *                           Enum: seabios,ovmf
                          * @param boot               Specify guest boot order. Use the 'order='
@@ -11258,7 +12441,8 @@ public class PveClient extends PveClientBase {
                          *                           converge in the very end, because too much newly
                          *                           dirtied RAM needs to be transferred, the limit will
                          *                           be increased automatically step-by-step until
-                         *                           migration can converge.
+                         *                           migration can converge. Will be capped to 2000
+                         *                           seconds (maximum in QEMU).
                          * @param migrate_speed      Set maximum speed (in MB/s) for migrations. Value 0
                          *                           is no limit.
                          * @param name               Set a name for the VM. Only used on the
@@ -11626,8 +12810,8 @@ public class PveClient extends PveClientBase {
                         /**
                          * Creates a TCP VNC proxy connections.
                          * 
-                         * @param generate_password Generates a random password to be used as ticket
-                         *                          instead of the API ticket.
+                         * @param generate_password Deprecated, do not use. Password is generated when
+                         *                          required.
                          * @param websocket         Prepare for websocket upgrade (only required when
                          *                          using serial terminal, otherwise upgrade is always
                          *                          possible).
@@ -13109,7 +14293,7 @@ public class PveClient extends PveClientBase {
                  * @param amd_sev                Secure Encrypted Virtualization (SEV) features
                  *                               by AMD CPUs
                  * @param arch                   Virtual processor architecture. Defaults to the
-                 *                               host.
+                 *                               host architecture.
                  *                               Enum: x86_64,aarch64
                  * @param archive                The backup archive. Either the file system path
                  *                               to a .tar or .vma file (use '-' to pipe data
@@ -13120,8 +14304,10 @@ public class PveClient extends PveClientBase {
                  *                               with QXL/Spice.
                  * @param autostart              Automatic restart after crash (currently
                  *                               ignored).
-                 * @param balloon                Amount of target RAM for the VM in MiB. Using
-                 *                               zero disables the ballon driver.
+                 * @param balloon                Amount of target RAM for the VM in MiB. The
+                 *                               balloon driver is enabled by default, unless it
+                 *                               is explicitly disabled by setting the value to
+                 *                               zero.
                  * @param bios                   Select BIOS implementation.
                  *                               Enum: seabios,ovmf
                  * @param boot                   Specify guest boot order. Use the 'order='
@@ -13235,7 +14421,8 @@ public class PveClient extends PveClientBase {
                  *                               converge in the very end, because too much
                  *                               newly dirtied RAM needs to be transferred, the
                  *                               limit will be increased automatically
-                 *                               step-by-step until migration can converge.
+                 *                               step-by-step until migration can converge. Will
+                 *                               be capped to 2000 seconds (maximum in QEMU).
                  * @param migrate_speed          Set maximum speed (in MB/s) for migrations.
                  *                               Value 0 is no limit.
                  * @param name                   Set a name for the VM. Only used on the
@@ -16371,10 +17558,12 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Get configured values from either the config file or config DB.
+                         * Get configured values from either ceph.conf or the mon config DB. Underscores
+                         * in section and key names are normalised to hyphens in the response,
+                         * regardless of how they're written in the source.
                          * 
                          * @param config_keys List of &amp;lt;section&amp;gt;:&amp;lt;config key&amp;gt;
-                         *                    items.
+                         *                    items separated by semicolon, comma or space.
                          * @return Result
                          */
 
@@ -16602,7 +17791,12 @@ public class PveClient extends PveClientBase {
                         /**
                          * Destroy OSD
                          * 
-                         * @param cleanup If set, we remove partition table entries.
+                         * @param cleanup If set, also destroy the underlying logical volumes via
+                         *                'ceph-volume lvm zap --destroy', remove the volume group's
+                         *                physical volume with pvremove, and wipe any
+                         *                journal/block.db/block.wal partitions left over from filestore
+                         *                OSDs. Without this flag the LVs and partitions are left intact
+                         *                for inspection.
                          * @return Result
                          */
 
@@ -16653,8 +17847,9 @@ public class PveClient extends PveClientBase {
                      * @param db_dev_size        Size in GiB for block.db.
                      * @param encrypted          Enables encryption of the OSD.
                      * @param osds_per_device    OSD services per physical device. Only useful for
-                     *                           fast NVMe devices" ." to utilize their performance
-                     *                           better.
+                     *                           fast NVMe devices to utilize their performance
+                     *                           better. Mutually exclusive with 'db_dev' and
+                     *                           'wal_dev'.
                      * @param wal_dev            Block device name for block.wal.
                      * @param wal_dev_size       Size in GiB for block.wal.
                      * @return Result
@@ -16845,7 +18040,9 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Destroy Ceph Monitor and Manager.
+                         * Destroy a Ceph Monitor. Refuses to remove the last monitor of the cluster.
+                         * Does not destroy any Manager on the same node; use
+                         * /nodes/{node}/ceph/mgr/{id} for that.
                          * 
                          * @return Result
                          */
@@ -16855,7 +18052,7 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Create Ceph Monitor and Manager
+                         * Create a Ceph Monitor. Also auto-creates a Manager for the first monitor.
                          * 
                          * @param mon_address Overwrites autodetected monitor IP address(es). Must be in
                          *                    the public network(s) of Ceph.
@@ -16869,7 +18066,7 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Create Ceph Monitor and Manager
+                         * Create a Ceph Monitor. Also auto-creates a Manager for the first monitor.
                          * 
                          * @return Result
                          */
@@ -16914,6 +18111,37 @@ public class PveClient extends PveClientBase {
                             this.client = client;
                             this.node = node;
                             this.name = name;
+                        }
+
+                        /**
+                         * Destroy a Ceph filesystem. Refuses if any PVE storage entry of type 'cephfs'
+                         * still references the filesystem and is not disabled. Optionally also removes
+                         * the storage entries and/or the underlying metadata and data pools.
+                         * 
+                         * @param remove_pools    Remove the metadata and data pools used by this
+                         *                        filesystem.
+                         * @param remove_storages Remove pveceph-managed storages configured for this
+                         *                        filesystem.
+                         * @return Result
+                         */
+
+                        public Result destroyfs(Boolean remove_pools, Boolean remove_storages) {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("remove-pools", remove_pools);
+                            parameters.put("remove-storages", remove_storages);
+                            return client.delete("/nodes/" + this.node + "/ceph/fs/" + this.name + "", parameters);
+                        }
+
+                        /**
+                         * Destroy a Ceph filesystem. Refuses if any PVE storage entry of type 'cephfs'
+                         * still references the filesystem and is not disabled. Optionally also removes
+                         * the storage entries and/or the underlying metadata and data pools.
+                         * 
+                         * @return Result
+                         */
+
+                        public Result destroyfs() {
+                            return client.delete("/nodes/" + this.node + "/ceph/fs/" + this.name + "", null);
                         }
 
                         /**
@@ -17126,6 +18354,9 @@ public class PveClient extends PveClientBase {
                      * 
                      * @param name              The name of the pool. It must be unique.
                      * @param add_storages      Configure VM and CT storage using the new pool.
+                     *                          Defaults to false for replicated pools and to true
+                     *                          for erasure-coded pools (since EC pools are
+                     *                          typically only useful when wired up to storage).
                      * @param application       The application of the pool.
                      *                          Enum: rbd,cephfs,rgw
                      * @param crush_rule        The rule to use for mapping object placement in the
@@ -17192,11 +18423,14 @@ public class PveClient extends PveClientBase {
                     }
 
                     /**
-                     * Create initial ceph default configuration and setup symlinks.
+                     * Create the initial Ceph default configuration and set up symlinks. Idempotent
+                     * on re-call: if a [global] section already exists in ceph.conf, the existing
+                     * fsid / auth / pool defaults are preserved and most parameters are silently
+                     * ignored.
                      * 
-                     * @param cluster_network Declare a separate cluster network, OSDs will
-                     *                        routeheartbeat, object replication and recovery
-                     *                        traffic over it
+                     * @param cluster_network Declare a separate cluster network, OSDs will route
+                     *                        heartbeat, object replication and recovery traffic
+                     *                        over it
                      * @param disable_cephx   Disable cephx authentication. WARNING: cephx is a
                      *                        security feature protecting against man-in-the-middle
                      *                        attacks. Only consider disabling cephx if your network
@@ -17224,7 +18458,10 @@ public class PveClient extends PveClientBase {
                     }
 
                     /**
-                     * Create initial ceph default configuration and setup symlinks.
+                     * Create the initial Ceph default configuration and set up symlinks. Idempotent
+                     * on re-call: if a [global] section already exists in ceph.conf, the existing
+                     * fsid / auth / pool defaults are preserved and most parameters are silently
+                     * ignored.
                      * 
                      * @return Result
                      */
@@ -17347,7 +18584,9 @@ public class PveClient extends PveClientBase {
                     }
 
                     /**
-                     * Get ceph status.
+                     * Get the Ceph cluster status (raw 'ceph status' output). The response is
+                     * cluster-wide and identical to /cluster/ceph/status; this node-level alias
+                     * exists for operator convenience.
                      * 
                      * @return Result
                      */
@@ -17391,8 +18630,9 @@ public class PveClient extends PveClientBase {
                     /**
                      * Read ceph log
                      * 
-                     * @param limit
-                     * @param start
+                     * @param limit Maximum number of log lines to return. Defaults to the
+                     *              dump_logfile limit (typically 50) when omitted.
+                     * @param start Offset of the first log line to return (0-based).
                      * @return Result
                      */
 
@@ -17594,9 +18834,6 @@ public class PveClient extends PveClientBase {
                  *                                  targets/matchers instead. Comma-separated
                  *                                  list of email addresses or users that should
                  *                                  receive email notifications.
-                 * @param maxfiles                  Deprecated: use 'prune-backups' instead.
-                 *                                  Maximal number of backup files per guest
-                 *                                  system.
                  * @param mode                      Backup mode.
                  *                                  Enum: snapshot,suspend,stop
                  * @param notes_template            Template string for generating notes for the
@@ -17655,7 +18892,7 @@ public class PveClient extends PveClientBase {
 
                 public Result vzdump(Boolean all, Integer bwlimit, String compress, String dumpdir, String exclude,
                         List<Object> exclude_path, String fleecing, Integer ionice, String job_id, Integer lockwait,
-                        String mailnotification, String mailto, Integer maxfiles, String mode, String notes_template,
+                        String mailnotification, String mailto, String mode, String notes_template,
                         String notification_mode, String pbs_change_detection_mode, String performance, Integer pigz,
                         String pool, Boolean protected_, String prune_backups, Boolean quiet, Boolean remove,
                         String script, Boolean stdexcludes, Boolean stdout, Boolean stop, Integer stopwait,
@@ -17673,7 +18910,6 @@ public class PveClient extends PveClientBase {
                     parameters.put("lockwait", lockwait);
                     parameters.put("mailnotification", mailnotification);
                     parameters.put("mailto", mailto);
-                    parameters.put("maxfiles", maxfiles);
                     parameters.put("mode", mode);
                     parameters.put("notes-template", notes_template);
                     parameters.put("notification-mode", notification_mode);
@@ -18944,6 +20180,21 @@ public class PveClient extends PveClientBase {
                         /**
                          * List all custom and default CPU models.
                          * 
+                         * @param arch Virtual processor architecture. Defaults to the host
+                         *             architecture.
+                         *             Enum: x86_64,aarch64
+                         * @return Result
+                         */
+
+                        public Result index(String arch) {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("arch", arch);
+                            return client.get("/nodes/" + this.node + "/capabilities/qemu/cpu", parameters);
+                        }
+
+                        /**
+                         * List all custom and default CPU models.
+                         * 
                          * @return Result
                          */
 
@@ -18963,7 +20214,27 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * List of available VM-specific CPU flags.
+                         * List of available VM-specific CPU flags. Returns an empty list for 'aarch64'
+                         * as no VM-specific flags are defined for it yet.
+                         * 
+                         * @param accel Acceleration type to check node compatibility for.
+                         *              Enum: kvm,tcg
+                         * @param arch  Virtual processor architecture. Defaults to the host
+                         *              architecture.
+                         *              Enum: x86_64,aarch64
+                         * @return Result
+                         */
+
+                        public Result index(String accel, String arch) {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("accel", accel);
+                            parameters.put("arch", arch);
+                            return client.get("/nodes/" + this.node + "/capabilities/qemu/cpu-flags", parameters);
+                        }
+
+                        /**
+                         * List of available VM-specific CPU flags. Returns an empty list for 'aarch64'
+                         * as no VM-specific flags are defined for it yet.
                          * 
                          * @return Result
                          */
@@ -18981,6 +20252,21 @@ public class PveClient extends PveClientBase {
                         protected PVEMachines(PveClient client, Object node) {
                             this.client = client;
                             this.node = node;
+                        }
+
+                        /**
+                         * Get available QEMU/KVM machine types.
+                         * 
+                         * @param arch Virtual processor architecture. Defaults to the host
+                         *             architecture.
+                         *             Enum: x86_64,aarch64
+                         * @return Result
+                         */
+
+                        public Result types(String arch) {
+                            Map<String, Object> parameters = new HashMap<>();
+                            parameters.put("arch", arch);
+                            return client.get("/nodes/" + this.node + "/capabilities/qemu/machines", parameters);
                         }
 
                         /**
@@ -19131,6 +20417,13 @@ public class PveClient extends PveClientBase {
                         return importMetadata == null
                                 ? (importMetadata = new PVEImportMetadata(client, this.node, this.storage))
                                 : importMetadata;
+                    }
+
+                    private PVEIdentity identity;
+
+                    public PVEIdentity getIdentity() {
+                        return identity == null ? (identity = new PVEIdentity(client, this.node, this.storage))
+                                : identity;
                     }
 
                     public class PVEPrunebackups {
@@ -19828,6 +21121,29 @@ public class PveClient extends PveClientBase {
                             parameters.put("volume", volume);
                             return client.get("/nodes/" + this.node + "/storage/" + this.storage + "/import-metadata",
                                     parameters);
+                        }
+
+                    }
+
+                    public class PVEIdentity {
+                        private final PveClient client;
+                        private final Object node;
+                        private final Object storage;
+
+                        protected PVEIdentity(PveClient client, Object node, Object storage) {
+                            this.client = client;
+                            this.node = node;
+                            this.storage = storage;
+                        }
+
+                        /**
+                         * Return identity information for this storage instance.
+                         * 
+                         * @return Result
+                         */
+
+                        public Result identity() {
+                            return client.get("/nodes/" + this.node + "/storage/" + this.storage + "/identity", null);
                         }
 
                     }
@@ -21593,7 +22909,7 @@ public class PveClient extends PveClientBase {
                  * 
                  * @param property Return only a specific property from the node configuration.
                  *                 Enum:
-                 *                 acme,acmedomain0,acmedomain1,acmedomain2,acmedomain3,acmedomain4,acmedomain5,ballooning-target,description,startall-onboot-delay,wakeonlan
+                 *                 acme,acmedomain0,acmedomain1,acmedomain2,acmedomain3,acmedomain4,acmedomain5,ballooning-target,description,location,startall-onboot-delay,wakeonlan
                  * @return Result
                  */
 
@@ -21627,6 +22943,8 @@ public class PveClient extends PveClientBase {
                  * @param digest                Prevent changes if current configuration file
                  *                              has different SHA1 digest. This can be used to
                  *                              prevent concurrent modifications.
+                 * @param location              The location of the node. Overrides the default
+                 *                              from the datacenter config.
                  * @param startall_onboot_delay Initial delay in seconds, before starting all
                  *                              the Virtual Guests with on-boot enabled.
                  * @param wakeonlan             Node specific wake on LAN settings.
@@ -21634,14 +22952,15 @@ public class PveClient extends PveClientBase {
                  */
 
                 public Result setOptions(String acme, Map<Integer, String> acmedomainN, Integer ballooning_target,
-                        String delete, String description, String digest, Integer startall_onboot_delay,
-                        String wakeonlan) {
+                        String delete, String description, String digest, String location,
+                        Integer startall_onboot_delay, String wakeonlan) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("acme", acme);
                     parameters.put("ballooning-target", ballooning_target);
                     parameters.put("delete", delete);
                     parameters.put("description", description);
                     parameters.put("digest", digest);
+                    parameters.put("location", location);
                     parameters.put("startall-onboot-delay", startall_onboot_delay);
                     parameters.put("wakeonlan", wakeonlan);
                     addIndexedParameter(parameters, "acmedomain", acmedomainN);
@@ -22424,8 +23743,8 @@ public class PveClient extends PveClientBase {
                 /**
                  * Opens a websocket for VNC traffic.
                  * 
-                 * @param port      Port number returned by previous vncproxy call.
-                 * @param vncticket Ticket from previous call to vncproxy.
+                 * @param port      Port number returned by previous 'vncshell' call.
+                 * @param vncticket Ticket from previous call to 'vncshell'.
                  * @return Result
                  */
 
@@ -22706,15 +24025,21 @@ public class PveClient extends PveClientBase {
                  * Start all VMs and containers located on this node (by default only those with
                  * onboot=1).
                  * 
-                 * @param force Issue start command even if virtual guest have 'onboot' not set
-                 *              or set to off.
-                 * @param vms   Only consider guests from this comma separated list of VMIDs.
+                 * @param force       Issue start command even if virtual guest have 'onboot'
+                 *                    not set or set to off.
+                 * @param max_workers Defines the maximum number of tasks running concurrently.
+                 *                    If not set, uses 'max_workers' from datacenter.cfg, and if
+                 *                    that's not set, the available CPU threads, clamped to a
+                 *                    maximum of 8, are used.
+                 * @param vms         Only consider guests from this comma separated list of
+                 *                    VMIDs.
                  * @return Result
                  */
 
-                public Result startall(Boolean force, String vms) {
+                public Result startall(Boolean force, Integer max_workers, String vms) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("force", force);
+                    parameters.put("max-workers", max_workers);
                     parameters.put("vms", vms);
                     return client.create("/nodes/" + this.node + "/startall", parameters);
                 }
@@ -22744,17 +24069,22 @@ public class PveClient extends PveClientBase {
                 /**
                  * Stop all VMs and Containers.
                  * 
-                 * @param force_stop Force a hard-stop after the timeout.
-                 * @param timeout    Timeout for each guest shutdown task. Depending on
-                 *                   `force-stop`, the shutdown gets then simply aborted or a
-                 *                   hard-stop is forced.
-                 * @param vms        Only consider Guests with these IDs.
+                 * @param force_stop  Force a hard-stop after the timeout.
+                 * @param max_workers Defines the maximum number of tasks running concurrently.
+                 *                    If not set, uses 'max_workers' from datacenter.cfg, and if
+                 *                    that's not set, the available CPU threads, clamped to a
+                 *                    maximum of 8, are used.
+                 * @param timeout     Timeout for each guest shutdown task. Depending on
+                 *                    `force-stop`, the shutdown gets then simply aborted or a
+                 *                    hard-stop is forced.
+                 * @param vms         Only consider Guests with these IDs.
                  * @return Result
                  */
 
-                public Result stopall(Boolean force_stop, Integer timeout, String vms) {
+                public Result stopall(Boolean force_stop, Integer max_workers, Integer timeout, String vms) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("force-stop", force_stop);
+                    parameters.put("max-workers", max_workers);
                     parameters.put("timeout", timeout);
                     parameters.put("vms", vms);
                     return client.create("/nodes/" + this.node + "/stopall", parameters);
@@ -22784,12 +24114,17 @@ public class PveClient extends PveClientBase {
                 /**
                  * Suspend all VMs.
                  * 
-                 * @param vms Only consider Guests with these IDs.
+                 * @param max_workers Maximal number of parallel migration job. If not set,
+                 *                    uses'max_workers' from datacenter.cfg, and if that's not
+                 *                    set the available' .' CPU threads, clamped to a maximum of
+                 *                    8, are used.
+                 * @param vms         Only consider Guests with these IDs.
                  * @return Result
                  */
 
-                public Result suspendall(String vms) {
+                public Result suspendall(Integer max_workers, String vms) {
                     Map<String, Object> parameters = new HashMap<>();
+                    parameters.put("max-workers", max_workers);
                     parameters.put("vms", vms);
                     return client.create("/nodes/" + this.node + "/suspendall", parameters);
                 }
@@ -22819,17 +24154,22 @@ public class PveClient extends PveClientBase {
                  * Migrate all VMs and Containers.
                  * 
                  * @param target           Target node.
-                 * @param maxworkers       Maximal number of parallel migration job. If not set,
+                 * @param max_workers      Maximal number of parallel migration job. If not set,
                  *                         uses'max_workers' from datacenter.cfg. One of both
                  *                         must be set!
+                 * @param maxworkers       Maximal number of parallel migration job. If not set,
+                 *                         uses'max_workers' from datacenter.cfg. One of both
+                 *                         must be set!Deprecated, use 'max-workers' instead.
                  * @param vms              Only consider Guests with these IDs.
                  * @param with_local_disks Enable live storage migration for local disk
                  * @return Result
                  */
 
-                public Result migrateall(String target, Integer maxworkers, String vms, Boolean with_local_disks) {
+                public Result migrateall(String target, Integer max_workers, Integer maxworkers, String vms,
+                        Boolean with_local_disks) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("target", target);
+                    parameters.put("max-workers", max_workers);
                     parameters.put("maxworkers", maxworkers);
                     parameters.put("vms", vms);
                     parameters.put("with-local-disks", with_local_disks);
@@ -22969,7 +24309,7 @@ public class PveClient extends PveClientBase {
             /**
              * Update storage configuration.
              * 
-             * @param blocksize                block size
+             * @param blocksize                ZFS block size
              * @param bwlimit                  Set I/O bandwidth limit for various
              *                                 operations (in KiB/s).
              * @param comstar_hg               host group for comstar views
@@ -23072,7 +24412,7 @@ public class PveClient extends PveClientBase {
              *                                 backing-chains.
              * @param sparse                   use sparse volumes
              * @param subdir                   Subdir to mount.
-             * @param tagged_only              Only use logical volumes tagged with
+             * @param tagged_only              Only list logical volumes tagged with
              *                                 'pve-vm-ID'.
              * @param username                 RBD Id.
              * @param zfs_base_path            Base path where to look for the created ZFS
@@ -23194,7 +24534,7 @@ public class PveClient extends PveClientBase {
          * @param authsupported            Authsupported.
          * @param base_                    Base volume. This volume is automatically
          *                                 activated.
-         * @param blocksize                block size
+         * @param blocksize                ZFS block size
          * @param bwlimit                  Set I/O bandwidth limit for various
          *                                 operations (in KiB/s).
          * @param comstar_hg               host group for comstar views
@@ -23300,7 +24640,7 @@ public class PveClient extends PveClientBase {
          *                                 backing-chains.
          * @param sparse                   use sparse volumes
          * @param subdir                   Subdir to mount.
-         * @param tagged_only              Only use logical volumes tagged with
+         * @param tagged_only              Only list logical volumes tagged with
          *                                 'pve-vm-ID'.
          * @param target                   iSCSI target.
          * @param thinpool                 LVM thin pool LV name.
@@ -23654,29 +24994,35 @@ public class PveClient extends PveClientBase {
                         }
 
                         /**
-                         * Update API token for a specific user.
+                         * Update API token for a specific user. NOTE: when 'regenerate' is set, the
+                         * returned token value needs to be stored as it cannot be retrieved afterwards!
                          * 
                          * @param comment
-                         * @param delete  A list of settings you want to delete.
-                         * @param expire  API token expiration date (seconds since epoch). '0' means no
-                         *                expiration date.
-                         * @param privsep Restrict API token privileges with separate ACLs (default), or
-                         *                give full privileges of corresponding user.
+                         * @param delete     A list of settings you want to delete.
+                         * @param expire     API token expiration date (seconds since epoch). '0' means
+                         *                   no expiration date.
+                         * @param privsep    Restrict API token privileges with separate ACLs (default),
+                         *                   or give full privileges of corresponding user.
+                         * @param regenerate Regenerate the token's secret value. All users of the
+                         *                   previous secret will lose access after this operation.
                          * @return Result
                          */
 
-                        public Result updateTokenInfo(String comment, String delete, Integer expire, Boolean privsep) {
+                        public Result updateTokenInfo(String comment, String delete, Integer expire, Boolean privsep,
+                                Boolean regenerate) {
                             Map<String, Object> parameters = new HashMap<>();
                             parameters.put("comment", comment);
                             parameters.put("delete", delete);
                             parameters.put("expire", expire);
                             parameters.put("privsep", privsep);
+                            parameters.put("regenerate", regenerate);
                             return client.set("/access/users/" + this.userid + "/token/" + this.tokenid + "",
                                     parameters);
                         }
 
                         /**
-                         * Update API token for a specific user.
+                         * Update API token for a specific user. NOTE: when 'regenerate' is set, the
+                         * returned token value needs to be stored as it cannot be retrieved afterwards!
                          * 
                          * @return Result
                          */
@@ -24231,6 +25577,9 @@ public class PveClient extends PveClientBase {
                  * @param acr_values            Specifies the Authentication Context Class
                  *                              Reference values that theAuthorization Server is
                  *                              being requested to use for the Auth Request.
+                 * @param audiences             A list of audiences that the OpenID Issuer may
+                 *                              include that are accepted in addition to
+                 *                              'client-id'.
                  * @param autocreate            Automatically create users if they do not exist.
                  * @param base_dn               LDAP base domain name
                  * @param bind_dn               LDAP bind domain name
@@ -24298,17 +25647,18 @@ public class PveClient extends PveClientBase {
                  * @return Result
                  */
 
-                public Result update(String acr_values, Boolean autocreate, String base_dn, String bind_dn,
-                        String capath, Boolean case_sensitive, String cert, String certkey, Boolean check_connection,
-                        String client_id, String client_key, String comment, Boolean default_, String delete,
-                        String digest, String domain, String filter, String group_classes, String group_dn,
-                        String group_filter, String group_name_attr, Boolean groups_autocreate, String groups_claim,
-                        Boolean groups_overwrite, String issuer_url, String mode, String password, Integer port,
-                        String prompt, Boolean query_userinfo, String scopes, Boolean secure, String server1,
-                        String server2, String sslversion, String sync_defaults_options, String sync_attributes,
-                        String tfa, String user_attr, String user_classes, Boolean verify) {
+                public Result update(String acr_values, String audiences, Boolean autocreate, String base_dn,
+                        String bind_dn, String capath, Boolean case_sensitive, String cert, String certkey,
+                        Boolean check_connection, String client_id, String client_key, String comment, Boolean default_,
+                        String delete, String digest, String domain, String filter, String group_classes,
+                        String group_dn, String group_filter, String group_name_attr, Boolean groups_autocreate,
+                        String groups_claim, Boolean groups_overwrite, String issuer_url, String mode, String password,
+                        Integer port, String prompt, Boolean query_userinfo, String scopes, Boolean secure,
+                        String server1, String server2, String sslversion, String sync_defaults_options,
+                        String sync_attributes, String tfa, String user_attr, String user_classes, Boolean verify) {
                     Map<String, Object> parameters = new HashMap<>();
                     parameters.put("acr-values", acr_values);
+                    parameters.put("audiences", audiences);
                     parameters.put("autocreate", autocreate);
                     parameters.put("base_dn", base_dn);
                     parameters.put("bind_dn", bind_dn);
@@ -24383,6 +25733,9 @@ public class PveClient extends PveClientBase {
              * @param acr_values            Specifies the Authentication Context Class
              *                              Reference values that theAuthorization Server is
              *                              being requested to use for the Auth Request.
+             * @param audiences             A list of audiences that the OpenID Issuer may
+             *                              include that are accepted in addition to
+             *                              'client-id'.
              * @param autocreate            Automatically create users if they do not exist.
              * @param base_dn               LDAP base domain name
              * @param bind_dn               LDAP bind domain name
@@ -24448,8 +25801,8 @@ public class PveClient extends PveClientBase {
              * @return Result
              */
 
-            public Result create(String realm, String type, String acr_values, Boolean autocreate, String base_dn,
-                    String bind_dn, String capath, Boolean case_sensitive, String cert, String certkey,
+            public Result create(String realm, String type, String acr_values, String audiences, Boolean autocreate,
+                    String base_dn, String bind_dn, String capath, Boolean case_sensitive, String cert, String certkey,
                     Boolean check_connection, String client_id, String client_key, String comment, Boolean default_,
                     String domain, String filter, String group_classes, String group_dn, String group_filter,
                     String group_name_attr, Boolean groups_autocreate, String groups_claim, Boolean groups_overwrite,
@@ -24461,6 +25814,7 @@ public class PveClient extends PveClientBase {
                 parameters.put("realm", realm);
                 parameters.put("type", type);
                 parameters.put("acr-values", acr_values);
+                parameters.put("audiences", audiences);
                 parameters.put("autocreate", autocreate);
                 parameters.put("base_dn", base_dn);
                 parameters.put("bind_dn", bind_dn);
@@ -24846,6 +26200,29 @@ public class PveClient extends PveClientBase {
             protected PVEVncticket(PveClient client) {
                 this.client = client;
 
+            }
+
+            /**
+             * verify VNC authentication ticket.
+             * 
+             * @param authid    UserId or token
+             * @param path      Verify ticket, and check if user have access 'privs' on
+             *                  'path'
+             * @param privs     Verify ticket, and check if user have access 'privs' on
+             *                  'path'
+             * @param vncticket The VNC ticket.
+             * @param port      Verify that the ticket is valid for this port.
+             * @return Result
+             */
+
+            public Result verifyVncTicket(String authid, String path, String privs, String vncticket, Integer port) {
+                Map<String, Object> parameters = new HashMap<>();
+                parameters.put("authid", authid);
+                parameters.put("path", path);
+                parameters.put("privs", privs);
+                parameters.put("vncticket", vncticket);
+                parameters.put("port", port);
+                return client.create("/access/vncticket", parameters);
             }
 
             /**
