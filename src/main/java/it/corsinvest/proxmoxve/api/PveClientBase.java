@@ -476,8 +476,19 @@ public class PveClientBase {
             if (logger.isLoggable(Level.FINE)) {
                 logger.log(Level.FINE, "Method: {0}, Url: {1}", new Object[] { httpMethod, url });
                 if (methodType != MethodType.GET && !params.isEmpty()) {
+                    var sensitiveParams = new String[] { "password", "token", "ticket", "otp", "apitoken" };
                     var paramsStr = new StringBuilder("Parameters:");
-                    params.forEach((key, value) -> paramsStr.append("\n  ").append(key).append(" : ").append(value));
+                    params.forEach((key, value) -> {
+                        var paramName = key.toLowerCase();
+                        var isSensitive = false;
+                        for (var p : sensitiveParams) {
+                            if (paramName.contains(p)) {
+                                isSensitive = true;
+                                break;
+                            }
+                        }
+                        paramsStr.append("\n  ").append(key).append(" : ").append(isSensitive ? "****" : value);
+                    });
                     logger.fine(paramsStr.toString());
                 }
             }
