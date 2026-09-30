@@ -185,7 +185,9 @@ public class PveClientBase {
      * @param username user name
      * @param password password connection
      * @param realm    pam/pve or custom
-     * @param otp      One-time password for Two-factor authentication.
+     * @param otp      Second factor of a user with two-factor authentication: a
+     *                 TOTP code (e.g. 123456) or 'type:value' (e.g.
+     *                 recovery:abcd-1234).
      * @return boolean indicating if login was successful
      * @throws PveExceptionAuthentication if authentication fails
      */
@@ -195,22 +197,40 @@ public class PveClientBase {
         params.put("password", password);
         params.put("username", username);
         params.put("realm", realm);
-        if (otp != null) {
-            params.put("otp", otp);
-        }
         var result = create("/access/ticket", params);
 
-        if (result.isSuccessStatusCode()) {
-            var dataNode = result.getData();
-            if (dataNode.has("NeedTFA")) {
+        if (result.isSuccessStatusCode() && result.getData().has("NeedTFA")) {
+            if (otp == null || otp.isBlank()) {
                 throw new PveExceptionAuthentication(result,
                         "Couldn't authenticate user: missing Two Factor Authentication (TFA)");
             }
 
+            // second step: the response to the challenge of the first one
+            var tfaParams = new java.util.HashMap<String, Object>();
+            tfaParams.put("password", getTfaResponse(otp));
+            tfaParams.put("username", username);
+            tfaParams.put("realm", realm);
+            tfaParams.put("tfa-challenge", result.getData().get("ticket").asText());
+            result = create("/access/ticket", tfaParams);
+        }
+
+        if (result.isSuccessStatusCode()) {
+            var dataNode = result.getData();
             _ticketCSRFPreventionToken = dataNode.get("CSRFPreventionToken").asText();
             _ticketPVEAuthCookie = dataNode.get("ticket").asText();
         }
         return result.isSuccessStatusCode();
+    }
+
+    /**
+     * Second factor as Proxmox VE expects it in the response to a TFA challenge:
+     * 'type:value'. A code without a type is a TOTP code.
+     *
+     * @param otp second factor
+     * @return response to the TFA challenge
+     */
+    static String getTfaResponse(String otp) {
+        return otp.contains(":") ? otp : "totp:" + otp;
     }
 
     /**
@@ -476,7 +496,7 @@ public class PveClientBase {
             if (logger.isLoggable(Level.FINE)) {
                 logger.log(Level.FINE, "Method: {0}, Url: {1}", new Object[] { httpMethod, url });
                 if (methodType != MethodType.GET && !params.isEmpty()) {
-                    var sensitiveParams = new String[] { "password", "token", "ticket", "otp", "apitoken" };
+                    var sensitiveParams = new String[] { "password", "token", "ticket", "otp", "apitoken", "tfa-challenge" };
                     var paramsStr = new StringBuilder("Parameters:");
                     params.forEach((key, value) -> {
                         var paramName = key.toLowerCase();
@@ -578,7 +598,9 @@ public class PveClientBase {
      * @param task    Task identifier
      * @param wait    Millisecond wait next check
      * @param timeOut Millisecond timeout
-     * @return boolean True if task finished within timeout, false otherwise
+     * @return boolean True if the task is finished, false if it is still running
+     *         at the timeout
+     * @throws PveResultException if the status of the task cannot be read
      */
     public boolean waitForTaskToFinish(String task, long wait, long timeOut) {
         var isRunning = true;
@@ -591,16 +613,17 @@ public class PveClientBase {
 
         var timeStart = System.currentTimeMillis();
         while (isRunning && (System.currentTimeMillis() - timeStart) < timeOut) {
-            isRunning = taskIsRunning(task);
             try {
                 Thread.sleep(wait);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
             }
+            isRunning = taskIsRunning(task);
         }
 
-        return System.currentTimeMillis() - timeStart < timeOut;
+        // finished, also when the last check came after the timeout
+        return !isRunning;
     }
 
     /**
@@ -608,9 +631,10 @@ public class PveClientBase {
      *
      * @param task Task identifier
      * @return boolean True if task is running, false otherwise
+     * @throws PveResultException if the status of the task cannot be read
      */
     public boolean taskIsRunning(String task) {
-        return readTaskStatus(task).getData().get("status").asText().equals("running");
+        return ensureTaskStatus(readTaskStatus(task), task).get("status").asText().equals("running");
     }
 
     /**
@@ -618,9 +642,11 @@ public class PveClientBase {
      *
      * @param task Task identifier
      * @return String Exit status of the task
+     * @throws PveResultException if the status of the task cannot be read
      */
     public String getExitStatusTask(String task) {
-        return readTaskStatus(task).getData().get("exitstatus").asText();
+        var exitStatus = ensureTaskStatus(readTaskStatus(task), task).get("exitstatus");
+        return exitStatus == null ? null : exitStatus.asText();
     }
 
     /**
@@ -641,5 +667,34 @@ public class PveClientBase {
      */
     private Result readTaskStatus(String task) {
         return get("/nodes/" + getNodeFromTask(task) + "/tasks/" + task + "/status", null);
+    }
+
+    /**
+     * Data of a task status result, checked before it is read, so that an API
+     * failure (node down, missing privilege) is reported with the HTTP status and
+     * the Proxmox VE error instead of a NullPointerException.
+     *
+     * @param result result of the status read
+     * @param task   task identifier
+     * @return data of the task status
+     * @throws PveResultException if the status of the task cannot be read
+     */
+    private static JsonNode ensureTaskStatus(Result result, String task) {
+        if (result == null) {
+            throw new PveResultException(null, "Read status of task '" + task + "' returned no result");
+        }
+
+        var inError = result.getResponse() != null && result.responseInError();
+        var data = result.getData();
+        if (inError || !result.isSuccessStatusCode() || data == null || data.isNull()) {
+            var detail = inError ? result.getError()
+                    : !result.isSuccessStatusCode() ? result.getReasonPhrase()
+                    : "response does not contain 'data'";
+
+            throw new PveResultException(result, "Read status of task '" + task + "' failed ("
+                    + result.getStatusCode() + " " + result.getReasonPhrase() + "): " + detail);
+        }
+
+        return data;
     }
 }
