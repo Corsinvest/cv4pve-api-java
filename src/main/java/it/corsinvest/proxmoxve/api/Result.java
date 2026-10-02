@@ -125,7 +125,8 @@ public class Result {
      * @return
      */
     public boolean responseInError() {
-        return _response.has("errors") && !_response.get("errors").isNull();
+        // no response at all when the request got no answer or the body is not JSON
+        return _response != null && _response.has("errors") && !_response.get("errors").isNull();
     }
 
     /**

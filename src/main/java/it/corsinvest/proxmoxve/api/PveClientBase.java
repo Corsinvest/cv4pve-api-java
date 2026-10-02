@@ -4,11 +4,10 @@
  */
 package it.corsinvest.proxmoxve.api;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.Proxy;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -24,8 +23,10 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * Proxmox VE Client Base
@@ -33,6 +34,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class PveClientBase {
 
     private static final Logger logger = Logger.getLogger(PveClientBase.class.getName());
+    private static final String[] SENSITIVE_NAMES = { "password", "token", "ticket", "otp", "apitoken", "tfa-challenge" };
 
     private String _ticketCSRFPreventionToken;
     private String _ticketPVEAuthCookie;
@@ -126,9 +128,10 @@ public class PveClientBase {
     }
 
     /**
-     * Set timeout connection
+     * Set the timeout of a request: the longest wait to connect and the longest
+     * wait for data once connected. 0, the default, means no limit.
      *
-     * @param timeout Connection timeout in milliseconds
+     * @param timeout Timeout in milliseconds
      */
     public void setTimeout(int timeout) {
         if (timeout < 0) {
@@ -138,9 +141,9 @@ public class PveClientBase {
     }
 
     /**
-     * Return timeout connection
+     * Return the timeout of a request
      *
-     * @return int Connection timeout in milliseconds
+     * @return int Timeout in milliseconds, 0 for no limit
      */
     public int getTimeout() {
         return _timeout;
@@ -149,17 +152,21 @@ public class PveClientBase {
     /**
      * Creation ticket from login.
      *
-     * @param username user name or &lt;username&gt;@&lt;realm&gt;
+     * @param username user name or &lt;username&gt;@&lt;realm&gt;; without a
+     *                 realm it is pam
      * @param password password connection
-     * @return boolean indicating if login was successful
-     * @throws PveExceptionAuthentication if authentication fails
+     * @return boolean true when Proxmox VE gave a ticket; when false the reason
+     *         is in {@link #getLastResult()}
+     * @throws PveExceptionAuthentication if the user needs a second factor
      */
     public boolean login(String username, String password) throws PveExceptionAuthentication {
         var realm = "pam";
-        var data = username.split("@");
-        if (data.length > 1) {
-            username = data[0];
-            realm = data[1];
+
+        // user@realm: the realm is what follows the last @
+        var at = username.lastIndexOf('@');
+        if (at > 0) {
+            realm = username.substring(at + 1);
+            username = username.substring(0, at);
         }
 
         return login(username, password, realm, null);
@@ -171,8 +178,9 @@ public class PveClientBase {
      * @param username user name
      * @param password password connection
      * @param realm    pam/pve or custom
-     * @return boolean indicating if login was successful
-     * @throws PveExceptionAuthentication if authentication fails
+     * @return boolean true when Proxmox VE gave a ticket; when false the reason
+     *         is in {@link #getLastResult()}
+     * @throws PveExceptionAuthentication if the user needs a second factor
      */
     public boolean login(String username, String password, String realm)
             throws PveExceptionAuthentication {
@@ -188,8 +196,10 @@ public class PveClientBase {
      * @param otp      Second factor of a user with two-factor authentication: a
      *                 TOTP code (e.g. 123456) or 'type:value' (e.g.
      *                 recovery:abcd-1234).
-     * @return boolean indicating if login was successful
-     * @throws PveExceptionAuthentication if authentication fails
+     * @return boolean true when Proxmox VE gave a ticket; when false the reason
+     *         is in {@link #getLastResult()}
+     * @throws PveExceptionAuthentication if the user needs a second factor and
+     *                                    otp is missing
      */
     public boolean login(String username, String password, String realm, String otp)
             throws PveExceptionAuthentication {
@@ -197,9 +207,10 @@ public class PveClientBase {
         params.put("password", password);
         params.put("username", username);
         params.put("realm", realm);
-        var result = create("/access/ticket", params);
+        var result = executeAction("/access/ticket", MethodType.CREATE, params, ResponseType.JSON);
 
-        if (result.isSuccessStatusCode() && result.getData().has("NeedTFA")) {
+        var data = result.getData();
+        if (result.isSuccessStatusCode() && data != null && data.has("NeedTFA")) {
             if (otp == null || otp.isBlank()) {
                 throw new PveExceptionAuthentication(result,
                         "Couldn't authenticate user: missing Two Factor Authentication (TFA)");
@@ -210,16 +221,22 @@ public class PveClientBase {
             tfaParams.put("password", getTfaResponse(otp));
             tfaParams.put("username", username);
             tfaParams.put("realm", realm);
-            tfaParams.put("tfa-challenge", result.getData().get("ticket").asText());
-            result = create("/access/ticket", tfaParams);
+            tfaParams.put("tfa-challenge", data.path("ticket").asText());
+            result = executeAction("/access/ticket", MethodType.CREATE, tfaParams, ResponseType.JSON);
+            data = result.getData();
         }
 
-        if (result.isSuccessStatusCode()) {
-            var dataNode = result.getData();
-            _ticketCSRFPreventionToken = dataNode.get("CSRFPreventionToken").asText();
-            _ticketPVEAuthCookie = dataNode.get("ticket").asText();
+        // logged only with a ticket: a success status alone (e.g. the page of a proxy) is not a login
+        if (!result.isSuccessStatusCode()
+                || data == null
+                || !data.hasNonNull("ticket")
+                || !data.hasNonNull("CSRFPreventionToken")) {
+            return false;
         }
-        return result.isSuccessStatusCode();
+
+        _ticketCSRFPreventionToken = data.get("CSRFPreventionToken").asText();
+        _ticketPVEAuthCookie = data.get("ticket").asText();
+        return true;
     }
 
     /**
@@ -234,12 +251,26 @@ public class PveClientBase {
     }
 
     /**
-     * Returns the base URL used to interact with the Proxmox VE API.
+     * Returns the base URL used to interact with the Proxmox VE API, for the
+     * response type of the client (json, png).
      *
      * @return The proxmox API URL.
      */
     public String getApiUrl() {
-        return "https://" + getHostname() + ":" + getPort() + "/api2/json";
+        return getApiUrl(getResponseType());
+    }
+
+    private String getApiUrl(ResponseType responseType) {
+        return getBaseAddress() + "/api2/" + (responseType == ResponseType.PNG ? "png" : "json");
+    }
+
+    /**
+     * Address of the node, without the path of the API.
+     *
+     * @return scheme, host and port
+     */
+    protected String getBaseAddress() {
+        return "https://" + getHostname() + ":" + getPort();
     }
 
     /**
@@ -315,9 +346,11 @@ public class PveClientBase {
         }
     }
 
-    private void setConnectionTimeout(HttpURLConnection httpCon) {
+    private void setTimeouts(HttpURLConnection httpCon) {
         if (_timeout > 0) {
+            // without the read timeout a node that accepts the connection and does not answer blocks forever
             httpCon.setConnectTimeout(_timeout);
+            httpCon.setReadTimeout(_timeout);
         }
     }
 
@@ -385,31 +418,81 @@ public class PveClientBase {
      *
      * @param httpCon HTTP connection
      * @param statusCode HTTP status code
-     * @return Response body as string
+     * @return Response body as it was sent
      * @throws IOException if reading fails
      */
-    private String readResponse(HttpURLConnection httpCon, int statusCode) throws IOException {
+    private byte[] readResponse(HttpURLConnection httpCon, int statusCode) throws IOException {
         // Choose the correct stream based on status code
         var stream = (statusCode >= 200 && statusCode < 400)
             ? httpCon.getInputStream()
             : httpCon.getErrorStream();
 
         if (stream == null) {
-            return "";
+            return new byte[0];
         }
 
-        try (var reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-            var sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line).append("\n");
-            }
-            return sb.toString();
+        try (stream) {
+            return stream.readAllBytes();
         }
     }
 
+    /**
+     * Reason for a body that is not JSON (a proxy page, another service on that
+     * port): it shows the start of the body.
+     */
+    private static String notJsonReason(int statusCode, String body) {
+        var start = (body.length() > 100 ? body.substring(0, 100) + "\u2026" : body)
+                .replaceAll("\\r\\n|\\r|\\n", " ")
+                .trim();
+        return "The answer is not JSON (HTTP " + statusCode + "): " + start;
+    }
+
+    private static boolean isSensitive(String name) {
+        var lower = name.toLowerCase();
+        for (var sensitive : SENSITIVE_NAMES) {
+            if (lower.contains(sensitive)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Copy of an answer for the log, without the secrets it carries: the ticket
+     * and the CSRF token of a login, the value of a new API token.
+     */
+    private static String maskSensitiveResponse(JsonNode response, String resource) {
+        if (response == null) {
+            return "null";
+        }
+
+        if (response.path("data").isObject()) {
+            var copy = response.deepCopy();
+            var data = (ObjectNode) copy.get("data");
+            var names = new java.util.ArrayList<String>();
+            data.fieldNames().forEachRemaining(names::add);
+            for (var name : names) {
+                if (isSensitive(name) || (name.equals("value") && resource.contains("/token"))) {
+                    data.put(name, "****");
+                }
+            }
+            return copy.toPrettyString();
+        }
+
+        return response.toPrettyString();
+    }
+
     private Result executeAction(String resource, MethodType methodType, Map<String, Object> parameters) {
-        var url = getApiUrl() + resource;
+        return executeAction(resource, methodType, parameters, getResponseType());
+    }
+
+    private Result executeAction(String resource,
+            MethodType methodType,
+            Map<String, Object> parameters,
+            ResponseType responseType) {
+        // the url without the query string is the one written in the log
+        var resourceUrl = getApiUrl(responseType) + resource;
+        var url = resourceUrl;
 
         // decode http method
         var httpMethod = switch (methodType) {
@@ -432,112 +515,84 @@ public class PveClientBase {
             });
         }
 
+        if (logger.isLoggable(Level.FINE)) {
+            logger.log(Level.FINE, "Method: {0}, Url: {1}", new Object[] { httpMethod, resourceUrl });
+            if (!params.isEmpty()) {
+                var paramsStr = new StringBuilder("Parameters:");
+                params.forEach((key, value) -> paramsStr.append("\n  ")
+                        .append(key)
+                        .append(" : ")
+                        .append(isSensitive(key) ? "****" : value));
+                logger.fine(paramsStr.toString());
+            }
+        }
+
         var statusCode = 0;
         var reasonPhrase = "";
         JsonNode response = null;
-        HttpURLConnection httpCon = null;
 
         try {
-            switch (methodType) {
-                case GET: {
-                    if (!params.isEmpty()) {
-                        url += "?" + buildQueryString(params);
-                    }
-
-                    httpCon = (HttpURLConnection) URI.create(url).toURL().openConnection(_proxy);
-
-                    // Configure SSL for this connection only (not global)
-                    if (httpCon instanceof HttpsURLConnection httpsConn) {
-                        configureTrustAllSSL(httpsConn);
-                    }
-
-                    httpCon.setRequestMethod("GET");
-                    setConnectionTimeout(httpCon);
-                    setToken(httpCon);
-                    break;
-                }
-
-                case SET:
-                case CREATE: {
-                    var data = objectMapper.writeValueAsString(params);
-                    httpCon = (HttpURLConnection) URI.create(url).toURL().openConnection(_proxy);
-
-                    // Configure SSL for this connection only (not global)
-                    if (httpCon instanceof HttpsURLConnection httpsConn) {
-                        configureTrustAllSSL(httpsConn);
-                    }
-
-                    httpCon.setRequestMethod(httpMethod);
-                    httpCon.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-                    httpCon.setRequestProperty("Content-Length", String.valueOf(data.length()));
-                    setConnectionTimeout(httpCon);
-                    setToken(httpCon);
-
-                    httpCon.setDoOutput(true);
-                    httpCon.getOutputStream().write(data.getBytes(StandardCharsets.UTF_8));
-                    break;
-                }
-
-                case DELETE: {
-                    httpCon = (HttpURLConnection) URI.create(url).toURL().openConnection(_proxy);
-
-                    // Configure SSL for this connection only (not global)
-                    if (httpCon instanceof HttpsURLConnection httpsConn) {
-                        configureTrustAllSSL(httpsConn);
-                    }
-
-                    httpCon.setRequestMethod("DELETE");
-                    setConnectionTimeout(httpCon);
-                    setToken(httpCon);
-                    break;
-                }
+            var hasBody = methodType == MethodType.SET || methodType == MethodType.CREATE;
+            if (!hasBody && !params.isEmpty()) {
+                url += "?" + buildQueryString(params);
             }
 
-            if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, "Method: {0}, Url: {1}", new Object[] { httpMethod, url });
-                if (methodType != MethodType.GET && !params.isEmpty()) {
-                    var sensitiveParams = new String[] { "password", "token", "ticket", "otp", "apitoken", "tfa-challenge" };
-                    var paramsStr = new StringBuilder("Parameters:");
-                    params.forEach((key, value) -> {
-                        var paramName = key.toLowerCase();
-                        var isSensitive = false;
-                        for (var p : sensitiveParams) {
-                            if (paramName.contains(p)) {
-                                isSensitive = true;
-                                break;
-                            }
-                        }
-                        paramsStr.append("\n  ").append(key).append(" : ").append(isSensitive ? "****" : value);
-                    });
-                    logger.fine(paramsStr.toString());
-                }
+            var httpCon = (HttpURLConnection) URI.create(url).toURL().openConnection(_proxy);
+
+            // Configure SSL for this connection only (not global)
+            if (httpCon instanceof HttpsURLConnection httpsConn) {
+                configureTrustAllSSL(httpsConn);
+            }
+
+            httpCon.setRequestMethod(httpMethod);
+            setTimeouts(httpCon);
+            setToken(httpCon);
+
+            if (hasBody) {
+                var data = objectMapper.writeValueAsString(params).getBytes(StandardCharsets.UTF_8);
+                httpCon.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                httpCon.setDoOutput(true);
+                httpCon.getOutputStream().write(data);
             }
 
             statusCode = httpCon.getResponseCode();
             reasonPhrase = httpCon.getResponseMessage();
 
             // Read response using the appropriate stream (success or error)
-            String responseBody = readResponse(httpCon, statusCode);
+            var body = readResponse(httpCon, statusCode);
 
-            if (!responseBody.isEmpty()) {
-                switch (getResponseType()) {
-                    case JSON:
-                        response = objectMapper.readTree(responseBody);
-                        break;
-
-                    case PNG:
-                        response = objectMapper.createObjectNode()
-                                .put("data", "data:image/png;base64,"
-                                        + Base64.getEncoder().encodeToString(responseBody.getBytes(StandardCharsets.UTF_8)));
-                        break;
-
-                    default:
-                        throw new AssertionError();
+            if (body.length > 0) {
+                if (responseType == ResponseType.PNG && statusCode == HttpURLConnection.HTTP_OK) {
+                    response = objectMapper.createObjectNode()
+                            .put("data", "data:image/png;base64," + Base64.getEncoder().encodeToString(body));
+                } else {
+                    // json, or the error answer of a png request
+                    var text = new String(body, StandardCharsets.UTF_8);
+                    try {
+                        response = objectMapper.readTree(text);
+                    } catch (JsonProcessingException ex) {
+                        // not an answer of the API: keep the HTTP status (a success becomes
+                        // 502, since the answer cannot be used) and show the start of the body
+                        logger.log(Level.FINE, "The answer is not JSON", ex);
+                        reasonPhrase = notJsonReason(statusCode, text);
+                        if (statusCode >= 200 && statusCode <= 299) {
+                            statusCode = HttpURLConnection.HTTP_BAD_GATEWAY;
+                        }
+                    }
                 }
             }
 
+        } catch (SocketTimeoutException ex) {
+            logger.log(Level.SEVERE, "Request timed out", ex);
+            statusCode = HttpURLConnection.HTTP_CLIENT_TIMEOUT;
+            reasonPhrase = "Request timed out after " + _timeout + " ms: " + ex.getMessage();
+            response = null;
         } catch (IOException ex) {
+            // the request got no answer: name not resolved, connection refused, certificate refused
             logger.log(Level.SEVERE, "Error executing request", ex);
+            statusCode = 0;
+            reasonPhrase = ex.getClass().getSimpleName() + ": " + ex.getMessage();
+            response = null;
         }
 
         _lastResult = new Result(response,
@@ -546,7 +601,7 @@ public class PveClientBase {
                 resource,
                 parameters,
                 methodType,
-                getResponseType());
+                responseType);
 
         if (logger.isLoggable(Level.FINER)) {
             logger.log(Level.FINER, """
@@ -557,7 +612,7 @@ public class PveClientBase {
                     =============================
                     """,
                     new Object[] {
-                            response != null ? response.toPrettyString() : "null",
+                            maskSensitiveResponse(response, resource),
                             _lastResult.getStatusCode(),
                             _lastResult.getReasonPhrase(),
                             _lastResult.isSuccessStatusCode()
@@ -641,7 +696,8 @@ public class PveClientBase {
      * Return exit status code task
      *
      * @param task Task identifier
-     * @return String Exit status of the task
+     * @return String Exit status of the task ('OK', 'WARNINGS: n' or the error);
+     *         null while the task is running
      * @throws PveResultException if the status of the task cannot be read
      */
     public String getExitStatusTask(String task) {
@@ -652,10 +708,14 @@ public class PveClientBase {
     /**
      * Get node from task
      *
-     * @param task Task
-     * @return String
+     * @param task Task identifier (UPID)
+     * @return String Node of the task
+     * @throws PveResultException if the task identifier is not valid
      */
     public static String getNodeFromTask(String task) {
+        if (task == null || !task.matches("UPID:[^:]+:.*")) {
+            throw new PveResultException(null, "'" + task + "' is not a valid task identifier (UPID)");
+        }
         return task.split(":")[1];
     }
 
@@ -666,7 +726,10 @@ public class PveClientBase {
      * @return Result containing task status information
      */
     private Result readTaskStatus(String task) {
-        return get("/nodes/" + getNodeFromTask(task) + "/tasks/" + task + "/status", null);
+        return executeAction("/nodes/" + getNodeFromTask(task) + "/tasks/" + task + "/status",
+                MethodType.GET,
+                null,
+                ResponseType.JSON);
     }
 
     /**

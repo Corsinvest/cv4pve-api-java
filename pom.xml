@@ -60,6 +60,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>17</maven.compiler.release>
         <jackson.version>2.18.11</jackson.version>
+        <junit.version>6.1.3</junit.version>
+        <!-- Tests tagged 'live' need a real Proxmox VE: run them with -P live -->
+        <test.groups/>
+        <test.excludedGroups>live</test.excludedGroups>
     </properties>
 
     <!-- === DEPENDENCIES === -->
@@ -79,6 +83,14 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
             <version>${jackson.version}</version>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -164,14 +176,14 @@
                 </configuration>
             </plugin>
 
-            <!-- Exec plugin for running test examples -->
+            <!-- Tests -->
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.6.3</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.6</version>
                 <configuration>
-                    <mainClass>it.corsinvest.proxmoxve.api.Test</mainClass>
-                    <classpathScope>test</classpathScope>
+                    <groups>${test.groups}</groups>
+                    <excludedGroups>${test.excludedGroups}</excludedGroups>
                 </configuration>
             </plugin>
         </plugins>
@@ -183,6 +195,15 @@
             <id>dev</id>
             <properties>
                 <gpg.skip>true</gpg.skip>
+            </properties>
+        </profile>
+
+        <!-- Only the tests on a real Proxmox VE (PVE_HOST, PVE_API_TOKEN, PVE_TEST_VMID) -->
+        <profile>
+            <id>live</id>
+            <properties>
+                <test.groups>live</test.groups>
+                <test.excludedGroups/>
             </properties>
         </profile>
 
