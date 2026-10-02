@@ -27,14 +27,14 @@ Proxmox VE API Client for Java (Made in Italy)
 <dependency>
     <groupId>it.corsinvest.proxmoxve</groupId>
     <artifactId>cv4pve-api-java</artifactId>
-    <version>9.1.1</version>
+    <version>9.2.2</version>
 </dependency>
 ```
 
 **Gradle**
 
 ```gradle
-implementation 'it.corsinvest.proxmoxve:cv4pve-api-java:9.1.1'
+implementation 'it.corsinvest.proxmoxve:cv4pve-api-java:9.2.2'
 ```
 
 ### Basic Usage
