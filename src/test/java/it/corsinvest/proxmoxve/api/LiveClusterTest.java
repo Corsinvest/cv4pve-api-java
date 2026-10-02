@@ -11,6 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.BeforeAll;
@@ -193,5 +195,57 @@ class LiveClusterTest {
         }
 
         assertFalse(hasSnapshot(ok(vm.getSnapshot().snapshotList()).getData(), name));
+    }
+
+    @Test
+    void chartOfANodeIsAPngImage() {
+        var node = ok(client.getNodes().index()).getData().get(0).path("node").asText();
+        var parameters = new HashMap<String, Object>();
+        parameters.put("ds", "cpu");
+        parameters.put("timeframe", "hour");
+
+        client.setResponseType(ResponseType.PNG);
+        Result result;
+        try {
+            result = client.get("/nodes/" + node + "/rrd", parameters);
+        } finally {
+            client.setResponseType(ResponseType.JSON);
+        }
+
+        assertTrue(result.isSuccessStatusCode(), () -> result.getStatusCode() + " " + result.getReasonPhrase());
+        var prefix = "data:image/png;base64,";
+        var uri = result.getData().asText();
+        assertTrue(uri.startsWith(prefix));
+        var bytes = Base64.getDecoder().decode(uri.substring(prefix.length()));
+        // signature of a PNG file
+        assertEquals((byte) 0x89, bytes[0]);
+        assertEquals("PNG", new String(bytes, 1, 3, java.nio.charset.StandardCharsets.US_ASCII));
+    }
+
+    @Test
+    void reasonOfAnErrorIsTheMessageOfProxmoxVe() {
+        var node = ok(client.getNodes().index()).getData().get(0).path("node").asText();
+
+        var result = client.get("/nodes/" + node + "/qemu/999999/config", null);
+
+        assertFalse(result.isSuccessStatusCode());
+        assertTrue(result.getReasonPhrase().contains("does not exist"), result.getReasonPhrase());
+        assertFalse(result.responseInError());
+    }
+
+    @Test
+    void selfSignedCertificateIsRefusedWhenValidated() {
+        var strict = new PveClient(client.getHostname(), client.getPort());
+        strict.setApiToken(client.getApiToken());
+        strict.setTimeout(10000);
+        strict.setValidateCertificate(true);
+
+        var result = strict.getVersion().version();
+
+        // a node with a certificate of a trusted authority answers 200: nothing to check there
+        assumeTrue(!result.isSuccessStatusCode(), "the node has a trusted certificate");
+        assertEquals(0, result.getStatusCode());
+        assertFalse(result.getReasonPhrase().isEmpty());
+        assertEquals("", result.getError());
     }
 }
