@@ -50,6 +50,9 @@ var guests = select(client, "production");
 System.out.println(guests.size() + " guests selected");
 ```
 
+Proxmox VE refreshes the cluster resources every few seconds: a guest created or changed a moment
+before can still show its old status, or a name such as `VM 108` in place of its own.
+
 The examples below use this helper for the outcome of a task: `OK`, the reason of the failure, or that
 it is still running.
 
