@@ -4,7 +4,7 @@
 <dependency>
     <groupId>it.corsinvest.proxmoxve</groupId>
     <artifactId>cv4pve-api-java</artifactId>
-    <version>9.2.2</version>
+    <version>9.2.3</version>
 </dependency>
 ```
 
