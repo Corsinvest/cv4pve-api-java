@@ -78,7 +78,8 @@ snapshot = vm.getSnapshot().snapshot("before-update", null, true);
 ```
 
 - Names are those of the API. A `-` in a name becomes `_`: `force-cpu` is `force_cpu`.
-- Booleans are `Boolean` and are sent as `1` or `0`.
+- Required parameters have primitive types (`int`, `boolean`), the optional ones the wrapper types
+  (`Integer`, `Boolean`), so that they can be `null`. Booleans are sent as `1` or `0`.
 - Parameters that exist with an index (`net0`, `net1`, `scsi0`) are one `Map<Integer, String>`
   argument, `netN`, `scsiN`: see [Indexed parameters](/cv4pve-api-java/concepts/indexed-parameters/).
 - Type, format and allowed values of each parameter are in the API viewer; the client sends what you
