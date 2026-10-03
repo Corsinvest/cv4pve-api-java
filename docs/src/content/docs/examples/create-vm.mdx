@@ -1,0 +1,149 @@
+---
+title: Create a VM
+description: "Create a VM from Java: an empty VM with an installer ISO, or a clone of a cloud-init template with its network and SSH key, waiting for each task."
+---
+
+Two complete ways to get a new VM. Both use a small helper that waits for a task and throws if the
+call or the task failed, so the steps read in sequence:
+
+```java
+import java.util.LinkedHashMap;
+import it.corsinvest.proxmoxve.api.PveClient;
+import it.corsinvest.proxmoxve.api.Result;
+
+static void ensureDone(PveClient client, Result result, int timeoutSeconds) {
+    if (!result.isSuccessStatusCode()) {
+        throw new IllegalStateException(result.responseInError()
+                ? result.getError()
+                : result.getStatusCode() + " " + result.getReasonPhrase());
+    }
+
+    // calls that finish at once return no task
+    var data = result.getData();
+    if (data == null || !data.isTextual() || !data.asText().startsWith("UPID:")) {
+        return;
+    }
+
+    var upid = data.asText();
+    if (!client.waitForTaskToFinish(upid, 1000, timeoutSeconds * 1000L)) {
+        throw new IllegalStateException("Task still running after " + timeoutSeconds + " seconds: " + upid);
+    }
+
+    var exitStatus = client.getExitStatusTask(upid);
+    if (!exitStatus.equals("OK") && !exitStatus.startsWith("WARNINGS")) {
+        throw new IllegalStateException("Task failed: " + exitStatus);
+    }
+}
+```
+
+Why both checks are needed is in [Tasks](/cv4pve-api-java/concepts/tasks/).
+
+The parameters of a VM go in a map, sent with a
+[raw call](/cv4pve-api-java/concepts/api-structure/#raw-calls): the generated `createVm` and
+`updateVm` take about a hundred parameters by position.
+
+## An empty VM with an installer
+
+A VM with a new disk, a network card and the installer ISO in the CD-ROM drive, ready to be installed
+from the console.
+
+```java
+var node = "pve01";
+
+var vmId = client.getCluster().getNextid().nextid().getData().asInt();
+
+var parameters = new LinkedHashMap<String, Object>();
+parameters.put("vmid", vmId);
+parameters.put("name", "debian13");
+parameters.put("ostype", "l26");
+parameters.put("memory", 4096);
+parameters.put("cores", 2);
+parameters.put("cpu", "x86-64-v2-AES");
+parameters.put("scsihw", "virtio-scsi-single");
+parameters.put("scsi0", "local-lvm:32,discard=on,iothread=1");
+parameters.put("ide2", "local:iso/debian-13.1.0-amd64-netinst.iso,media=cdrom");
+parameters.put("net0", "model=virtio,bridge=vmbr0,firewall=1");
+parameters.put("boot", "order=scsi0;ide2");
+parameters.put("agent", "1");
+
+ensureDone(client, client.create("/nodes/" + node + "/qemu", parameters), 60);
+
+ensureDone(client, client.getNodes().get(node).getQemu().get(vmId).getStatus().getStart().vmStart(), 60);
+
+System.out.println("VM " + vmId + " created and started");
+```
+
+The format of disks and network is in
+[Indexed parameters](/cv4pve-api-java/concepts/indexed-parameters/). The storage names (`local-lvm`,
+`local`), the bridge and the ISO are those of your node.
+
+## A clone of a cloud-init template
+
+The fast way to a working system: a template made once from a cloud image, with a cloud-init drive,
+cloned for each new VM. The template is prepared as described in
+[Cloud-Init Support](https://pve.proxmox.com/pve-docs/chapter-qm.html#qm_cloud_init); here it is VM
+9000.
+
+```java
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+var node = "pve01";
+var templateId = 9000;
+
+var vmId = client.getCluster().getNextid().nextid().getData().asInt();
+var publicKey = Files.readString(Path.of("id_ed25519.pub")).trim();
+
+// 1. clone: a full copy can take minutes
+//    newid, bwlimit, description, format, full, name, pool, snapname, storage, target
+var result = client.getNodes().get(node).getQemu().get(templateId).getClone()
+        .cloneVm(vmId, null, null, null, true, "web02", null, null, null, null);
+ensureDone(client, result, 900);
+
+var vm = client.getNodes().get(node).getQemu().get(vmId);
+
+// 2. resources and cloud-init: user, key, address
+var config = new LinkedHashMap<String, Object>();
+config.put("cores", 2);
+config.put("memory", 4096);
+config.put("ciuser", "admin");
+config.put("sshkeys", URLEncoder.encode(publicKey, StandardCharsets.UTF_8).replace("+", "%20"));
+config.put("ipconfig0", "ip=192.168.1.102/24,gw=192.168.1.1");
+config.put("nameserver", "192.168.1.1");
+ensureDone(client, client.set("/nodes/" + node + "/qemu/" + vmId + "/config", config), 60);
+
+// 3. grow the disk of the image to 32 GiB
+ensureDone(client, vm.getResize().resizeVm("scsi0", "32G"), 60);
+
+// 4. start
+ensureDone(client, vm.getStatus().getStart().vmStart(), 60);
+
+System.out.println("VM " + vmId + " is starting at 192.168.1.102");
+```
+
+The source here is a template, so with `full` as `false` or `null` the clone is a linked clone: it is
+created at once and shares the disk of the template, which then cannot be removed. A VM that is not a
+template is always cloned in full.
+
+## Remove a VM
+
+```java
+var vm = client.getNodes().get("pve01").getQemu().get(121);
+
+ensureDone(client, vm.getStatus().getStop().vmStop(), 60);
+
+// destroy_unreferenced_disks, purge, skiplock
+ensureDone(client, vm.destroyVm(null, true, null), 60);
+```
+
+`purge` also removes the VM from backup jobs, replication and HA. There is no confirmation: the disks
+are deleted.
+
+## Permissions
+
+Creating and cloning need `VM.Allocate` on `/vms` (or on the pool), `Datastore.AllocateSpace` on the
+storage, `SDN.Use` on the bridge, and `VM.Clone` on the template for a clone. The options given when
+creating, and the configuration changes after it, need the matching `VM.Config.*` privileges: see
+[Permissions](/cv4pve-api-java/permissions/).

@@ -1,0 +1,106 @@
+---
+title: Troubleshooting
+description: "See what the client sends to Proxmox VE, and fix the errors met most often: authentication, permissions, certificates, timeouts, failed tasks."
+---
+
+## Logging
+
+The client logs through `java.util.logging`, with the logger `it.corsinvest.proxmoxve.api`. Raise its
+level, and the level of a handler, to see what it sends and receives:
+
+```java
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+var logger = Logger.getLogger("it.corsinvest.proxmoxve.api");
+logger.setLevel(Level.FINE);
+
+var handler = new ConsoleHandler();
+handler.setLevel(Level.FINE);
+logger.addHandler(handler);
+```
+
+The handler is needed because the default console handler of the JVM shows only `INFO` and above.
+
+| Level | What is logged |
+|---|---|
+| `FINE` | Method and URL of every request, without the query string, and its parameters |
+| `FINER` | Also the JSON of every response, with status code and reason |
+| `SEVERE` | The exception of a request that got no answer (connection, certificate) or timed out |
+
+Compare the URL and the parameters with the endpoint in the
+[Proxmox VE API viewer](https://pve.proxmox.com/pve-docs/api-viewer/): most problems are a parameter
+with the wrong name or value.
+
+The parameters whose name contains `password`, `token`, `ticket` or `otp` are logged as `****`, and so
+are the ticket and the CSRF token in the answer of a login. Other values are logged as they are:
+check the output before you share it.
+
+An application that uses SLF4J or Log4j routes `java.util.logging` to it with the bridge of that
+library (`jul-to-slf4j`, `log4j-jul`).
+
+## Without a logger
+
+Every call returns a `Result`, and the last one is also in `client.getLastResult()`:
+
+```java
+var result = client.getLastResult();
+System.out.println(result.getMethodType() + " " + result.getRequestResource() + " "
+        + result.getStatusCode() + " " + result.getReasonPhrase());
+```
+
+## Status codes
+
+A failed call does not throw: it returns a `Result` with `isSuccessStatusCode()` `false`. What the
+status code means:
+
+| Status | Meaning | What to do |
+|---|---|---|
+| 0 | The request got no answer: name not resolved, connection refused, certificate refused. `getReasonPhrase()` has the exception | Check host, port and network; for a certificate see [Connection](/cv4pve-api-java/connection/#certificate) |
+| 400 | Proxmox VE refused the parameters. `responseInError()` is `true` and `getError()` lists each parameter with its problem | Fix the parameter named in the error |
+| 401 | The token or the ticket was refused: the token is wrong or revoked, or the ticket is older than two hours | Check the token, or log in again |
+| 403 | Authenticated, but without the privilege the endpoint requires on that path | Check the roles of the user and, with privilege separation, of the token: [Permissions](/cv4pve-api-java/permissions/) |
+| 408 | The request ran out of time: the timeout of the client | Check that the node answers; raise the timeout if the endpoint is slow |
+| 500 | Proxmox VE could not do what was asked. The reason is in `getReasonPhrase()`, for example `Configuration file 'nodes/pve01/qemu-server/999.conf' does not exist` for a VM id that does not exist | Read the reason |
+| 501 | The endpoint does not exist on that node: the cluster is older than the library | Check the Proxmox VE version: [Versions](/cv4pve-api-java/concepts/api-structure/#versions) |
+| 502 | The answer is not JSON: something that is not the Proxmox VE API answered. `getReasonPhrase()` shows the start of what it sent | Check host and port, and proxies in between |
+
+More in [Errors](/cv4pve-api-java/concepts/errors/).
+
+## `NullPointerException` reading the data
+
+`getData()` returns `null` when the call got no JSON answer, and `get("name")` on a `JsonNode` returns
+`null` for a member that is not there. It happens most often when the call failed and the code reads
+its data anyway. Check `isSuccessStatusCode()` first, and read optional members with `path("name")`,
+which never returns `null`: see [Results](/cv4pve-api-java/concepts/results/#reading-the-data).
+
+## `PveExceptionAuthentication`: missing two-factor authentication
+
+The user has two-factor authentication and `login` was called without the second factor: see
+[Connection](/cv4pve-api-java/connection/#two-factor-authentication). An API token needs none.
+
+## A call that never returns
+
+Without a timeout a request waits for the node as long as it takes. Set one:
+[Connection](/cv4pve-api-java/connection/#timeout).
+
+## An empty list
+
+A list that comes back empty with status 200 may mean an account without privileges: Proxmox VE leaves
+out what the caller may not see instead of returning an error. See
+[Permissions](/cv4pve-api-java/permissions/#how-missing-privileges-are-reported).
+
+## The call succeeded but nothing changed
+
+Starting a VM, a clone, a backup or a snapshot only *starts a task*: the successful `Result` says the
+task was accepted, not that it ended well. Wait for the task and read its exit status: see
+[Tasks](/cv4pve-api-java/concepts/tasks/).
+
+## Reporting a problem
+
+Open an [issue](https://github.com/Corsinvest/cv4pve-api-java/issues) with:
+
+- the version of the library and of Java (`java -version`)
+- the Proxmox VE version: `client.getVersion().version().getData().get("version").asText()`
+- the code of the call and the `FINE` log of the request, without tokens or passwords

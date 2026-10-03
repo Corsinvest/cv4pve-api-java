@@ -3,8 +3,11 @@ name: Build and Test
 on:
   push:
     branches: [ master ]
+    paths: [ "src/**", "pom.xml", ".github/workflows/maven-build.yml" ]
   pull_request:
     branches: [ master ]
+    paths: [ "src/**", "pom.xml", ".github/workflows/maven-build.yml" ]
+  workflow_dispatch:
 
 permissions:
   contents: read

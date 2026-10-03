@@ -1,0 +1,144 @@
+---
+title: Results
+description: "Every call returns a Result: the HTTP outcome and the Proxmox VE data as a Jackson JsonNode. Reading objects, lists, optional members, and charts as PNG."
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Every method of the client returns a `Result`. It holds two things: how the HTTP request went, and what
+Proxmox VE answered.
+
+```java
+var result = client.getNodes().get("pve01").getQemu().get(100).getStatus().getCurrent().vmStatus();
+
+if (result.isSuccessStatusCode()) {
+    System.out.println(result.getData().get("status").asText());
+}
+```
+
+## The Result
+
+| Method | What it is |
+|---|---|
+| `isSuccessStatusCode()` | `true` when the HTTP status is 200 |
+| `getStatusCode()`, `getReasonPhrase()` | HTTP status and its text. On a failure Proxmox VE puts the reason here |
+| `getResponse()` | The JSON answer as a Jackson `JsonNode`; `null` when there is none |
+| `getData()` | The `data` member of the answer: what the API returns. `null` when there is no answer |
+| `responseInError()` | `true` when the answer has an `errors` member: Proxmox VE refused one or more parameters |
+| `getError()` | The refused parameters, one per line, as `name : message` |
+| `getRequestResource()`, `getRequestParameters()`, `getMethodType()` | What was asked: path, parameters, and `GET`, `SET`, `CREATE` or `DELETE` |
+| `getResponseType()` | `JSON` or `PNG` |
+
+A failed call does not throw: [Errors](/cv4pve-api-java/concepts/errors/) explains what to check.
+
+## Reading the data
+
+`getData()` is what the API viewer shows under *Returns*: an object, a list or a single value, as a
+[`JsonNode`](https://javadoc.io/doc/com.fasterxml.jackson.core/jackson-databind/latest/com/fasterxml/jackson/databind/JsonNode.html).
+
+```java
+import com.fasterxml.jackson.databind.JsonNode;
+
+// an object: its members by name
+var status = result.getData();
+System.out.println("VM " + status.get("vmid").asInt() + ": " + status.get("status").asText()
+        + ", " + status.get("cpus").asInt() + " CPUs");
+
+// a list: usable with for
+var vms = client.getNodes().get("pve01").getQemu().vmlist().getData();
+for (JsonNode vm : vms) {
+    if (vm.get("status").asText().equals("running")) {
+        System.out.println(vm.get("vmid").asInt() + " " + vm.path("name").asText());
+    }
+}
+
+// a single value, for example the id of a task
+var upid = client.getNodes().get("pve01").getQemu().get(100).getStatus().getStart().vmStart()
+        .getData().asText();
+```
+
+<Aside type="caution">
+`get("name")` returns `null` for a member that Proxmox VE leaves out, and many are optional: for
+example `name`, `cores` and `description` in the configuration of a VM, which are not returned when
+they have no value or the default one. On a failed call `getData()` itself is `null`. Check
+`isSuccessStatusCode()` first, and read optional members with `path`.
+</Aside>
+
+### Optional members
+
+`path("name")` never returns `null`: for a missing member it gives a node whose `asText`, `asInt` and
+the others return the default you pass. `has("name")` tells whether the member is there.
+
+```java
+var config = client.getNodes().get("pve01").getQemu().get(100).getConfig().vmConfig().getData();
+
+// path() never returns null: a missing member reads as the default
+var name = config.path("name").asText("(no name)");
+var cores = config.path("cores").asInt(1);
+
+if (config.has("net0")) {
+    System.out.println(config.get("net0").asText());
+}
+```
+
+### Every member
+
+```java
+config.fields().forEachRemaining(entry ->
+        System.out.println(entry.getKey() + " = " + entry.getValue().asText()));
+```
+
+### Your own classes
+
+Jackson converts a node to a class or a record of yours. Tell it to ignore the members you did not
+declare, since Proxmox VE returns more than you need and adds new ones over time:
+
+```java
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+record Vm(int vmid, String name, String status) {
+}
+
+var mapper = new ObjectMapper();
+for (JsonNode node : client.getNodes().get("pve01").getQemu().vmlist().getData()) {
+    var vm = mapper.treeToValue(node, Vm.class);
+    System.out.println(vm.vmid() + " " + vm.name() + " " + vm.status());
+}
+```
+
+## Charts as PNG
+
+Proxmox VE can answer the `rrd` endpoints with a chart instead of data. Set the response type to
+`PNG` before the call: the data is then a string with the image as a data URI, ready for the `src` of
+an `img` tag.
+
+```java
+import it.corsinvest.proxmoxve.api.ResponseType;
+import it.corsinvest.proxmoxve.api.Result;
+
+client.setResponseType(ResponseType.PNG);
+Result chart;
+try {
+    chart = client.getNodes().get("pve01").getRrd().rrd("cpu", "day");
+} finally {
+    client.setResponseType(ResponseType.JSON);
+}
+
+if (chart.isSuccessStatusCode()) {
+    var dataUri = chart.getData().asText();   // data:image/png;base64,...
+
+    var bytes = Base64.getDecoder().decode(dataUri.substring(dataUri.indexOf(',') + 1));
+    Files.write(Path.of("cpu.png"), bytes);
+}
+```
+
+The response type belongs to the client, not to the call: set it back to `JSON`, the default, before
+the other calls. A PNG call that fails has the status and the errors of any other failed call.
+
+## The last result
+
+`client.getLastResult()` is the `Result` of the last request, also when a helper made the call for
+you: a failed `login` returns `false`, and the reason is in
+`client.getLastResult().getReasonPhrase()`.
