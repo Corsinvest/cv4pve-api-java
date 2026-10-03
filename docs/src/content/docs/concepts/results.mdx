@@ -60,8 +60,9 @@ var upid = client.getNodes().get("pve01").getQemu().get(100).getStatus().getStar
 <Aside type="caution">
 `get("name")` returns `null` for a member that Proxmox VE leaves out, and many are optional: for
 example `name`, `cores` and `description` in the configuration of a VM, which are not returned when
-they have no value or the default one. On a failed call `getData()` itself is `null`. Check
-`isSuccessStatusCode()` first, and read optional members with `path`.
+they have no value or the default one. On a failed call there is no data: `getData()` is `null` when
+the request got no JSON answer, and an empty node, whose `get("name")` returns `null`, when Proxmox VE
+answered with an error. Check `isSuccessStatusCode()` first, and read optional members with `path`.
 </Aside>
 
 ### Optional members

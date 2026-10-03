@@ -37,11 +37,13 @@ var finished = client.waitForTaskToFinish(upid, 2000, 600000);
 
 It reads the status of the task at each interval until the task stops, and returns `true` if it
 stopped, `false` if it is still running when the time runs out. Set the time to the longest the task
-may take: seconds for a start or a snapshot, minutes for a clone, a migration or a backup.
+may take: seconds for a start or a snapshot, minutes for a clone, a migration or a backup. An interval
+of 0 or less becomes 500 milliseconds, and a time shorter than the interval becomes the interval plus
+5 seconds.
 
 <Aside type="caution">
 Check `isSuccessStatusCode()` of the call before reading the UPID, as above: a call that failed has
-no task, and `getData()` is `null`.
+no task, and no data to read the UPID from.
 </Aside>
 
 To check without waiting, `taskIsRunning(upid)` returns `true` while the task runs.
