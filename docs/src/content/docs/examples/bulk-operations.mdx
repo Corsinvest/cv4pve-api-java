@@ -1,0 +1,152 @@
+---
+title: Bulk operations
+description: "Act on many VMs and containers at once from Java: select them by tag, start the tasks, wait for all of them and report which failed."
+---
+
+The same action on many guests: a snapshot of every production VM before an update, a shutdown of a
+lab every evening. The pattern is always select, start, wait, report.
+
+```java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import com.fasterxml.jackson.databind.JsonNode;
+import it.corsinvest.proxmoxve.api.PveClient;
+import it.corsinvest.proxmoxve.api.Result;
+```
+
+## Select
+
+`/cluster/resources` returns every guest with its node and type, so the rest of the code needs no
+lookup. A small record keeps what is needed:
+
+```java
+record Guest(int vmId, String name, String node, String type, String status) {
+    boolean isRunning() {
+        return status.equals("running");
+    }
+}
+
+static List<Guest> select(PveClient client, String tag) {
+    var guests = new ArrayList<Guest>();
+    for (JsonNode vm : client.getCluster().getResources().resources("vm").getData()) {
+        var tags = List.of(vm.path("tags").asText().split(";"));
+        if (tags.contains(tag) && vm.path("template").asInt() == 0) {
+            guests.add(new Guest(vm.get("vmid").asInt(),
+                    vm.path("name").asText(),
+                    vm.get("node").asText(),
+                    vm.get("type").asText(),
+                    vm.get("status").asText()));
+        }
+    }
+    return guests;
+}
+```
+
+```java
+// every guest with the tag "production", except the templates
+var guests = select(client, "production");
+
+System.out.println(guests.size() + " guests selected");
+```
+
+The examples below use this helper for the outcome of a task: `OK`, the reason of the failure, or that
+it is still running.
+
+```java
+static String outcome(PveClient client, Result result, long timeout) {
+    if (!result.isSuccessStatusCode()) {
+        return result.getStatusCode() + " " + result.getReasonPhrase();
+    }
+
+    var upid = result.getData().asText();
+    return client.waitForTaskToFinish(upid, 2000, timeout)
+            ? client.getExitStatusTask(upid)
+            : "still running after " + timeout / 60000 + " minutes";
+}
+```
+
+## One at a time
+
+The simplest form, and the right one when the operations should not load the storage together: a
+snapshot of each guest, waiting for one before starting the next.
+
+```java
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+var name = "auto" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmm"));
+var failed = new ArrayList<String>();
+
+for (var guest : guests) {
+    var node = client.getNodes().get(guest.node());
+    var result = guest.type().equals("qemu")
+            ? node.getQemu().get(guest.vmId()).getSnapshot().snapshot(name, "Before the update", null)
+            : node.getLxc().get(guest.vmId()).getSnapshot().snapshot(name, "Before the update");
+
+    var outcome = outcome(client, result, 300000);
+
+    System.out.println(guest.vmId() + " " + guest.name() + ": " + outcome);
+    if (!outcome.equals("OK") && !outcome.startsWith("WARNINGS")) {
+        failed.add(guest.vmId() + " " + guest.name());
+    }
+}
+
+if (!failed.isEmpty()) {
+    System.out.println("Failed: " + String.join(", ", failed));
+}
+```
+
+## All together
+
+To shut down many guests the waiting can overlap: start every task, then wait for all of them. The
+path is the same for a VM and a container except for the type, so a raw call covers both.
+
+```java
+// start: each call returns as soon as its task is accepted
+var started = new LinkedHashMap<Guest, Result>();
+for (var guest : guests) {
+    if (guest.isRunning()) {
+        started.put(guest, client.create(
+                "/nodes/" + guest.node() + "/" + guest.type() + "/" + guest.vmId() + "/status/shutdown",
+                null));
+    }
+}
+
+// wait: the tasks are already running together, so the total time is the longest one
+started.forEach((guest, result) ->
+        System.out.println(guest.vmId() + " " + guest.name() + ": " + outcome(client, result, 300000)));
+```
+
+The tasks run on the nodes, not in the application: once started they go on together, and waiting for
+them one after the other takes as long as the slowest. No threads are needed.
+
+## How many at once
+
+Proxmox VE accepts every task you start. To limit how many run at the same time (a rolling reboot, or
+operations that are heavy on disk and network) work in batches, and wait for a batch before starting
+the next:
+
+```java
+var running = guests.stream().filter(Guest::isRunning).toList();
+
+for (var from = 0; from < running.size(); from += 4) {
+    var batch = running.subList(from, Math.min(from + 4, running.size()));
+
+    // start the batch
+    var rebooting = new LinkedHashMap<Guest, Result>();
+    for (var guest : batch) {
+        rebooting.put(guest, client.create(
+                "/nodes/" + guest.node() + "/" + guest.type() + "/" + guest.vmId() + "/status/reboot",
+                null));
+    }
+
+    // wait for it, up to 10 minutes each
+    rebooting.forEach((guest, result) ->
+            System.out.println(guest.vmId() + ": " + outcome(client, result, 600000)));
+}
+```
+
+Backups need no batches: a node runs one backup at a time and the others wait for it. For backups on a
+schedule, a backup job of Proxmox VE itself is the better tool. For snapshots with retention see
+[cv4pve-autosnap](https://corsinvest.github.io/cv4pve-autosnap/).

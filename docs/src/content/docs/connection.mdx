@@ -1,0 +1,138 @@
+---
+title: Connection
+description: Connect to Proxmox VE from Java with an API token or a user and password, two-factor authentication, certificate validation, timeout and proxy.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+A `PveClient` talks to one node, on the port you give:
+
+```java
+import it.corsinvest.proxmoxve.api.PveClient;
+
+var client = new PveClient("pve01", 8006);
+var other = new PveClient("pve02.example.com", 443);
+```
+
+Any node of a cluster answers for the whole cluster. The client is then authenticated in one of the
+ways below.
+
+## API token
+
+An [API token](https://pve.proxmox.com/pve-docs/chapter-pveum.html#pveum_tokens) is the way for
+applications and scheduled jobs: it does not expire unless you say so, it can be revoked without
+touching the user, and it can have fewer privileges than the user. Set it and call the API, there is
+no login:
+
+```java
+var client = new PveClient("pve01", 8006);
+client.setApiToken("automation@pve!app=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+
+var version = client.getVersion().version();
+```
+
+The format is `USER@REALM!TOKENID=SECRET`. A wrong token is not reported when you set it: the first
+call returns a `Result` with status 401.
+
+## User and password
+
+`login` asks Proxmox VE for a ticket and returns `true` if it got one:
+
+```java
+var client = new PveClient("pve01", 8006);
+
+if (!client.login("automation@pve", password)) {
+    System.out.println(client.getLastResult().getReasonPhrase());
+    return;
+}
+```
+
+The realm is the part after the last `@`. Without it the realm is `pam`: `login("root", password)`
+logs in `root@pam`. The realm can also be a separate argument: `login("automation", password, "pve")`.
+
+<Aside>
+A ticket is valid for two hours and the client does not renew it. A process that runs longer calls
+`login` again, or uses an API token.
+</Aside>
+
+## Two-factor authentication
+
+For a user with two-factor authentication, pass the second factor as the fourth argument, after the
+realm:
+
+```java
+// the code of the authenticator app
+client.login("admin", password, "pve", "123456");
+
+// a recovery key, or any other factor, as type:value
+client.login("admin", password, "pve", "recovery:abcd-1234-efgh-5678");
+```
+
+A value without a type is a TOTP code. If the user needs a second factor and none is given, `login`
+throws `PveExceptionAuthentication`, a checked exception. API tokens are not subject to two-factor
+authentication.
+
+## Certificate
+
+By default the certificate of the node is **not** validated, so the self-signed certificate of a new
+installation works. With a trusted certificate on the nodes, turn the validation on:
+
+```java
+var client = new PveClient("pve01.example.com", 8006);
+client.setValidateCertificate(true);
+client.setApiToken(apiToken);
+```
+
+With the validation on, the certificate is checked against the trust store of the JVM and the name
+of the host against the certificate. A refused certificate does not throw: the call returns a
+`Result` with status 0 and the reason in `getReasonPhrase()`.
+
+## Timeout
+
+`setTimeout` sets, in milliseconds, the longest wait to connect and the longest wait for data once
+connected. The default is 0, **no limit**: a node that accepts the connection and then does not
+answer blocks the call. Set a timeout in every application that must not hang:
+
+```java
+client.setTimeout(30000);
+```
+
+A request that runs out of time does not throw: it returns a `Result` with status 408 and the reason
+in `getReasonPhrase()`. This is the time of the HTTP request, not of the operation it starts: a
+backup or a clone answers at once with the id of a [task](/cv4pve-api-java/concepts/tasks/).
+
+## Proxy
+
+To reach the node through an HTTP proxy:
+
+```java
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+
+client.setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress("proxy.example.com", 8080)));
+```
+
+## Several nodes
+
+A client is bound to one host. An application that must survive a node being down keeps a list of
+nodes and creates the client for the first that answers: a call to `getVersion().version()` with a
+short timeout is enough to test one.
+
+## Threads
+
+A `PveClient` holds the ticket, the response type and the last result: share it between threads only
+if they do not change these. For calls in parallel the simple way is one client per thread, each with
+the same API token.
+
+## Secrets
+
+Keep tokens and passwords out of the source code: read them from the environment or from the secret
+store of your platform.
+
+```java
+var client = new PveClient(System.getenv("PVE_HOST"), 8006);
+client.setApiToken(System.getenv("PVE_API_TOKEN"));
+```
+
+With logging at `FINE` level the client masks the parameters that carry passwords, tickets and tokens:
+see [Troubleshooting](/cv4pve-api-java/troubleshooting/#logging).

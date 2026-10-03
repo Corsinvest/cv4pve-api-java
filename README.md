@@ -1,4 +1,4 @@
-# Corsinvest.ProxmoxVE.Api for Java
+# <img src="https://raw.githubusercontent.com/Corsinvest/cv4pve-api-java/master/icon.svg" alt="" height="36" align="top"> cv4pve-api-java
 
 ```
    ______                _                      __
@@ -10,18 +10,44 @@
 Proxmox VE API Client for Java (Made in Italy)
 ```
 
-[![License](https://img.shields.io/github/license/Corsinvest/cv4pve-api-java.svg?style=flat-square)](LICENSE)
-[![Java](https://img.shields.io/badge/Java-17%2B-blue?style=flat-square&logo=java)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
+[![License](https://img.shields.io/github/license/Corsinvest/cv4pve-api-java.svg?style=flat-square)](https://github.com/Corsinvest/cv4pve-api-java/blob/master/LICENSE)
+[![Java](https://img.shields.io/badge/Java-17%2B-blue?style=flat-square&logo=openjdk)](https://openjdk.org/)
 [![Maven Central](https://img.shields.io/maven-metadata/v.svg?metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fit%2Fcorsinvest%2Fproxmoxve%2Fcv4pve-api-java%2Fmaven-metadata.xml&label=maven-central&style=flat-square)](https://central.sonatype.com/artifact/it.corsinvest.proxmoxve/cv4pve-api-java)
 
+> **The Proxmox VE API from Java**: a client with a method for every endpoint of the Proxmox VE API, running in your application and talking only to the API.
+>
+> **[Documentation](https://corsinvest.github.io/cv4pve-api-java/)**
 
 ---
 
-## Quick Start
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Corsinvest/cv4pve-api-java/master/docs/src/assets/java.svg" alt="Java logo" width="70">
+</p>
 
-### Add the dependency to your project
+## Why
 
-**Maven**
+An application that manages Proxmox VE (a customer portal, a scheduled job, a monitoring or billing tool) has to speak its REST API: tickets and tokens, paths, parameters, JSON, tasks that end later. Written by hand it is a layer of HTTP code to build and to keep up with every Proxmox VE release.
+
+cv4pve-api-java is that layer, generated from the API itself. The calls follow the tree of the API, so the [Proxmox VE API viewer](https://pve.proxmox.com/pve-docs/api-viewer/) is also the reference of the client.
+
+It **runs in your application and uses only the Proxmox VE API**: nothing to install on the nodes, no SSH.
+
+---
+
+## Features
+
+- **The whole API**: a method for every endpoint and HTTP method, generated from the Proxmox VE API schema; `/nodes/{node}/qemu/{vmid}/config` is `client.getNodes().get("pve01").getQemu().get(100).getConfig()`.
+- **One Result for every call**: the HTTP outcome and the Proxmox VE data, read as a Jackson `JsonNode`. A failed call does not throw.
+- **API token or password**: with two-factor authentication, certificate validation, timeout and proxy.
+- **Tasks**: start a backup, a clone or a migration, wait for its task and read whether it succeeded.
+- **Raw calls**: GET, POST, PUT and DELETE on any path with a map of parameters, for the calls with many options and for endpoints newer than the library.
+- **One dependency**: Java 17 or later and Jackson, on Windows, Linux and macOS.
+
+---
+
+## Quick start
+
+Maven:
 
 ```xml
 <dependency>
@@ -31,137 +57,55 @@ Proxmox VE API Client for Java (Made in Italy)
 </dependency>
 ```
 
-**Gradle**
+Gradle:
 
-```gradle
+```groovy
 implementation 'it.corsinvest.proxmoxve:cv4pve-api-java:9.2.3'
 ```
 
-### Basic Usage
-
 ```java
-import it.corsinvest.proxmoxve.*;
+import it.corsinvest.proxmoxve.api.PveClient;
 
-// Create client and authenticate
-var client = new PveClient("your-proxmox-host.com", 8006);
-if (client.login("root@pam", "your-password")) {
-    // Get cluster status
-    var status = client.getCluster().getStatus().getStatus().getData();
-    System.out.println("Cluster: " + status.get(0).get("name").asText());
+// connect to any node of the cluster, with an API token
+var client = new PveClient("pve01", 8006);
+client.setApiToken("automation@pve!app=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
-    // Manage VMs
-    var vm = client.getNodes().get("pve1")
-        .getQemu().get(100).getConfig().vmConfig()
-        .getData();
-    System.out.println("VM: " + vm.get("name").asText());
-}
+// GET /nodes/{node}/qemu/{vmid}/status/current
+var result = client.getNodes().get("pve01").getQemu().get(100).getStatus().getCurrent().vmStatus();
+
+System.out.println(result.isSuccessStatusCode()
+        ? "VM " + result.getData().get("vmid").asInt() + " is " + result.getData().get("status").asText()
+        : result.getStatusCode() + " " + result.getReasonPhrase());
 ```
 
----
+What the token needs: [Permissions](https://corsinvest.github.io/cv4pve-api-java/permissions/).
 
-## Key Features
-
-### Developer Experience
-- **Intuitive API structure** that mirrors Proxmox VE API hierarchy
-- **Modern Java 17+** with var, pattern matching, records, and other contemporary features
-- **Jackson JSON parsing** for robust data handling
-- **JavaDoc support** in all IDEs
-- **Auto-generated** from official API documentation
-- **Tree structure** matching Proxmox VE API paths
-
-### Core Functionality
-- **Full API coverage** for Proxmox VE 9.x
-- **VM/CT management** (create, configure, snapshot, clone)
-- **Cluster operations** (status, resources, HA, corosync)
-- **Storage management** (local, shared, backup, replication)
-- **Network configuration** (bridges, VLANs, SDN, firewall)
-
-### Enterprise Ready
-- **API token authentication** (Proxmox VE 6.2+)
-- **Two-factor authentication** support
-- **SSL certificate validation** with custom trust managers
-- **Configurable timeouts** and HTTP proxy support
-- **Thread-safe connection handling**
+The first two numbers of the version are the Proxmox VE version the client was generated from: 9.2.x is for Proxmox VE 9.2. Changes of each release: [CHANGELOG.md](https://github.com/Corsinvest/cv4pve-api-java/blob/master/CHANGELOG.md).
 
 ---
 
 ## Documentation
 
-### Getting Started
-
-- **[Authentication](./docs/authentication.md)** - API tokens and security
-- **[Basic Examples](./docs/examples.md)** - Common usage patterns
-- **[Advanced Usage](./docs/advanced.md)** - Complex scenarios and best practices
-- **[Common Issues](./docs/common-issues.md)** - Configuration patterns and troubleshooting
-
-### API Reference
-
-- **[API Structure](./docs/apistructure.md)** - Understanding the tree structure
-- **[Result Handling](./docs/results.md)** - Working with responses
-- **[Error Handling](./docs/errorhandling.md)** - Exception management
-- **[Task Management](./docs/tasks.md)** - Long-running operations
+| | |
+|---|---|
+| [Getting started](https://corsinvest.github.io/cv4pve-api-java/getting-started/) | Install, connect, first calls |
+| [Connection](https://corsinvest.github.io/cv4pve-api-java/connection/) | API token or password, two-factor authentication, certificates, timeout, proxy |
+| [Permissions](https://corsinvest.github.io/cv4pve-api-java/permissions/) | The user, the token and the privileges an application needs |
+| [Concepts](https://corsinvest.github.io/cv4pve-api-java/concepts/api-structure/) | API structure, results, indexed parameters, tasks, errors |
+| [Examples](https://corsinvest.github.io/cv4pve-api-java/examples/common-tasks/) | Common tasks, creating a VM, bulk operations |
+| [Troubleshooting](https://corsinvest.github.io/cv4pve-api-java/troubleshooting/) | Logging and the common errors |
 
 ---
 
-## Examples
+## Related tools
 
-### VM Management
-
-```java
-// Create and configure a VM
-var client = new PveClient("pve.example.com", 8006);
-client.login("admin@pve", "password");
-
-var result = client.getNodes().get("pve1").getQemu().createVm(
-    100,           // vmid
-    "web-server",  // name
-    4096,          // memory
-    2              // cores
-);
-
-if (result.isSuccessStatusCode()) {
-    System.out.println("VM created successfully!");
-}
-```
-
-### Cluster Monitoring
-
-```java
-// Get cluster resources
-var resources = client.getCluster().getResources().resources().getData();
-
-for (var resource : resources) {
-    if (resource.get("type").asText().equals("qemu")) {
-        System.out.println("VM " + resource.get("vmid").asInt() + ": " +
-                          resource.get("name").asText() + " on " +
-                          resource.get("node").asText() + " - " +
-                          resource.get("status").asText());
-    }
-}
-```
-
-### VM Discovery
-
-```java
-// Get all VMs in cluster
-var resources = client.getCluster().getResources().resources().getData();
-
-for (var resource : resources) {
-    if (resource.get("type").asText().equals("qemu")) {
-        var node = resource.get("node").asText();
-        var vmid = resource.get("vmid").asInt();
-        var name = resource.get("name").asText();
-        var status = resource.get("status").asText();
-        System.out.println("VM " + vmid + " (" + name + ") on " + node + " - " + status);
-    }
-}
-```
+Prefer a command line? [cv4pve-cli](https://github.com/Corsinvest/cv4pve-cli) calls the same API from any shell. The same client for .NET: [cv4pve-api-dotnet](https://github.com/Corsinvest/cv4pve-api-dotnet). From PowerShell: [cv4pve-api-powershell](https://github.com/Corsinvest/cv4pve-api-powershell). The whole suite: [corsinvest.it/cv4pve](https://www.corsinvest.it/en/cv4pve/).
 
 ---
 
 ## Support
 
-Professional support and consulting available through [Corsinvest](https://www.corsinvest.it/cv4pve).
+Professional support and consulting available through [Corsinvest](https://www.corsinvest.it/en/cv4pve/).
 
 ---
 

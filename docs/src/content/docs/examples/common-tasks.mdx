@@ -1,0 +1,238 @@
+---
+title: Common tasks
+description: "Short Java recipes for Proxmox VE: list VMs and containers, read a configuration, start and stop, snapshots, backup, nodes, storage and metrics."
+---
+
+Short recipes to copy. They assume a connected `client` (see
+[Connection](/cv4pve-api-java/connection/)) and these imports:
+
+```java
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import com.fasterxml.jackson.databind.JsonNode;
+import it.corsinvest.proxmoxve.api.PveClient;
+import it.corsinvest.proxmoxve.api.Result;
+```
+
+The recipes that start a task use this helper: it checks the call, waits for the task and returns how
+it ended, `OK` or the reason of the failure. Why each step is needed is in
+[Errors](/cv4pve-api-java/concepts/errors/) and [Tasks](/cv4pve-api-java/concepts/tasks/).
+
+```java
+static String run(PveClient client, Result result, long timeout) {
+    if (!result.isSuccessStatusCode()) {
+        return result.getStatusCode() + " " + result.getReasonPhrase();
+    }
+
+    var upid = result.getData().asText();
+    return client.waitForTaskToFinish(upid, 1000, timeout)
+            ? client.getExitStatusTask(upid)
+            : "still running";
+}
+```
+
+## List VMs and containers
+
+One call for the whole cluster, whatever the node:
+
+```java
+var result = client.getCluster().getResources().resources("vm");
+for (JsonNode vm : result.getData()) {
+    System.out.printf("%6d %-5s %-20s %-10s %s%n",
+            vm.get("vmid").asInt(),
+            vm.get("type").asText(),
+            vm.path("name").asText(),
+            vm.get("node").asText(),
+            vm.get("status").asText());
+}
+```
+
+`type` is `qemu` for a VM and `lxc` for a container. Only the running ones with a tag:
+
+```java
+for (JsonNode vm : result.getData()) {
+    var tags = List.of(vm.path("tags").asText().split(";"));
+    if (vm.get("status").asText().equals("running") && tags.contains("production")) {
+        System.out.println(vm.get("vmid").asInt() + " " + vm.path("name").asText());
+    }
+}
+```
+
+## Find a VM by name
+
+The API addresses a guest by node and id. The cluster resources give both from the name:
+
+```java
+JsonNode found = null;
+for (JsonNode vm : client.getCluster().getResources().resources("vm").getData()) {
+    if (vm.path("name").asText().equals("web01")) {
+        found = vm;
+    }
+}
+
+if (found != null) {
+    System.out.println("web01 is " + found.get("type").asText() + " " + found.get("vmid").asInt()
+            + " on " + found.get("node").asText());
+}
+```
+
+## Read the configuration of a VM
+
+```java
+var config = client.getNodes().get("pve01").getQemu().get(100).getConfig().vmConfig().getData();
+
+System.out.println(config.path("name").asText() + ": " + config.path("cores").asInt(1) + " cores, "
+        + config.path("memory").asText("512") + " MB");
+
+// disks and network devices
+config.fields().forEachRemaining(entry -> {
+    if (entry.getKey().matches("(scsi|virtio|sata|ide|net)\\d+")) {
+        System.out.println(entry.getKey() + ": " + entry.getValue().asText());
+    }
+});
+```
+
+Proxmox VE leaves out the settings that have their default value, so read them with `path`. For a
+container use `client.getNodes().get("pve01").getLxc().get(200).getConfig().vmConfig()`.
+
+## Change the configuration
+
+```java
+var parameters = new HashMap<String, Object>();
+parameters.put("cores", 4);
+parameters.put("memory", 8192);
+parameters.put("description", "Web server");
+
+var result = client.set("/nodes/pve01/qemu/100/config", parameters);
+if (!result.isSuccessStatusCode()) {
+    System.out.println(result.getReasonPhrase());
+}
+```
+
+Only the parameters you send change. To remove a setting, name it in `delete`:
+`client.set("/nodes/pve01/qemu/100/config", Map.of("delete", "description"))`. The configuration is
+changed with a [raw call](/cv4pve-api-java/concepts/api-structure/#raw-calls) because the generated
+`updateVm` takes all its parameters by position.
+
+## Start, stop, reboot
+
+Each of these starts a task: wait for it and read how it ended.
+
+```java
+var vm = client.getNodes().get("pve01").getQemu().get(100);
+
+System.out.println(run(client, vm.getStatus().getStart().vmStart(), 60000));
+```
+
+| Action | Call |
+|---|---|
+| Start | `vm.getStatus().getStart().vmStart()` |
+| Shut down from inside the guest, waiting up to 120 seconds | `vm.getStatus().getShutdown().vmShutdown(null, null, null, 120)` |
+| Stop at once, like pulling the plug | `vm.getStatus().getStop().vmStop()` |
+| Reboot | `vm.getStatus().getReboot().vmReboot()` |
+| Suspend, resume | `vm.getStatus().getSuspend().vmSuspend()`, `vm.getStatus().getResume().vmResume()` |
+
+## Current status of a VM
+
+```java
+var status = vm.getStatus().getCurrent().vmStatus().getData();
+
+System.out.printf("%s, CPU %.1f%%, memory %.1f%%, up %d s%n",
+        status.get("status").asText(),
+        status.path("cpu").asDouble() * 100,
+        status.path("mem").asDouble() * 100 / status.path("maxmem").asDouble(1),
+        status.path("uptime").asLong());
+```
+
+## Snapshots
+
+```java
+// take: snapname, description, vmstate
+var outcome = run(client, vm.getSnapshot().snapshot("before-update", "Before the update", null), 120000);
+
+// list
+for (JsonNode snapshot : vm.getSnapshot().snapshotList().getData()) {
+    System.out.println(snapshot.get("name").asText() + " " + snapshot.path("description").asText());
+}
+
+// roll back
+outcome = run(client, vm.getSnapshot().get("before-update").getRollback().rollback(), 300000);
+
+// remove
+outcome = run(client, vm.getSnapshot().get("before-update").delsnapshot(), 120000);
+```
+
+The list includes an entry named `current`, which is the present state of the VM, not a snapshot.
+
+## Back up a VM
+
+```java
+var backup = new HashMap<String, Object>();
+backup.put("vmid", "100");
+backup.put("storage", "backup");
+backup.put("mode", "snapshot");
+backup.put("compress", "zstd");
+
+System.out.println(run(client, client.create("/nodes/pve01/vzdump", backup), 3600000));
+```
+
+The token needs `VM.Backup` on the guest and `Datastore.AllocateSpace` on the storage. A node runs one
+backup at a time: a backup started while another is running waits for it, so allow for that in the
+timeout.
+
+## Nodes and their load
+
+```java
+for (JsonNode node : client.getNodes().index().getData()) {
+    System.out.printf("%-10s %-8s CPU %.1f%% memory %.1f%%%n",
+            node.get("node").asText(),
+            node.get("status").asText(),
+            node.path("cpu").asDouble() * 100,
+            node.path("mem").asDouble() * 100 / node.path("maxmem").asDouble(1));
+}
+```
+
+## Cluster status
+
+```java
+for (JsonNode item : client.getCluster().getStatus().getStatus().getData()) {
+    System.out.println(item.get("type").asText() + " " + item.get("name").asText()
+            + (item.path("online").asInt() == 1 ? " online" : ""));
+}
+```
+
+## Storage of a node
+
+```java
+for (JsonNode storage : client.getNodes().get("pve01").getStorage().index().getData()) {
+    if (storage.path("active").asInt() == 1) {
+        System.out.printf("%-12s %-8s %,.0f of %,.0f GiB%n",
+                storage.get("storage").asText(),
+                storage.get("type").asText(),
+                storage.path("used").asDouble() / 1073741824.0,
+                storage.path("total").asDouble() / 1073741824.0);
+    }
+}
+```
+
+## Metrics of a VM
+
+The data behind the charts of the web interface, as numbers:
+
+```java
+import java.time.Instant;
+
+var data = client.getNodes().get("pve01").getQemu().get(100).getRrddata().rrddata("day", "AVERAGE").getData();
+for (JsonNode item : data) {
+    System.out.printf("%s CPU %.1f%%%n",
+            Instant.ofEpochSecond(item.get("time").asLong()),
+            item.path("cpu").asDouble() * 100);
+}
+```
+
+## The next free id
+
+```java
+var vmId = client.getCluster().getNextid().nextid().getData().asInt();
+```
