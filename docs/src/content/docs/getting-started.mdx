@@ -20,7 +20,9 @@ talks only to the Proxmox VE REST API on port 8006. Nothing is installed on the 
 
 <Steps>
 
-1. Add the dependency from
+1. **Add the package**
+
+   Add the dependency from
    [Maven Central](https://central.sonatype.com/artifact/it.corsinvest.proxmoxve/cv4pve-api-java):
 
    <Tabs>
@@ -42,7 +44,9 @@ talks only to the Proxmox VE REST API on port 8006. Nothing is installed on the 
 
    The only dependency it brings is [Jackson](https://github.com/FasterXML/jackson), used for JSON.
 
-2. Create the client with an API token. With a token there is no login call:
+2. **Create the client**
+
+   Create the client with an API token. With a token there is no login call:
 
    ```java
    import it.corsinvest.proxmoxve.api.PveClient;
@@ -55,7 +59,9 @@ talks only to the Proxmox VE REST API on port 8006. Nothing is installed on the 
    self-signed certificate works as it is. All the ways to connect are in
    [Connection](/cv4pve-api-java/connection/).
 
-3. Make the first call and check its outcome:
+3. **Make the first call**
+
+   Make the first call and check its outcome:
 
    ```java
    var result = client.getVersion().version();
@@ -67,7 +73,9 @@ talks only to the Proxmox VE REST API on port 8006. Nothing is installed on the 
    }
    ```
 
-4. Read some data. The path of the API is the path in the code:
+4. **Read some data**
+
+   Read some data. The path of the API is the path in the code:
 
    ```java
    import com.fasterxml.jackson.databind.JsonNode;
