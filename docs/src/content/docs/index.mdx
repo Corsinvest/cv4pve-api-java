@@ -28,20 +28,46 @@ hero:
 ---
 
 import { Image } from 'astro:assets';
-import { LinkCard } from '@astrojs/starlight/components';
+import { LinkCard, Tabs, TabItem } from '@astrojs/starlight/components';
 import FeatureGrid from '@corsinvest/cv4pve-docs-theme/components/FeatureGrid.astro';
 import CtaBand from '@corsinvest/cv4pve-docs-theme/components/CtaBand.astro';
+import Motto from '@corsinvest/cv4pve-docs-theme/components/Motto.astro';
 import proxmoxLogo from '../../assets/proxmox-logo.svg';
 import javaLogo from '../../assets/java.svg';
 
 export const features = [
-  { title: 'The whole API', text: 'A method for every endpoint and HTTP method, generated from the Proxmox VE API schema, placed where the API has it: the path of an endpoint is the path in the code.', href: 'concepts/api-structure/' },
-  { title: 'One Result for every call', text: 'The HTTP outcome and the Proxmox VE data together, read as a Jackson JsonNode. A failed call does not throw.', href: 'concepts/results/' },
-  { title: 'API token or password', text: 'Connect with an API token or a user and password, with two-factor authentication, certificate validation, timeout and proxy.', href: 'connection/' },
-  { title: 'Tasks', text: 'Start a backup, a clone or a migration, wait for its task to finish and read whether it succeeded.', href: 'concepts/tasks/' },
-  { title: 'Raw calls', text: 'GET, POST, PUT and DELETE on any path with a map of parameters: for the calls with many options and for endpoints newer than the library.', href: 'concepts/api-structure/#raw-calls' },
-  { title: 'One dependency', text: 'Java 17 or later and Jackson. No framework, no HTTP library to configure.', href: 'getting-started/' },
+  { icon: 'mdi:api', title: 'The whole API', text: 'A method for every endpoint and HTTP method, generated from the Proxmox VE API schema, placed where the API has it: the path of an endpoint is the path in the code.', href: 'concepts/api-structure/' },
+  { icon: 'mdi:code-braces-box', title: 'One Result for every call', text: 'The HTTP outcome and the Proxmox VE data together, read as a Jackson JsonNode. A failed call does not throw.', href: 'concepts/results/' },
+  { icon: 'mdi:key-outline', title: 'API token or password', text: 'Connect with an API token or a user and password, with two-factor authentication, certificate validation, timeout and proxy.', href: 'connection/' },
+  { icon: 'mdi:timer-sand', title: 'Tasks', text: 'Start a backup, a clone or a migration, wait for its task to finish and read whether it succeeded.', href: 'concepts/tasks/' },
+  { icon: 'mdi:code-json', title: 'Raw calls', text: 'GET, POST, PUT and DELETE on any path with a map of parameters: for the calls with many options and for endpoints newer than the library.', href: 'concepts/api-structure/#raw-calls' },
+  { icon: 'mdi:package-variant-closed', title: 'One dependency', text: 'Java 17 or later and Jackson. No framework, no HTTP library to configure.', href: 'getting-started/' },
 ];
+
+<Motto />
+
+<Tabs>
+  <TabItem label="Maven">
+
+```xml
+<!-- pom.xml: the latest version is on Maven Central -->
+<dependency>
+    <groupId>it.corsinvest.proxmoxve</groupId>
+    <artifactId>cv4pve-api-java</artifactId>
+    <version>9.2.3</version>
+</dependency>
+```
+
+  </TabItem>
+  <TabItem label="Gradle">
+
+```groovy
+// build.gradle: the latest version is on Maven Central
+implementation 'it.corsinvest.proxmoxve:cv4pve-api-java:9.2.3'
+```
+
+  </TabItem>
+</Tabs>
 
 <div style="text-align: center">
   <Image src={javaLogo} alt="Java logo" width={90} style="display: inline-block" />
